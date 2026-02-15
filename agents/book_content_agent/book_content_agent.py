@@ -1,0 +1,437 @@
+import os
+import sys
+import json
+import uuid
+import time
+import hashlib
+from collections import defaultdict
+from typing import Any, Dict, List, Optional
+
+from fastapi import FastAPI
+from dotenv import load_dotenv
+
+_CURRENT_DIR = os.path.dirname(__file__)
+_PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, os.pardir, os.pardir))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
+
+from base import get_agent_logger, extract_text_from_message, call_openai_chat
+from acps_aip.aip_base_model import (
+    Message,
+    Task,
+    TaskState,
+    Product,
+    TextDataItem,
+    StructuredDataItem,
+)
+from acps_aip.aip_rpc_server import add_aip_rpc_router, TaskManager, CommandHandlers
+
+load_dotenv()
+
+AGENT_ID = os.getenv("BOOK_CONTENT_AGENT_ID", "book_content_agent_001")
+AIP_ENDPOINT = os.getenv("BOOK_CONTENT_AGENT_ENDPOINT", "/book-content/rpc")
+LOG_LEVEL = os.getenv("BOOK_CONTENT_AGENT_LOG_LEVEL", "INFO").upper()
+LLM_MODEL = os.getenv("BOOK_CONTENT_EMBED_MODEL", os.getenv("OPENAI_MODEL", "qwen-plus"))
+EMBEDDING_VERSION = os.getenv("BOOK_CONTENT_EMBED_VERSION", "book_content_v1")
+VECTOR_DIM = max(8, int(os.getenv("BOOK_CONTENT_VECTOR_DIM", "12")))
+DEFAULT_KG_MODE = os.getenv("BOOK_CONTENT_DEFAULT_KG_MODE", "local")
+
+logger = get_agent_logger("agent.book_content", "BOOK_CONTENT_AGENT_LOG_LEVEL", LOG_LEVEL)
+
+app = FastAPI(
+    title="Book Content Agent",
+    description="ACPs-compliant agent that synthesizes book vectors, tags, and KG references.",
+)
+
+_BOOK_CONTENT_CONTEXT: Dict[str, Dict[str, Any]] = {}
+
+
+def _parse_payload(message: Message) -> Dict[str, Any]:
+    params = getattr(message, "commandParams", None) or {}
+    payload = params.get("payload") if isinstance(params, dict) else None
+    if isinstance(payload, dict):
+        return payload
+    text = extract_text_from_message(message)
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        logger.warning("event=payload_parse_failed task_id=%s", message.taskId)
+        return {}
+
+
+def _merge_payload(task_id: str, new_payload: Dict[str, Any]) -> Dict[str, Any]:
+    base_payload = _BOOK_CONTENT_CONTEXT.get(task_id, {})
+    merged: Dict[str, Any] = {**base_payload}
+    for key, value in new_payload.items():
+        if value in (None, ""):
+            continue
+        if key in {"books", "candidate_ids", "kg_edges"}:
+            existing = merged.get(key) or []
+            if isinstance(value, list):
+                merged[key] = existing + value
+            continue
+        if key == "metadata":
+            existing_meta = merged.get("metadata") or {}
+            if isinstance(value, dict):
+                merged[key] = {**existing_meta, **value}
+            continue
+        merged[key] = value
+    _BOOK_CONTENT_CONTEXT[task_id] = merged
+    return merged
+
+
+def _validate_payload(payload: Dict[str, Any]) -> List[str]:
+    missing: List[str] = []
+    has_candidates = bool(payload.get("candidate_ids"))
+    has_books = bool(payload.get("books"))
+    has_batch = bool(payload.get("ingest_batch_id"))
+    if not (has_candidates or has_books or has_batch):
+        missing.append("candidate_ids|books|ingest_batch_id")
+
+    use_remote_kg = bool(payload.get("use_remote_kg"))
+    kg_mode = str(payload.get("kg_mode") or DEFAULT_KG_MODE).lower()
+    if (use_remote_kg or kg_mode == "remote") and not payload.get("kg_endpoint"):
+        missing.append("kg_endpoint")
+    return missing
+
+
+def _to_float_vector(seed_text: str, dim: int = VECTOR_DIM) -> List[float]:
+    digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
+    values: List[float] = []
+    while len(values) < dim:
+        for b in digest:
+            values.append(round(b / 255.0, 4))
+            if len(values) >= dim:
+                break
+        digest = hashlib.sha256(digest).digest()
+    return values
+
+
+def _build_book_records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    books: List[Dict[str, Any]] = []
+
+    source_books = payload.get("books") or []
+    for index, book in enumerate(source_books):
+        if not isinstance(book, dict):
+            continue
+        book_id = str(book.get("book_id") or book.get("id") or f"book_{index}")
+        normalized = {**book, "book_id": book_id}
+        books.append(normalized)
+
+    source_candidate_ids = payload.get("candidate_ids") or []
+    existing_ids = {b["book_id"] for b in books}
+    for candidate_id in source_candidate_ids:
+        cid = str(candidate_id)
+        if cid in existing_ids:
+            continue
+        books.append({"book_id": cid, "title": cid, "description": "", "genres": []})
+
+    ingest_batch_id = payload.get("ingest_batch_id")
+    if not books and ingest_batch_id:
+        books = [
+            {
+                "book_id": f"{ingest_batch_id}_sample_001",
+                "title": "batch_sample_title",
+                "description": "autogenerated from ingest batch id",
+                "genres": [],
+            }
+        ]
+    return books
+
+
+def _heuristic_tags_for_book(book: Dict[str, Any]) -> Dict[str, Any]:
+    description = str(book.get("description") or "").lower()
+    genres = [str(g).lower().strip() for g in (book.get("genres") or []) if str(g).strip()]
+    review_snippets = " ".join(
+        str(r.get("text") or "").lower() for r in (book.get("reviews") or []) if isinstance(r, dict)
+    )
+    corpus = f"{description} {review_snippets}"
+
+    topic_counts: Dict[str, int] = defaultdict(int)
+    for token in genres:
+        topic_counts[token] += 2
+    for token in ["history", "romance", "science", "fantasy", "business", "technology", "mystery"]:
+        if token in corpus:
+            topic_counts[token] += 1
+
+    style = "narrative"
+    if any(token in corpus for token in ["guide", "practical", "playbook", "manual"]):
+        style = "practical"
+    elif any(token in corpus for token in ["essay", "reflection"]):
+        style = "essay"
+
+    mood = "balanced"
+    if any(token in corpus for token in ["dark", "tragedy", "bleak"]):
+        mood = "dark"
+    elif any(token in corpus for token in ["hopeful", "inspiring", "uplifting"]):
+        mood = "uplifting"
+
+    difficulty = str(book.get("difficulty") or "").lower().strip()
+    if not difficulty:
+        page_count = book.get("page_count") or book.get("pages")
+        try:
+            pages = int(page_count)
+            difficulty = "advanced" if pages >= 500 else "intermediate" if pages >= 280 else "beginner"
+        except (TypeError, ValueError):
+            difficulty = "intermediate"
+
+    diversity_indicators = []
+    if any(token in corpus for token in ["global", "multicultural", "cross-cultural", "diaspora"]):
+        diversity_indicators.append("cross_cultural")
+    if any(token in corpus for token in ["female lead", "women", "queer", "lgbt"]):
+        diversity_indicators.append("representation")
+
+    ordered_topics = [name for name, _ in sorted(topic_counts.items(), key=lambda item: item[1], reverse=True)]
+    return {
+        "book_id": book["book_id"],
+        "topics": ordered_topics[:4],
+        "style": style,
+        "difficulty": difficulty,
+        "mood": mood,
+        "diversity_indicators": diversity_indicators,
+    }
+
+
+def _extract_kg_refs(payload: Dict[str, Any], books: List[Dict[str, Any]]) -> List[str]:
+    refs: List[str] = []
+    kg_edges = payload.get("kg_edges") or []
+    for edge in kg_edges:
+        if isinstance(edge, dict):
+            node_id = edge.get("node_id") or edge.get("target") or edge.get("id")
+            if node_id:
+                refs.append(str(node_id))
+
+    for book in books:
+        if book.get("kg_node_id"):
+            refs.append(str(book.get("kg_node_id")))
+
+    if not refs and payload.get("kg_endpoint") and (payload.get("use_remote_kg") or str(payload.get("kg_mode", "")).lower() == "remote"):
+        endpoint = str(payload.get("kg_endpoint")).rstrip("/")
+        refs.extend([f"{endpoint}/nodes/{book['book_id']}" for book in books[:5]])
+
+    seen = set()
+    deduped: List[str] = []
+    for item in refs:
+        if item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
+def _vectorize_books(books: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    vectors: List[Dict[str, Any]] = []
+    for book in books:
+        seed_text = " | ".join(
+            [
+                str(book.get("book_id") or ""),
+                str(book.get("title") or ""),
+                str(book.get("description") or ""),
+                ",".join(str(g) for g in (book.get("genres") or [])),
+            ]
+        )
+        vectors.append(
+            {
+                "book_id": book["book_id"],
+                "vector": _to_float_vector(seed_text),
+                "vector_dim": VECTOR_DIM,
+                "embedding_model": LLM_MODEL,
+                "embedding_version": EMBEDDING_VERSION,
+            }
+        )
+    return vectors
+
+
+async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not books:
+        return {"source": "none", "llm_tags": []}
+    if not os.getenv("OPENAI_API_KEY"):
+        return {"source": "heuristic", "llm_tags": []}
+
+    rows = []
+    for book in books[:4]:
+        rows.append(
+            {
+                "book_id": book["book_id"],
+                "title": book.get("title"),
+                "description": str(book.get("description") or "")[:200],
+                "genres": book.get("genres") or [],
+            }
+        )
+    user_prompt = (
+        "Extract compact topical tags for each book. Return strict JSON with key 'llm_tags' as a list of objects "
+        "{book_id, tags}.\n"
+        + json.dumps(rows, ensure_ascii=False)
+    )
+    try:
+        raw = await call_openai_chat(
+            [
+                {"role": "system", "content": "You generate compact book tags for recommendation systems."},
+                {"role": "user", "content": user_prompt},
+            ],
+            model=LLM_MODEL,
+            temperature=0.2,
+            max_tokens=256,
+        )
+        data = json.loads(raw)
+        llm_tags = data.get("llm_tags") if isinstance(data, dict) else []
+        if not isinstance(llm_tags, list):
+            llm_tags = []
+        return {"source": "llm", "llm_tags": llm_tags[:20]}
+    except Exception as exc:  # pragma: no cover
+        logger.exception("event=llm_tag_enrichment_failed error=%s", exc)
+        return {"source": "heuristic", "llm_tags": []}
+
+
+async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
+    start_ts = time.perf_counter()
+    books = _build_book_records(payload)
+    content_vectors = _vectorize_books(books)
+    heuristic_tags = [_heuristic_tags_for_book(book) for book in books]
+    llm_enrichment = await _llm_tag_enrichment(books)
+    kg_refs = _extract_kg_refs(payload, books)
+
+    outputs = {
+        "content_vectors": content_vectors,
+        "book_tags": heuristic_tags,
+        "kg_refs": kg_refs,
+        "kg_context": {
+            "mode": str(payload.get("kg_mode") or DEFAULT_KG_MODE),
+            "endpoint": payload.get("kg_endpoint"),
+        },
+        "llm_enrichment": llm_enrichment,
+    }
+
+    elapsed = (time.perf_counter() - start_ts) * 1000
+    diagnostics = {
+        "input_counts": {
+            "books": len(books),
+            "candidate_ids": len(payload.get("candidate_ids") or []),
+            "kg_refs": len(kg_refs),
+        },
+        "api_key_present": bool(os.getenv("OPENAI_API_KEY")),
+        "model": LLM_MODEL,
+        "embedding_version": EMBEDDING_VERSION,
+        "latency_ms": round(elapsed, 2),
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+
+    return {
+        "agent_id": AGENT_ID,
+        "embedding_version": EMBEDDING_VERSION,
+        "outputs": outputs,
+        "diagnostics": diagnostics,
+    }
+
+
+def _render_summary(result: Dict[str, Any]) -> str:
+    outputs = result.get("outputs") or {}
+    vectors = outputs.get("content_vectors") or []
+    tags = outputs.get("book_tags") or []
+    kg_refs = outputs.get("kg_refs") or []
+    top_topics = []
+    if tags:
+        top_topics = tags[0].get("topics") or []
+    return (
+        f"Books analyzed: {len(vectors)} | "
+        f"Top topics: {', '.join(top_topics[:3]) or 'N/A'} | "
+        f"KG refs: {len(kg_refs)}"
+    )
+
+
+def _finalize_task(task_id: str, result: Dict[str, Any]) -> Task:
+    summary = _render_summary(result)
+    product = Product(
+        id=str(uuid.uuid4()),
+        name="book-content-analysis",
+        description="Book vectors, feature tags, and KG trace references",
+        dataItems=[StructuredDataItem(data=result), TextDataItem(text=summary)],
+    )
+    TaskManager.set_products(task_id, [product])
+    TaskManager.update_task_status(
+        task_id,
+        TaskState.Completed,
+        data_items=[TextDataItem(text="Book content analysis complete")],
+    )
+    _BOOK_CONTENT_CONTEXT.pop(task_id, None)
+    return TaskManager.get_task(task_id)
+
+
+def _set_awaiting_input(task_id: str, missing: List[str]) -> Task:
+    TaskManager.update_task_status(
+        task_id,
+        TaskState.AwaitingInput,
+        data_items=[TextDataItem(text=f"missing_fields: {', '.join(missing)}")],
+    )
+    return TaskManager.get_task(task_id)
+
+
+def _fail_task(task_id: str, reason: str) -> Task:
+    TaskManager.update_task_status(
+        task_id,
+        TaskState.Failed,
+        data_items=[TextDataItem(text=reason)],
+    )
+    _BOOK_CONTENT_CONTEXT.pop(task_id, None)
+    return TaskManager.get_task(task_id)
+
+
+async def handle_start(message: Message, existing_task: Optional[Task]) -> Task:
+    if existing_task:
+        return existing_task
+    task = TaskManager.create_task(message, initial_state=TaskState.Working)
+    payload = _merge_payload(task.id, _parse_payload(message))
+    missing = _validate_payload(payload)
+    if missing:
+        logger.info("event=awaiting_input task_id=%s missing=%s", task.id, missing)
+        return _set_awaiting_input(task.id, missing)
+    try:
+        result = await _analyze_content(payload)
+        return _finalize_task(task.id, result)
+    except Exception as exc:  # pragma: no cover
+        logger.exception("event=book_content_analysis_failed task_id=%s", task.id)
+        return _fail_task(task.id, f"analysis failed: {exc}")
+
+
+async def handle_continue(message: Message, task: Task) -> Task:
+    TaskManager.add_message_to_history(task.id, message)
+    if task.status.state not in {TaskState.AwaitingInput, TaskState.Working}:
+        return task
+
+    payload = _merge_payload(task.id, _parse_payload(message))
+    missing = _validate_payload(payload)
+    if missing:
+        logger.info("event=awaiting_input_continue task_id=%s missing=%s", task.id, missing)
+        return _set_awaiting_input(task.id, missing)
+
+    TaskManager.update_task_status(task.id, TaskState.Working, data_items=[TextDataItem(text="content-analyzing")])
+    try:
+        result = await _analyze_content(payload)
+        return _finalize_task(task.id, result)
+    except Exception as exc:  # pragma: no cover
+        logger.exception("event=book_content_continue_failed task_id=%s", task.id)
+        return _fail_task(task.id, f"analysis failed: {exc}")
+
+
+def _cancel_handler(message: Message, task: Task) -> Task:
+    _BOOK_CONTENT_CONTEXT.pop(task.id, None)
+    TaskManager.add_message_to_history(task.id, message)
+    if task.status.state in {
+        TaskState.Completed,
+        TaskState.Canceled,
+        TaskState.Failed,
+        TaskState.Rejected,
+    }:
+        return task
+    return TaskManager.update_task_status(task.id, TaskState.Canceled)
+
+
+agent_handlers = CommandHandlers(
+    on_start=handle_start,
+    on_continue=handle_continue,
+    on_cancel=_cancel_handler,
+)
+
+add_aip_rpc_router(app, AIP_ENDPOINT, agent_handlers)

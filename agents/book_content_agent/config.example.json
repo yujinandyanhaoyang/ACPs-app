@@ -1,0 +1,18 @@
+{
+  "mtls": {
+    "cert_path": "certs/book_content.crt",
+    "key_path": "certs/book_content.key",
+    "ca_path": "certs/ca.crt"
+  },
+  "acs": {
+    "aic": "book_content_agent_001",
+    "skills": ["book.vectorize", "kg.enrich", "tag.extract"],
+    "endpoint": "https://localhost:8212/book-content/rpc"
+  },
+  "environment": {
+    "BOOK_CONTENT_AGENT_ENDPOINT": "/book-content/rpc",
+    "BOOK_CONTENT_EMBED_MODEL": "sentence-bert-placeholder",
+    "BOOK_CONTENT_VECTOR_DIM": "12",
+    "BOOK_CONTENT_DEFAULT_KG_MODE": "local"
+  }
+}

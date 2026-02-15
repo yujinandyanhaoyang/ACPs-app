@@ -2,6 +2,7 @@ import os
 import sys
 import uuid
 import pathlib
+import importlib
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
@@ -12,12 +13,24 @@ ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-# Import the FastAPI app objects directly from each agent module
-import beijing_urban.beijing_urban as beijing_urban
-import beijing_rural.beijing_rural as beijing_rural
-import beijing_catering.beijing_catering as beijing_catering
-import china_hotel.china_hotel as china_hotel
-import china_transport.china_transport as china_transport
+
+def _optional_import(path: str):
+    try:
+        return importlib.import_module(path)
+    except ModuleNotFoundError:
+        return None
+
+
+# Import the FastAPI app objects directly from each agent module when available
+beijing_urban = _optional_import("beijing_urban.beijing_urban")
+beijing_rural = _optional_import("beijing_rural.beijing_rural")
+beijing_catering = _optional_import("beijing_catering.beijing_catering")
+china_hotel = _optional_import("china_hotel.china_hotel")
+china_transport = _optional_import("china_transport.china_transport")
+reader_profile_agent = _optional_import("agents.reader_profile_agent.profile_agent")
+book_content_agent = _optional_import("agents.book_content_agent.book_content_agent")
+rec_ranking_agent = _optional_import("agents.rec_ranking_agent.rec_ranking_agent")
+reading_concierge = _optional_import("reading_concierge.reading_concierge")
 
 from acps_aip.aip_base_model import Message, TextDataItem, TaskCommand
 
@@ -68,27 +81,65 @@ def patch_openai(monkeypatch):
 
 @pytest.fixture(scope="session")
 def client_urban():
+    if not beijing_urban:
+        pytest.skip("beijing_urban module unavailable in this workspace")
     return TestClient(beijing_urban.app)
 
 
 @pytest.fixture(scope="session")
 def client_rural():
+    if not beijing_rural:
+        pytest.skip("beijing_rural module unavailable in this workspace")
     return TestClient(beijing_rural.app)
 
 
 @pytest.fixture(scope="session")
 def client_catering():
+    if not beijing_catering:
+        pytest.skip("beijing_catering module unavailable in this workspace")
     return TestClient(beijing_catering.app)
 
 
 @pytest.fixture(scope="session")
 def client_hotel():
+    if not china_hotel:
+        pytest.skip("china_hotel module unavailable in this workspace")
     return TestClient(china_hotel.app)
 
 
 @pytest.fixture(scope="session")
 def client_transport():
+    if not china_transport:
+        pytest.skip("china_transport module unavailable in this workspace")
     return TestClient(china_transport.app)
+
+
+@pytest.fixture(scope="session")
+def client_reader_profile():
+    if not reader_profile_agent:
+        pytest.skip("reader_profile_agent module unavailable in this workspace")
+    return TestClient(reader_profile_agent.app)
+
+
+@pytest.fixture(scope="session")
+def client_book_content():
+    if not book_content_agent:
+        pytest.skip("book_content_agent module unavailable in this workspace")
+    return TestClient(book_content_agent.app)
+
+
+@pytest.fixture(scope="session")
+def client_rec_ranking():
+    if not rec_ranking_agent:
+        pytest.skip("rec_ranking_agent module unavailable in this workspace")
+    return TestClient(rec_ranking_agent.app)
+
+
+@pytest.fixture(scope="session")
+def client_reading_concierge():
+    if not reading_concierge:
+        pytest.skip("reading_concierge module unavailable in this workspace")
+    return TestClient(reading_concierge.app)
 
 
 def build_rpc_payload(

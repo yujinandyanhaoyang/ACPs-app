@@ -1,0 +1,31 @@
+{
+  "aic": "reading_concierge_001",
+  "active": true,
+  "protocolVersion": "01.00",
+  "name": "Reading Concierge Coordinator",
+  "description": "Leader coordinator for ACPs-based personalized reading recommendation orchestration.",
+  "version": "1.0.0",
+  "provider": {
+    "organization": "BUPT",
+    "department": "AI School"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for ACPs inter-agent communication"
+    }
+  },
+  "endPoints": [],
+  "capabilities": {
+    "streaming": false,
+    "notification": false,
+    "messageQueue": []
+  },
+  "skills": [
+    {
+      "id": "reading.orchestrate",
+      "name": "reading.orchestrate",
+      "description": "Orchestrate profile/content/ranking agents into unified recommendation flow"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "mtls": {
+    "cert_path": "certs/rec_ranking.crt",
+    "key_path": "certs/rec_ranking.key",
+    "ca_path": "certs/ca.crt"
+  },
+  "acs": {
+    "aic": "rec_ranking_agent_001",
+    "skills": ["ranking.svd", "ranking.multifactor", "explanation.llm"],
+    "endpoint": "https://localhost:8213/rec-ranking/rpc"
+  },
+  "environment": {
+    "REC_RANKING_AGENT_ENDPOINT": "/rec-ranking/rpc",
+    "REC_RANKING_MODEL": "qwen-plus",
+    "REC_RANKING_TOP_K": "5",
+    "REC_RANKING_NOVELTY_THRESHOLD": "0.45"
+  }
+}

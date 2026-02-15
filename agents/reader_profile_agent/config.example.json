@@ -1,0 +1,17 @@
+{
+  "mtls": {
+    "cert_path": "certs/reader_profile.crt",
+    "key_path": "certs/reader_profile.key",
+    "ca_path": "certs/ca.crt"
+  },
+  "acs": {
+    "aic": "reader_profile_agent_001",
+    "skills": ["profile.extract", "preference.embedding", "sentiment.analysis"],
+    "endpoint": "https://localhost:8211/reader-profile/rpc"
+  },
+  "environment": {
+    "READER_PROFILE_AGENT_ENDPOINT": "/reader-profile/rpc",
+    "READER_PROFILE_DEFAULT_SCENARIO": "warm",
+    "READER_PROFILE_DEFAULT_GENRES": "fiction:0.25,science_fiction:0.2,history:0.15"
+  }
+}
