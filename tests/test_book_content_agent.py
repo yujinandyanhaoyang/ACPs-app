@@ -73,6 +73,7 @@ def test_start_completes_with_valid_books(client_book_content, new_task_id):
     assert len(outputs["content_vectors"]) == 2
     assert "kg_refs" in outputs
     assert "book_tags" in outputs
+    assert "embedding_backend" in outputs
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -148,3 +149,4 @@ def test_book_content_agent_end_to_end_env_and_llm(monkeypatch, client_book_cont
     assert len(outputs["kg_refs"]) >= 1
     diagnostics = structured["diagnostics"]
     assert diagnostics["api_key_present"] is True
+    assert diagnostics["embedding_backend"]["backend"] in {"sentence-transformers", "hash-fallback"}

@@ -83,6 +83,7 @@ def test_start_completes_with_ranked_outputs(client_rec_ranking, new_task_id):
     assert len(outputs["ranking"]) == 2
     assert "metric_snapshot" in outputs
     assert "explanations" in outputs
+    assert outputs["collaborative_backend"]["backend"] == "provided-factors"
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -112,6 +113,8 @@ def test_continue_unblocks_after_missing_input(client_rec_ranking, new_task_id):
     assert _state(cont) == TaskState.Completed.value
     summary = _products(cont)[0]["dataItems"][1]["text"]
     assert "Top recommendation" in summary
+    outputs = _products(cont)[0]["dataItems"][0]["data"]["outputs"]
+    assert outputs["collaborative_backend"]["backend"] in {"sklearn-truncated-svd", "overlap-fallback"}
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -172,4 +175,5 @@ def test_rec_ranking_agent_end_to_end_env_and_llm(monkeypatch, client_rec_rankin
     metrics = outputs["metric_snapshot"]
     assert "avg_novelty" in metrics
     assert "avg_diversity" in metrics
+    assert "collaborative_backend" in outputs
     assert structured["diagnostics"]["api_key_present"] is True

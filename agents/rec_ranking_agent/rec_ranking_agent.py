@@ -14,6 +14,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from base import get_agent_logger, extract_text_from_message, call_openai_chat
+from services.model_backends import estimate_collaborative_scores_with_svd
 from acps_aip.aip_base_model import (
     Message,
     Task,
@@ -212,6 +213,14 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
     user_vector = _flatten_profile_to_vector(profile_vector)
     svd_map = _build_svd_map(payload)
     pool = _candidate_pool(payload)
+    svd_backend_meta: Dict[str, Any] = {"backend": "provided-factors", "n_components": 0}
+    if not svd_map:
+        estimated_scores, svd_backend_meta = estimate_collaborative_scores_with_svd(
+            history=payload.get("history") or [],
+            candidates=pool,
+            n_components=int((payload.get("constraints") or {}).get("svd_components") or 8),
+        )
+        svd_map = estimated_scores
 
     rows: List[Dict[str, Any]] = []
     for idx, candidate in enumerate(pool):
@@ -296,6 +305,7 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
     return selected, {
         "metric_snapshot": metric_snapshot,
         "scoring_weights": scoring_weights,
+        "collaborative_backend": svd_backend_meta,
         "constraints": {
             "top_k": top_k,
             "novelty_threshold": novelty_threshold,
@@ -392,6 +402,7 @@ async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
         "metric_snapshot": meta["metric_snapshot"],
         "scoring_weights": meta["scoring_weights"],
         "constraints": meta["constraints"],
+        "collaborative_backend": meta["collaborative_backend"],
     }
 
     elapsed = (time.perf_counter() - start_ts) * 1000
@@ -404,6 +415,7 @@ async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
         "api_key_present": bool(os.getenv("OPENAI_API_KEY")),
         "model": LLM_MODEL,
         "ranking_version": RANKING_VERSION,
+        "collaborative_backend": meta["collaborative_backend"],
         "latency_ms": round(elapsed, 2),
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }

@@ -3,7 +3,6 @@ import sys
 import json
 import uuid
 import time
-import hashlib
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
@@ -16,6 +15,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from base import get_agent_logger, extract_text_from_message, call_openai_chat
+from services.model_backends import generate_text_embeddings
 from acps_aip.aip_base_model import (
     Message,
     Task,
@@ -95,18 +95,6 @@ def _validate_payload(payload: Dict[str, Any]) -> List[str]:
     if (use_remote_kg or kg_mode == "remote") and not payload.get("kg_endpoint"):
         missing.append("kg_endpoint")
     return missing
-
-
-def _to_float_vector(seed_text: str, dim: int = VECTOR_DIM) -> List[float]:
-    digest = hashlib.sha256(seed_text.encode("utf-8")).digest()
-    values: List[float] = []
-    while len(values) < dim:
-        for b in digest:
-            values.append(round(b / 255.0, 4))
-            if len(values) >= dim:
-                break
-        digest = hashlib.sha256(digest).digest()
-    return values
 
 
 def _build_book_records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -221,27 +209,35 @@ def _extract_kg_refs(payload: Dict[str, Any], books: List[Dict[str, Any]]) -> Li
     return deduped
 
 
-def _vectorize_books(books: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    vectors: List[Dict[str, Any]] = []
+def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
+    seed_texts: List[str] = []
     for book in books:
-        seed_text = " | ".join(
-            [
-                str(book.get("book_id") or ""),
-                str(book.get("title") or ""),
-                str(book.get("description") or ""),
-                ",".join(str(g) for g in (book.get("genres") or [])),
-            ]
+        seed_texts.append(
+            " | ".join(
+                [
+                    str(book.get("book_id") or ""),
+                    str(book.get("title") or ""),
+                    str(book.get("description") or ""),
+                    ",".join(str(g) for g in (book.get("genres") or [])),
+                ]
+            )
         )
+    embeddings, backend = generate_text_embeddings(seed_texts, model_name=LLM_MODEL, fallback_dim=VECTOR_DIM)
+
+    vectors: List[Dict[str, Any]] = []
+    for idx, book in enumerate(books):
+        vector = embeddings[idx] if idx < len(embeddings) else []
         vectors.append(
             {
                 "book_id": book["book_id"],
-                "vector": _to_float_vector(seed_text),
-                "vector_dim": VECTOR_DIM,
+                "vector": vector,
+                "vector_dim": len(vector),
                 "embedding_model": LLM_MODEL,
                 "embedding_version": EMBEDDING_VERSION,
+                "embedding_backend": backend.get("backend"),
             }
         )
-    return vectors
+    return {"content_vectors": vectors, "embedding_backend": backend}
 
 
 async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -288,7 +284,8 @@ async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
     start_ts = time.perf_counter()
     books = _build_book_records(payload)
-    content_vectors = _vectorize_books(books)
+    vectorization_result = _vectorize_books(books)
+    content_vectors = vectorization_result["content_vectors"]
     heuristic_tags = [_heuristic_tags_for_book(book) for book in books]
     llm_enrichment = await _llm_tag_enrichment(books)
     kg_refs = _extract_kg_refs(payload, books)
@@ -302,6 +299,7 @@ async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
             "endpoint": payload.get("kg_endpoint"),
         },
         "llm_enrichment": llm_enrichment,
+        "embedding_backend": vectorization_result["embedding_backend"],
     }
 
     elapsed = (time.perf_counter() - start_ts) * 1000
@@ -314,6 +312,7 @@ async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
         "api_key_present": bool(os.getenv("OPENAI_API_KEY")),
         "model": LLM_MODEL,
         "embedding_version": EMBEDDING_VERSION,
+        "embedding_backend": vectorization_result["embedding_backend"],
         "latency_ms": round(elapsed, 2),
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
