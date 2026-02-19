@@ -1,0 +1,32 @@
+{
+  "generated_at": "2026-02-19T13:42:32Z",
+  "case_count": 8,
+  "winner_method": "traditional_hybrid",
+  "winner_objective_score": 0.71057,
+  "acps_quality": {
+    "precision_at_k": 0.5,
+    "recall_at_k": 0.875,
+    "ndcg_at_k": 0.8188
+  },
+  "acps_efficiency": {
+    "latency_ms_mean": 8569.9303
+  },
+  "acps_reliability": {
+    "strict_mode": {
+      "case_count": 1,
+      "failure_case_count": 1,
+      "failure_rate": 1.0
+    },
+    "fallback_mode": {
+      "case_count": 7,
+      "fallback_observed_case_count": 2,
+      "fallback_observed_rate": 0.2857
+    },
+    "overall": {
+      "remote_attempt_rate": 0.375,
+      "fallback_rate": 0.25,
+      "remote_success_rate": 0.125,
+      "strict_failure_rate": 0.125
+    }
+  }
+}

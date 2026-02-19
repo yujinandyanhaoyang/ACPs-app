@@ -1,0 +1,249 @@
+[
+  {
+    "case_id": "warm_sf",
+    "query": "Recommend sci-fi books with social themes.",
+    "user_profile": {"preferred_language": "en"},
+    "history": [
+      {
+        "title": "Dune",
+        "genres": ["science_fiction", "classic"],
+        "themes": ["politics", "ecology"],
+        "rating": 5,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "b1",
+        "title": "Foundation",
+        "description": "Civilization-scale science fiction.",
+        "genres": ["science_fiction"]
+      },
+      {
+        "book_id": "b2",
+        "title": "Hyperion",
+        "description": "Layered narrative with diverse voices.",
+        "genres": ["science_fiction"]
+      }
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 2,
+      "ground_truth_ids": ["b1"]
+    }
+  },
+  {
+    "case_id": "explore_diverse",
+    "query": "Find novel and diverse books for me.",
+    "user_profile": {"preferred_language": "en"},
+    "history": [
+      {
+        "title": "Sapiens",
+        "genres": ["history"],
+        "themes": ["society"],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "b3",
+        "title": "The Left Hand of Darkness",
+        "description": "Culture and identity in speculative setting.",
+        "genres": ["science_fiction"]
+      },
+      {
+        "book_id": "b4",
+        "title": "Homegoing",
+        "description": "Multigenerational and multicultural narrative.",
+        "genres": ["fiction"]
+      }
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 2,
+      "ground_truth_ids": ["b3", "b4"]
+    }
+  },
+  {
+    "case_id": "cold_start",
+    "query": "I am new and want beginner recommendations.",
+    "user_profile": {},
+    "history": [],
+    "reviews": [],
+    "candidate_ids": ["c1", "c2", "c3"],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 3,
+      "ground_truth_ids": ["c1"]
+    }
+  },
+  {
+    "case_id": "warm_nonfiction",
+    "query": "Recommend practical nonfiction books on technology and business.",
+    "user_profile": {"preferred_language": "en"},
+    "history": [
+      {
+        "title": "The Lean Startup",
+        "genres": ["business", "nonfiction"],
+        "themes": ["innovation", "product"],
+        "rating": 5,
+        "language": "en"
+      },
+      {
+        "title": "Clean Code",
+        "genres": ["technology", "nonfiction"],
+        "themes": ["engineering"],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "b5",
+        "title": "Inspired",
+        "description": "Practical product management and technology leadership.",
+        "genres": ["business", "technology"]
+      },
+      {
+        "book_id": "b6",
+        "title": "Zero to One",
+        "description": "Startup thinking with business strategy.",
+        "genres": ["business"]
+      },
+      {
+        "book_id": "b7",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Engineering systems and reliability patterns.",
+        "genres": ["technology", "nonfiction"]
+      }
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 3,
+      "ground_truth_ids": ["b5", "b7"]
+    }
+  },
+  {
+    "case_id": "explore_cross_domain",
+    "query": "Explore books across history, culture, and speculative fiction.",
+    "user_profile": {"preferred_language": "en"},
+    "history": [
+      {
+        "title": "Sapiens",
+        "genres": ["history", "nonfiction"],
+        "themes": ["society"],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "b8",
+        "title": "Kindred",
+        "description": "Speculative fiction connected to history and identity.",
+        "genres": ["fiction", "history", "science_fiction"]
+      },
+      {
+        "book_id": "b9",
+        "title": "The Silk Roads",
+        "description": "Global history and cross-cultural development.",
+        "genres": ["history", "nonfiction"]
+      },
+      {
+        "book_id": "b10",
+        "title": "Babel",
+        "description": "Language, empire, and culture in speculative context.",
+        "genres": ["fiction", "fantasy"]
+      }
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 3,
+      "ground_truth_ids": ["b8", "b9"]
+    }
+  },
+  {
+    "case_id": "remote_stress_warm",
+    "query": "Recommend data and engineering nonfiction with stable quality.",
+    "user_profile": {"preferred_language": "en"},
+    "history": [
+      {
+        "title": "Designing Data-Intensive Applications",
+        "genres": ["technology", "nonfiction"],
+        "themes": ["systems", "engineering"],
+        "rating": 5,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "rs1",
+        "title": "Accelerate",
+        "description": "Engineering performance and delivery outcomes.",
+        "genres": ["technology", "business"]
+      },
+      {
+        "book_id": "rs2",
+        "title": "The Phoenix Project",
+        "description": "IT operations and systems thinking through narrative.",
+        "genres": ["technology", "fiction"]
+      }
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 2,
+      "ground_truth_ids": ["rs1"],
+      "remote_stress": true
+    }
+  },
+  {
+    "case_id": "remote_stress_cold",
+    "query": "I am new, recommend beginner books on innovation and product thinking.",
+    "user_profile": {},
+    "history": [],
+    "reviews": [],
+    "candidate_ids": ["rsc1", "rsc2", "rsc3"],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 3,
+      "ground_truth_ids": ["rsc1"],
+      "remote_stress": true
+    }
+  },
+  {
+    "case_id": "remote_strict_warm",
+    "query": "Recommend robust software architecture books.",
+    "user_profile": {"preferred_language": "en"},
+    "history": [
+      {
+        "title": "Clean Architecture",
+        "genres": ["technology", "nonfiction"],
+        "themes": ["architecture", "design"],
+        "rating": 5,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "rss1",
+        "title": "Building Microservices",
+        "description": "Service architecture and distributed systems trade-offs.",
+        "genres": ["technology", "nonfiction"]
+      },
+      {
+        "book_id": "rss2",
+        "title": "Software Architecture: The Hard Parts",
+        "description": "Architecture decisions and modern engineering patterns.",
+        "genres": ["technology", "nonfiction"]
+      }
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 2,
+      "ground_truth_ids": ["rss1"],
+      "remote_stress": true,
+      "strict_remote_validation": true
+    }
+  }
+]

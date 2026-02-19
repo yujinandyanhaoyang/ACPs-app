@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^if \\(Test-Path plan\\.md\\) \\{ git mv plan\\.md __plan_tmp__\\.md; git mv __plan_tmp__\\.md PLAN\\.md \\}; git status --short$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

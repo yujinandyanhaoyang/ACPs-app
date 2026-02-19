@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ACPs Reading Recsys Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f6f8fb; color: #1f2937; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 8px; }
+    .sub { color: #4b5563; margin-bottom: 20px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 12px; color: #374151; margin-bottom: 4px; }
+    input, select, textarea, button { width: 100%; box-sizing: border-box; font-size: 14px; }
+    input, select, textarea { border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; background: #fff; }
+    textarea { min-height: 90px; font-family: Consolas, monospace; }
+    button { border: 0; border-radius: 8px; padding: 10px 12px; background: #2563eb; color: #fff; cursor: pointer; }
+    button.secondary { background: #4b5563; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #111827; color: #e5e7eb; padding: 10px; border-radius: 8px; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; font-size: 13px; }
+    .ok { color: #065f46; }
+    .warn { color: #b45309; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ACPs Multi-Agent Reading Recsys Demo</h1>
+    <div class="sub">Use this page to evaluate the current completed system behavior locally.</div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <button id="loadSummary" class="secondary">Load Benchmark Summary</button>
+        </div>
+        <div id="summaryStatus" class="sub"></div>
+      </div>
+      <pre id="summaryBox">(benchmark summary not loaded)</pre>
+    </div>
+
+    <div class="card">
+      <h3>Run Recommendation</h3>
+      <div class="grid">
+        <div>
+          <label>Query</label>
+          <input id="query" value="Recommend science fiction books with social themes." />
+        </div>
+        <div>
+          <label>Scenario</label>
+          <select id="scenario">
+            <option value="warm">warm</option>
+            <option value="cold">cold</option>
+            <option value="explore">explore</option>
+          </select>
+        </div>
+        <div>
+          <label>Top K</label>
+          <input id="topK" type="number" value="3" min="1" />
+        </div>
+        <div>
+          <label>Strict Remote Validation</label>
+          <select id="strictRemoteValidation">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:12px;">
+        <div>
+          <label>User Profile (JSON)</label>
+          <textarea id="userProfile">{"preferred_language":"en"}</textarea>
+        </div>
+        <div>
+          <label>History (JSON Array)</label>
+          <textarea id="history">[{"title":"Dune","genres":["science_fiction"],"rating":5,"language":"en"}]</textarea>
+        </div>
+        <div>
+          <label>Books (JSON Array)</label>
+          <textarea id="books">[{"book_id":"b1","title":"Foundation","description":"Civilization-scale science fiction","genres":["science_fiction"]},{"book_id":"b2","title":"Hyperion","description":"Layered narrative with diverse voices","genres":["science_fiction"]}]</textarea>
+        </div>
+        <div>
+          <label>Ground Truth IDs (JSON Array)</label>
+          <textarea id="groundTruth">["b1"]</textarea>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <button id="runBtn">Run /user_api</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Result Snapshot</h3>
+      <div id="resultState" class="sub">(no request yet)</div>
+      <table>
+        <thead>
+          <tr><th>Rank</th><th>Book</th><th>Score</th><th>Novelty</th></tr>
+        </thead>
+        <tbody id="recRows"><tr><td colspan="4">No recommendations yet.</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Evaluation & Partner Tasks</h3>
+      <pre id="evalBox">(evaluation pending)</pre>
+      <pre id="tasksBox">(partner tasks pending)</pre>
+    </div>
+
+    <div class="card">
+      <h3>Raw Response</h3>
+      <pre id="rawBox">(raw response pending)</pre>
+    </div>
+  </div>
+
+  <script>
+    function parseJsonOrThrow(text, fallbackValue) {
+      const value = (text || '').trim();
+      if (!value) return fallbackValue;
+      return JSON.parse(value);
+    }
+
+    function toPretty(obj) {
+      return JSON.stringify(obj, null, 2);
+    }
+
+    async function loadSummary() {
+      const statusEl = document.getElementById('summaryStatus');
+      const box = document.getElementById('summaryBox');
+      statusEl.textContent = 'Loading benchmark summary...';
+      try {
+        const resp = await fetch('/demo/benchmark-summary');
+        const data = await resp.json();
+        box.textContent = toPretty(data);
+        if (data.available) {
+          statusEl.innerHTML = '<span class="ok">Summary loaded</span>';
+        } else {
+          statusEl.innerHTML = '<span class="warn">Summary not found yet. Run benchmark script first.</span>';
+        }
+      } catch (err) {
+        statusEl.innerHTML = '<span class="warn">Failed to load summary</span>';
+        box.textContent = String(err);
+      }
+    }
+
+    function renderRecommendations(rows) {
+      const tbody = document.getElementById('recRows');
+      if (!Array.isArray(rows) || rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4">No recommendations returned.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${row.rank ?? ''}</td>
+          <td>${row.title ?? row.book_id ?? ''}</td>
+          <td>${row.composite_score ?? ''}</td>
+          <td>${row.novelty_score ?? ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function runRecommendation() {
+      try {
+        const payload = {
+          query: document.getElementById('query').value,
+          user_profile: parseJsonOrThrow(document.getElementById('userProfile').value, {}),
+          history: parseJsonOrThrow(document.getElementById('history').value, []),
+          books: parseJsonOrThrow(document.getElementById('books').value, []),
+          constraints: {
+            scenario: document.getElementById('scenario').value,
+            top_k: Number(document.getElementById('topK').value || 3),
+            strict_remote_validation: document.getElementById('strictRemoteValidation').value === 'true',
+            ground_truth_ids: parseJsonOrThrow(document.getElementById('groundTruth').value, []),
+            ablation: true
+          }
+        };
+
+        const resp = await fetch('/user_api', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+
+        document.getElementById('resultState').innerHTML =
+          `state=<b>${data.state}</b>, scenario=<b>${data.scenario}</b>, recommendations=<b>${(data.recommendations || []).length}</b>`;
+        renderRecommendations(data.recommendations || []);
+        document.getElementById('evalBox').textContent = toPretty(data.evaluation || {});
+        document.getElementById('tasksBox').textContent = toPretty(data.partner_tasks || {});
+        document.getElementById('rawBox').textContent = toPretty(data);
+      } catch (err) {
+        document.getElementById('resultState').innerHTML = '<span class="warn">Request failed</span>';
+        document.getElementById('rawBox').textContent = String(err);
+      }
+    }
+
+    document.getElementById('loadSummary').addEventListener('click', loadSummary);
+    document.getElementById('runBtn').addEventListener('click', runRecommendation);
+  </script>
+</body>
+</html>

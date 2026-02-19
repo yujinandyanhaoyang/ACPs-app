@@ -3,11 +3,13 @@ import sys
 import json
 import uuid
 import asyncio
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -15,6 +17,9 @@ _CURRENT_DIR = os.path.dirname(__file__)
 _PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, os.pardir))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
+
+_DEMO_HTML_PATH = Path(_PROJECT_ROOT) / "web_demo" / "index.html"
+_BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_summary.json"
 
 from base import get_agent_logger
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
@@ -309,9 +314,23 @@ async def _invoke_remote_rpc(
     return response.json()
 
 
+def _mk_failed_rpc_response(reason: str) -> Dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "result": {
+            "status": {
+                "state": "failed",
+                "reason": reason,
+            },
+            "products": [],
+        },
+    }
+
+
 async def _invoke_partner_with_fallback(
     partner_key: str,
     payload: Dict[str, Any],
+    strict_remote_validation: bool = False,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     local = _resolve_local_partner(partner_key)
     remote_url = await _resolve_remote_partner_url(partner_key)
@@ -319,7 +338,13 @@ async def _invoke_partner_with_fallback(
     if PARTNER_MODE in {"auto", "remote"} and remote_url:
         try:
             response = await _invoke_remote_rpc(remote_url, payload)
-            return response, {"route": "remote", "rpc_url": remote_url, "fallback": False}
+            return response, {
+                "route": "remote",
+                "rpc_url": remote_url,
+                "fallback": False,
+                "remote_attempted": True,
+                "route_outcome": "remote_success",
+            }
         except Exception as exc:
             logger.warning(
                 "event=partner_remote_failed partner=%s rpc_url=%s error=%s",
@@ -327,12 +352,44 @@ async def _invoke_partner_with_fallback(
                 remote_url,
                 exc,
             )
+            if strict_remote_validation:
+                return _mk_failed_rpc_response("remote_failure_strict"), {
+                    "route": "remote",
+                    "rpc_url": remote_url,
+                    "fallback": False,
+                    "remote_attempted": True,
+                    "route_outcome": "remote_failed_strict",
+                }
             if PARTNER_MODE == "remote":
                 # In strict remote mode, still provide local fallback as safety per policy requirement.
                 logger.info("event=partner_remote_fallback_local partner=%s", partner_key)
 
+    if strict_remote_validation and PARTNER_MODE in {"auto", "remote"} and not remote_url:
+        return _mk_failed_rpc_response("remote_unavailable_strict"), {
+            "route": "none",
+            "rpc_url": None,
+            "fallback": False,
+            "remote_attempted": False,
+            "route_outcome": "remote_unavailable_strict",
+        }
+
     response = await _invoke_agent_rpc(local["app"], local["endpoint"], payload)
-    return response, {"route": "local", "rpc_url": None, "fallback": bool(remote_url)}
+    if remote_url:
+        return response, {
+            "route": "local",
+            "rpc_url": None,
+            "fallback": True,
+            "remote_attempted": True,
+            "route_outcome": "remote_failed_local_fallback",
+        }
+
+    return response, {
+        "route": "local",
+        "rpc_url": None,
+        "fallback": False,
+        "remote_attempted": False,
+        "route_outcome": "local_only",
+    }
 
 
 def _task_state(rpc_response: Dict[str, Any]) -> str:
@@ -507,6 +564,7 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     partner_results: Dict[str, Any] = {}
     policy = _scenario_policy(req)
     scenario = policy["scenario"]
+    strict_remote_validation = bool(req.constraints.get("strict_remote_validation", False))
 
     profile_payload = {
         "user_profile": policy["profile"]["user_profile"],
@@ -523,8 +581,16 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
         "kg_endpoint": req.constraints.get("kg_endpoint"),
     }
 
-    profile_task = _invoke_partner_with_fallback("profile", profile_payload)
-    content_task = _invoke_partner_with_fallback("content", content_payload)
+    profile_task = _invoke_partner_with_fallback(
+        "profile",
+        profile_payload,
+        strict_remote_validation=strict_remote_validation,
+    )
+    content_task = _invoke_partner_with_fallback(
+        "content",
+        content_payload,
+        strict_remote_validation=strict_remote_validation,
+    )
     (profile_resp, profile_route), (content_resp, content_route) = await asyncio.gather(profile_task, content_task)
 
     profile_state = _task_state(profile_resp)
@@ -566,7 +632,11 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
         "constraints": policy["ranking_constraints"],
         "scoring_weights": policy["ranking_weights"],
     }
-    ranking_resp, ranking_route = await _invoke_partner_with_fallback("ranking", ranking_payload)
+    ranking_resp, ranking_route = await _invoke_partner_with_fallback(
+        "ranking",
+        ranking_payload,
+        strict_remote_validation=strict_remote_validation,
+    )
     ranking_state = _task_state(ranking_resp)
     ranking_data = _extract_structured_result(ranking_resp)
     ranking_ok, ranking_reason = _validate_partner_outputs("ranking", ranking_state, ranking_data)
@@ -584,9 +654,61 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
         "scenario": scenario,
         "ranking_constraints": policy["ranking_constraints"],
         "ranking_weights": policy["ranking_weights"],
+        "strict_remote_validation": strict_remote_validation,
     }
 
     return partner_tasks, partner_results
+
+
+@app.get("/", response_class=HTMLResponse)
+async def demo_root() -> HTMLResponse:
+    if _DEMO_HTML_PATH.exists():
+        return HTMLResponse(_DEMO_HTML_PATH.read_text(encoding="utf-8"))
+    return HTMLResponse("<h3>Demo page not found. Expected: web_demo/index.html</h3>", status_code=404)
+
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_page() -> HTMLResponse:
+    if _DEMO_HTML_PATH.exists():
+        return HTMLResponse(_DEMO_HTML_PATH.read_text(encoding="utf-8"))
+    return HTMLResponse("<h3>Demo page not found. Expected: web_demo/index.html</h3>", status_code=404)
+
+
+@app.get("/demo/benchmark-summary")
+async def demo_benchmark_summary() -> JSONResponse:
+    if not _BENCHMARK_SUMMARY_PATH.exists():
+        return JSONResponse(
+            {
+                "available": False,
+                "message": "Benchmark summary not found. Run scripts/phase4_benchmark_compare.py first.",
+                "expected_path": str(_BENCHMARK_SUMMARY_PATH),
+            }
+        )
+
+    try:
+        payload = json.loads(_BENCHMARK_SUMMARY_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return JSONResponse(
+            {
+                "available": False,
+                "message": "Failed to parse benchmark summary file.",
+                "error": str(exc),
+            },
+            status_code=500,
+        )
+
+    return JSONResponse({"available": True, "summary": payload})
+
+
+@app.get("/demo/status")
+async def demo_status() -> Dict[str, Any]:
+    return {
+        "service": "reading_concierge",
+        "leader_id": LEADER_ID,
+        "partner_mode": PARTNER_MODE,
+        "demo_page_available": _DEMO_HTML_PATH.exists(),
+        "benchmark_summary_available": _BENCHMARK_SUMMARY_PATH.exists(),
+    }
 
 
 @app.post("/user_api")

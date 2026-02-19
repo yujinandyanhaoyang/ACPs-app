@@ -15,6 +15,32 @@ def _print_flow_response(body):
     print(json.dumps(body, ensure_ascii=False, indent=2))
 
 
+def test_demo_page_route_available(client_reading_concierge):
+    resp = client_reading_concierge.get("/demo")
+    assert resp.status_code == 200
+    assert "ACPs Multi-Agent Reading Recsys Demo" in resp.text
+
+
+def test_demo_status_route_available(client_reading_concierge):
+    resp = client_reading_concierge.get("/demo/status")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["service"] == "reading_concierge"
+    assert "demo_page_available" in payload
+    assert "benchmark_summary_available" in payload
+
+
+def test_demo_benchmark_summary_route_available(client_reading_concierge):
+    resp = client_reading_concierge.get("/demo/benchmark-summary")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert "available" in payload
+    if payload["available"]:
+        assert "summary" in payload
+    else:
+        assert "message" in payload
+
+
 @pytest.mark.usefixtures("patch_openai")
 def test_unified_orchestration_flow_completed(client_reading_concierge):
     payload = {
@@ -76,6 +102,8 @@ def test_unified_orchestration_flow_completed(client_reading_concierge):
     assert partner_tasks["reader_profile_agent_001"]["state"] == "completed"
     assert partner_tasks["book_content_agent_001"]["state"] == "completed"
     assert partner_tasks["rec_ranking_agent_001"]["state"] == "completed"
+    assert partner_tasks["reader_profile_agent_001"]["route_outcome"] in {"local_only", "remote_success", "remote_failed_local_fallback"}
+    assert "remote_attempted" in partner_tasks["reader_profile_agent_001"]
     assert partner_tasks["reader_profile_agent_001"]["acceptance"]["passed"] is True
     assert partner_tasks["book_content_agent_001"]["acceptance"]["passed"] is True
     assert partner_tasks["rec_ranking_agent_001"]["acceptance"]["passed"] is True
@@ -199,3 +227,50 @@ def test_remote_discovery_fallback_to_local(monkeypatch, client_reading_concierg
     assert tasks["book_content_agent_001"]["route"] == "local"
     assert tasks["rec_ranking_agent_001"]["route"] == "local"
     assert tasks["reader_profile_agent_001"]["fallback"] is True
+    assert tasks["reader_profile_agent_001"]["remote_attempted"] is True
+    assert tasks["reader_profile_agent_001"]["route_outcome"] == "remote_failed_local_fallback"
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_remote_strict_mode_disables_local_fallback(monkeypatch, client_reading_concierge):
+    monkeypatch.setattr(concierge, "PARTNER_MODE", "auto")
+
+    async def fake_discovery(partner_key: str):
+        return "http://127.0.0.1:9999/unreachable-rpc"
+
+    async def fake_remote_call(rpc_url, payload, task_id=None):
+        raise RuntimeError("simulated remote failure")
+
+    monkeypatch.setattr(concierge, "_discover_partner_endpoint", fake_discovery)
+    monkeypatch.setattr(concierge, "_invoke_remote_rpc", fake_remote_call)
+
+    payload = {
+        "query": "Recommend architecture books with strict remote validation.",
+        "user_profile": {"preferred_language": "en"},
+        "history": [
+            {
+                "title": "Clean Architecture",
+                "genres": ["technology"],
+                "rating": 5,
+                "language": "en",
+            }
+        ],
+        "books": [
+            {
+                "book_id": "strict-1",
+                "title": "Building Microservices",
+                "description": "service architecture and reliability",
+                "genres": ["technology"],
+            }
+        ],
+        "constraints": {"strict_remote_validation": True},
+    }
+    res = _post_user_api(client_reading_concierge, payload)
+
+    assert res["state"] == "needs_input"
+    tasks = res["partner_tasks"]
+    assert tasks["reader_profile_agent_001"]["state"] == "failed"
+    assert tasks["reader_profile_agent_001"]["fallback"] is False
+    assert tasks["reader_profile_agent_001"]["remote_attempted"] is True
+    assert tasks["reader_profile_agent_001"]["route_outcome"] == "remote_failed_strict"
+    assert "rec_ranking_agent_001" not in tasks

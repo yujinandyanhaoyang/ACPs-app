@@ -1,0 +1,1421 @@
+{
+  "generated_at": "2026-02-19T13:42:32Z",
+  "case_count": 8,
+  "methods": [
+    {
+      "method": "acps_multi_agent",
+      "runs": [
+        {
+          "case_id": "warm_sf",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.5,
+            "novelty": 0.45
+          },
+          "latency_ms": 13752.3788,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b2",
+              "title": "b2",
+              "composite_score": 0.515,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.0
+              },
+              "novelty_score": 0.4
+            },
+            {
+              "rank": 2,
+              "book_id": "b1",
+              "title": "b1",
+              "composite_score": 0.365,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 1.0
+              },
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "explore_diverse",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 1.0,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.4,
+            "novelty": 0.4
+          },
+          "latency_ms": 8549.7957,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b4",
+              "title": "b4",
+              "composite_score": 0.525,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.4
+              },
+              "novelty_score": 0.4
+            },
+            {
+              "rank": 2,
+              "book_id": "b3",
+              "title": "b3",
+              "composite_score": 0.275,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 0.4
+              },
+              "novelty_score": 0.4
+            }
+          ]
+        },
+        {
+          "case_id": "cold_start",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.3,
+            "novelty": 0.3
+          },
+          "latency_ms": 9461.7454,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "c1",
+              "title": "c1",
+              "composite_score": 0.61,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.3
+              },
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "c2",
+              "title": "c2",
+              "composite_score": 0.2322,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.1605,
+                "knowledge": 0.2,
+                "diversity": 0.3
+              },
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 3,
+              "book_id": "c3",
+              "title": "c3",
+              "composite_score": 0.16,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 0.3
+              },
+              "novelty_score": 0.3
+            }
+          ]
+        },
+        {
+          "case_id": "warm_nonfiction",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.9197,
+            "diversity": 0.6667,
+            "novelty": 0.4667
+          },
+          "latency_ms": 9153.7146,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b5",
+              "title": "b5",
+              "composite_score": 0.5448,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.5138,
+                "knowledge": 0.2,
+                "diversity": 1.0
+              },
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "b6",
+              "title": "b6",
+              "composite_score": 0.515,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.0
+              },
+              "novelty_score": 0.4
+            },
+            {
+              "rank": 3,
+              "book_id": "b7",
+              "title": "b7",
+              "composite_score": 0.365,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 1.0
+              },
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "explore_cross_domain",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.3333,
+            "novelty": 0.5333
+          },
+          "latency_ms": 10175.1359,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b8",
+              "title": "b8",
+              "composite_score": 0.515,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 1.0
+              },
+              "novelty_score": 0.6000000000000001
+            },
+            {
+              "rank": 2,
+              "book_id": "b9",
+              "title": "b9",
+              "composite_score": 0.365,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.0
+              },
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 3,
+              "book_id": "b10",
+              "title": "b10",
+              "composite_score": 0.3462,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.9247,
+                "knowledge": 0.2,
+                "diversity": 0.0
+              },
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.5,
+            "novelty": 0.5
+          },
+          "latency_ms": 7549.9274,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 1.0,
+          "fallback_rate": 1.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 3,
+          "fallback_count": 3,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rs1",
+              "title": "rs1",
+              "composite_score": 0.615,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.5
+              },
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "rs2",
+              "title": "rs2",
+              "composite_score": 0.265,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 0.5
+              },
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_cold",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.3,
+            "novelty": 0.3
+          },
+          "latency_ms": 9914.082,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 1.0,
+          "fallback_rate": 1.0,
+          "remote_success_rate": 0.0,
+          "task_count": 3,
+          "remote_attempted_count": 3,
+          "fallback_count": 3,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rsc1",
+              "title": "rsc1",
+              "composite_score": 0.61,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.3
+              },
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "rsc3",
+              "title": "rsc3",
+              "composite_score": 0.5768,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.9263,
+                "knowledge": 0.2,
+                "diversity": 0.3
+              },
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 3,
+              "book_id": "rsc2",
+              "title": "rsc2",
+              "composite_score": 0.16,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 0.3
+              },
+              "novelty_score": 0.3
+            }
+          ]
+        },
+        {
+          "case_id": "remote_strict_warm",
+          "state": "needs_input",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.0
+          },
+          "latency_ms": 2.6625,
+          "strict_remote_validation": true,
+          "strict_failure": 1.0,
+          "remote_attempt_rate": 1.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 1.0,
+          "task_count": 2,
+          "remote_attempted_count": 2,
+          "fallback_count": 0,
+          "recommendations": []
+        }
+      ],
+      "summary": {
+        "cases": 8.0,
+        "precision_at_k": 0.5,
+        "recall_at_k": 0.875,
+        "ndcg_at_k": 0.8188,
+        "diversity": 0.375,
+        "novelty": 0.3688,
+        "latency_ms_mean": 8569.9303,
+        "strict_failure_rate": 0.125,
+        "remote_attempt_rate": 0.375,
+        "fallback_rate": 0.25,
+        "remote_success_rate": 0.125,
+        "objective_score": 0.66096,
+        "objective_score_latency_aware": 0.489561
+      }
+    },
+    {
+      "method": "traditional_hybrid",
+      "runs": [
+        {
+          "case_id": "warm_sf",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.2,
+            "novelty": 0.315
+          },
+          "latency_ms": 0.0884,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b2",
+              "title": "Hyperion",
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.14285714285714285,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.375,
+              "novelty_score": 0.33
+            },
+            {
+              "rank": 2,
+              "book_id": "b1",
+              "title": "Foundation",
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.335,
+              "novelty_score": 0.3
+            }
+          ]
+        },
+        {
+          "case_id": "explore_diverse",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 1.0,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.2,
+            "novelty": 0.315
+          },
+          "latency_ms": 0.0369,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b3",
+              "title": "The Left Hand of Darkness",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 0.14285714285714285,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.21,
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "b4",
+              "title": "Homegoing",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 0.14285714285714285,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.2,
+              "novelty_score": 0.33
+            }
+          ]
+        },
+        {
+          "case_id": "cold_start",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.2,
+            "novelty": 0.33
+          },
+          "latency_ms": 0.0361,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "c1",
+              "title": "c1",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.51,
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "c2",
+              "title": "c2",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5,
+              "novelty_score": 0.33
+            },
+            {
+              "rank": 3,
+              "book_id": "c3",
+              "title": "c3",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.49,
+              "novelty_score": 0.36
+            }
+          ]
+        },
+        {
+          "case_id": "warm_nonfiction",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.2,
+            "novelty": 0.33
+          },
+          "latency_ms": 0.0428,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b5",
+              "title": "Inspired",
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.375,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.6412,
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "b7",
+              "title": "Designing Data-Intensive Applications",
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.375,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.6213,
+              "novelty_score": 0.36
+            },
+            {
+              "rank": 3,
+              "book_id": "b6",
+              "title": "Zero to One",
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.325,
+              "novelty_score": 0.33
+            }
+          ]
+        },
+        {
+          "case_id": "explore_cross_domain",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.2,
+            "novelty": 0.33
+          },
+          "latency_ms": 0.0713,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b9",
+              "title": "The Silk Roads",
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.125,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5437,
+              "novelty_score": 0.33
+            },
+            {
+              "rank": 2,
+              "book_id": "b8",
+              "title": "Kindred",
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.25,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.4225,
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 3,
+              "book_id": "b10",
+              "title": "Babel",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 0.25,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.2275,
+              "novelty_score": 0.36
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.2,
+            "novelty": 0.315
+          },
+          "latency_ms": 0.0308,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rs1",
+              "title": "Accelerate",
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.25,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.4225,
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "rs2",
+              "title": "The Phoenix Project",
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.125,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.3688,
+              "novelty_score": 0.33
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_cold",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.2,
+            "novelty": 0.33
+          },
+          "latency_ms": 0.0339,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rsc1",
+              "title": "rsc1",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.51,
+              "novelty_score": 0.3
+            },
+            {
+              "rank": 2,
+              "book_id": "rsc2",
+              "title": "rsc2",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5,
+              "novelty_score": 0.33
+            },
+            {
+              "rank": 3,
+              "book_id": "rsc3",
+              "title": "rsc3",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.49,
+              "novelty_score": 0.36
+            }
+          ]
+        },
+        {
+          "case_id": "remote_strict_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.2,
+            "novelty": 0.315
+          },
+          "latency_ms": 0.0298,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rss2",
+              "title": "Software Architecture: The Hard Parts",
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.4,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.64,
+              "novelty_score": 0.33
+            },
+            {
+              "rank": 2,
+              "book_id": "rss1",
+              "title": "Building Microservices",
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.2,
+                "knowledge": 0.2,
+                "diversity": 0.2
+              },
+              "composite_score": 0.58,
+              "novelty_score": 0.3
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "cases": 8.0,
+        "precision_at_k": 0.5625,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 0.9077,
+        "diversity": 0.2,
+        "novelty": 0.3225,
+        "latency_ms_mean": 0.0462,
+        "strict_failure_rate": 0.0,
+        "remote_attempt_rate": 0.0,
+        "fallback_rate": 0.0,
+        "remote_success_rate": 0.0,
+        "objective_score": 0.71057,
+        "objective_score_latency_aware": 0.710569
+      }
+    },
+    {
+      "method": "multi_agent_proxy",
+      "runs": [
+        {
+          "case_id": "warm_sf",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.45,
+            "novelty": 0.43
+          },
+          "latency_ms": 0.0362,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b2",
+              "title": "Hyperion",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.24285714285714285,
+                "knowledge": 0.25,
+                "diversity": 0.45
+              },
+              "composite_score": 0.3245,
+              "novelty_score": 0.49
+            },
+            {
+              "rank": 2,
+              "book_id": "b1",
+              "title": "Foundation",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.1,
+                "knowledge": 0.25,
+                "diversity": 0.45
+              },
+              "composite_score": 0.2685,
+              "novelty_score": 0.37
+            }
+          ]
+        },
+        {
+          "case_id": "explore_diverse",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 1.0,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.45,
+            "novelty": 0.43
+          },
+          "latency_ms": 0.025,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b4",
+              "title": "Homegoing",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.24285714285714285,
+                "knowledge": 0.25,
+                "diversity": 0.45
+              },
+              "composite_score": 0.3245,
+              "novelty_score": 0.49
+            },
+            {
+              "rank": 2,
+              "book_id": "b3",
+              "title": "The Left Hand of Darkness",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.24285714285714285,
+                "knowledge": 0.25,
+                "diversity": 0.45
+              },
+              "composite_score": 0.3185,
+              "novelty_score": 0.37
+            }
+          ]
+        },
+        {
+          "case_id": "cold_start",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.5,
+            "diversity": 0.2,
+            "novelty": 0.49
+          },
+          "latency_ms": 0.0306,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "c3",
+              "title": "c3",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 1.0,
+                "knowledge": 0.25,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5205,
+              "novelty_score": 0.61
+            },
+            {
+              "rank": 2,
+              "book_id": "c2",
+              "title": "c2",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 1.0,
+                "knowledge": 0.25,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5145,
+              "novelty_score": 0.49
+            },
+            {
+              "rank": 3,
+              "book_id": "c1",
+              "title": "c1",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 1.0,
+                "knowledge": 0.25,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5085,
+              "novelty_score": 0.37
+            }
+          ]
+        },
+        {
+          "case_id": "warm_nonfiction",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.6167,
+            "novelty": 0.49
+          },
+          "latency_ms": 0.0331,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b7",
+              "title": "Designing Data-Intensive Applications",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.475,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.4867,
+              "novelty_score": 0.61
+            },
+            {
+              "rank": 2,
+              "book_id": "b5",
+              "title": "Inspired",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.475,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.4747,
+              "novelty_score": 0.37
+            },
+            {
+              "rank": 3,
+              "book_id": "b6",
+              "title": "Zero to One",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.1,
+                "knowledge": 0.25,
+                "diversity": 0.45
+              },
+              "composite_score": 0.2745,
+              "novelty_score": 0.49
+            }
+          ]
+        },
+        {
+          "case_id": "explore_cross_domain",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.6667,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.9197,
+            "diversity": 0.7833,
+            "novelty": 0.49
+          },
+          "latency_ms": 0.0309,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "b8",
+              "title": "Kindred",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.35,
+                "knowledge": 0.25,
+                "diversity": 0.95
+              },
+              "composite_score": 0.506,
+              "novelty_score": 0.37
+            },
+            {
+              "rank": 2,
+              "book_id": "b10",
+              "title": "Babel",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.35,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.443,
+              "novelty_score": 0.61
+            },
+            {
+              "rank": 3,
+              "book_id": "b9",
+              "title": "The Silk Roads",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.225,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.3933,
+              "novelty_score": 0.49
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.7,
+            "novelty": 0.43
+          },
+          "latency_ms": 0.0222,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rs1",
+              "title": "Accelerate",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.35,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.431,
+              "novelty_score": 0.37
+            },
+            {
+              "rank": 2,
+              "book_id": "rs2",
+              "title": "The Phoenix Project",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.225,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.3933,
+              "novelty_score": 0.49
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_cold",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.5,
+            "diversity": 0.2,
+            "novelty": 0.49
+          },
+          "latency_ms": 0.0373,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rsc3",
+              "title": "rsc3",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 1.0,
+                "knowledge": 0.25,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5205,
+              "novelty_score": 0.61
+            },
+            {
+              "rank": 2,
+              "book_id": "rsc2",
+              "title": "rsc2",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 1.0,
+                "knowledge": 0.25,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5145,
+              "novelty_score": 0.49
+            },
+            {
+              "rank": 3,
+              "book_id": "rsc1",
+              "title": "rsc1",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 1.0,
+                "knowledge": 0.25,
+                "diversity": 0.2
+              },
+              "composite_score": 0.5085,
+              "novelty_score": 0.37
+            }
+          ]
+        },
+        {
+          "case_id": "remote_strict_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.5,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.7,
+            "novelty": 0.43
+          },
+          "latency_ms": 0.0234,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rss2",
+              "title": "Software Architecture: The Hard Parts",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.5,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.4895,
+              "novelty_score": 0.49
+            },
+            {
+              "rank": 2,
+              "book_id": "rss1",
+              "title": "Building Microservices",
+              "score_parts": {
+                "collaborative": 0.2,
+                "semantic": 0.30000000000000004,
+                "knowledge": 0.25,
+                "diversity": 0.7
+              },
+              "composite_score": 0.4135,
+              "novelty_score": 0.37
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "cases": 8.0,
+        "precision_at_k": 0.5625,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 0.7727,
+        "diversity": 0.5125,
+        "novelty": 0.46,
+        "latency_ms_mean": 0.0298,
+        "strict_failure_rate": 0.0,
+        "remote_attempt_rate": 0.0,
+        "fallback_rate": 0.0,
+        "remote_success_rate": 0.0,
+        "objective_score": 0.70832,
+        "objective_score_latency_aware": 0.708319
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "method": "traditional_hybrid",
+      "objective_score": 0.71057,
+      "objective_score_latency_aware": 0.710569,
+      "ndcg_at_k": 0.9077,
+      "precision_at_k": 0.5625,
+      "latency_ms_mean": 0.0462,
+      "strict_failure_rate": 0.0,
+      "remote_attempt_rate": 0.0,
+      "fallback_rate": 0.0,
+      "remote_success_rate": 0.0,
+      "rank": 1
+    },
+    {
+      "method": "multi_agent_proxy",
+      "objective_score": 0.70832,
+      "objective_score_latency_aware": 0.708319,
+      "ndcg_at_k": 0.7727,
+      "precision_at_k": 0.5625,
+      "latency_ms_mean": 0.0298,
+      "strict_failure_rate": 0.0,
+      "remote_attempt_rate": 0.0,
+      "fallback_rate": 0.0,
+      "remote_success_rate": 0.0,
+      "rank": 2
+    },
+    {
+      "method": "acps_multi_agent",
+      "objective_score": 0.66096,
+      "objective_score_latency_aware": 0.489561,
+      "ndcg_at_k": 0.8188,
+      "precision_at_k": 0.5,
+      "latency_ms_mean": 8569.9303,
+      "strict_failure_rate": 0.125,
+      "remote_attempt_rate": 0.375,
+      "fallback_rate": 0.25,
+      "remote_success_rate": 0.125,
+      "rank": 3
+    }
+  ],
+  "winner": {
+    "method": "traditional_hybrid",
+    "objective_score": 0.71057,
+    "objective_score_latency_aware": 0.710569,
+    "ndcg_at_k": 0.9077,
+    "precision_at_k": 0.5625,
+    "latency_ms_mean": 0.0462,
+    "strict_failure_rate": 0.0,
+    "remote_attempt_rate": 0.0,
+    "fallback_rate": 0.0,
+    "remote_success_rate": 0.0,
+    "rank": 1
+  },
+  "reliability_dashboard": {
+    "acps_reliability": {
+      "strict_mode": {
+        "case_count": 1,
+        "failure_case_count": 1,
+        "failure_rate": 1.0
+      },
+      "fallback_mode": {
+        "case_count": 7,
+        "fallback_observed_case_count": 2,
+        "fallback_observed_rate": 0.2857
+      },
+      "overall": {
+        "remote_attempt_rate": 0.375,
+        "fallback_rate": 0.25,
+        "remote_success_rate": 0.125,
+        "strict_failure_rate": 0.125
+      }
+    }
+  }
+}
