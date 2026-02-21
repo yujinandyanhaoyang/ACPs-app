@@ -15,10 +15,54 @@ def _print_flow_response(body):
     print(json.dumps(body, ensure_ascii=False, indent=2))
 
 
+def _demo_payload_with_query(query: str) -> dict:
+    return {
+        "query": query,
+        "user_profile": {"age": 29, "preferred_language": "en"},
+        "history": [
+            {
+                "title": "Dune",
+                "genres": ["science_fiction"],
+                "themes": ["politics", "ecology"],
+                "rating": 5,
+                "language": "en",
+            }
+        ],
+        "reviews": [{"rating": 5, "text": "I enjoy nuanced worldbuilding and ideas."}],
+        "books": [
+            {
+                "book_id": "sci-1",
+                "title": "Foundation",
+                "description": "A science fiction saga about psychohistory and galactic empires.",
+                "genres": ["science_fiction"],
+            },
+            {
+                "book_id": "hist-1",
+                "title": "The Silk Roads",
+                "description": "A global history narrative connecting trade, diplomacy, and empires.",
+                "genres": ["history"],
+            },
+            {
+                "book_id": "soc-1",
+                "title": "Sapiens",
+                "description": "An accessible history of humankind and social evolution.",
+                "genres": ["history", "society"],
+            },
+        ],
+        "constraints": {
+            "scenario": "warm",
+            "top_k": 2,
+            "ground_truth_ids": ["sci-1"],
+            "ablation": True,
+        },
+    }
+
+
 def test_demo_page_route_available(client_reading_concierge):
     resp = client_reading_concierge.get("/demo")
     assert resp.status_code == 200
     assert "ACPs Multi-Agent Reading Recsys Demo" in resp.text
+    assert "Final Recommendation Results (Natural Language)" in resp.text
 
 
 def test_demo_status_route_available(client_reading_concierge):
@@ -97,6 +141,7 @@ def test_unified_orchestration_flow_completed(client_reading_concierge):
 
     assert res["state"] == "completed"
     assert len(res["recommendations"]) >= 1
+    assert any(r.get("title") in {"Foundation", "Hyperion"} for r in res["recommendations"])
 
     partner_tasks = res["partner_tasks"]
     assert partner_tasks["reader_profile_agent_001"]["state"] == "completed"
@@ -274,3 +319,66 @@ def test_remote_strict_mode_disables_local_fallback(monkeypatch, client_reading_
     assert tasks["reader_profile_agent_001"]["remote_attempted"] is True
     assert tasks["reader_profile_agent_001"]["route_outcome"] == "remote_failed_strict"
     assert "rec_ranking_agent_001" not in tasks
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_demo_e2e_different_queries_should_change_recommendation_order(client_reading_concierge):
+    science_query = "Recommend science fiction books focused on future civilizations and technology."
+    history_query = "Recommend history books focused on trade routes and empires."
+
+    sci_res = _post_user_api(client_reading_concierge, _demo_payload_with_query(science_query))
+    hist_res = _post_user_api(client_reading_concierge, _demo_payload_with_query(history_query))
+
+    assert sci_res["state"] == "completed"
+    assert hist_res["state"] == "completed"
+
+    sci_top_ids = [row.get("book_id") for row in (sci_res.get("recommendations") or [])]
+    hist_top_ids = [row.get("book_id") for row in (hist_res.get("recommendations") or [])]
+
+    assert sci_top_ids and hist_top_ids
+    assert sci_top_ids != hist_top_ids
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_demo_e2e_explanations_follow_human_readable_language(client_reading_concierge):
+    res = _post_user_api(
+        client_reading_concierge,
+        _demo_payload_with_query("Recommend science fiction with social and philosophical depth."),
+    )
+
+    assert res["state"] == "completed"
+    explanations = res.get("explanations") or []
+    assert explanations
+
+    for item in explanations:
+        text = str(item.get("justification") or "").strip()
+        assert text
+        assert "_" not in text
+        assert len(text.split()) >= 5
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_demo_e2e_recommendation_output_has_no_logic_inconsistency(client_reading_concierge):
+    res = _post_user_api(
+        client_reading_concierge,
+        _demo_payload_with_query("Recommend books about big historical transitions and societal change."),
+    )
+
+    assert res["state"] == "completed"
+    rows = res.get("recommendations") or []
+    assert rows
+
+    top_k = (_demo_payload_with_query("tmp")["constraints"]["top_k"])
+    assert len(rows) <= top_k
+
+    ranks = [row.get("rank") for row in rows]
+    assert ranks == list(range(1, len(rows) + 1))
+
+    ids = [row.get("book_id") for row in rows]
+    assert all(ids)
+    assert len(ids) == len(set(ids))
+
+    for row in rows:
+        assert row.get("title")
+        assert isinstance(row.get("score_parts"), dict)
+        assert row.get("composite_score") is not None

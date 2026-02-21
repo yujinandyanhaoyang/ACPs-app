@@ -428,3 +428,38 @@
 		4. 消融研究：**retained** (no regression to ablation path).
 		5. 对标测试：**retained** (existing benchmark compare outputs unchanged and consumable).
 		6. 演示系统：**implemented MVP prototype** (interactive local frontend + service endpoints + report linkage).
+
+	## 2026-02-21 (Demo E2E troubleshooting cycle: query variance + language/logic checks)
+	- **Plan**
+		- Add stronger demo E2E cases for `/user_api` to validate:
+			1) whether different queries produce identical results,
+			2) whether recommendation explanations are human-readable,
+			3) whether ranking outputs contain logical inconsistencies.
+		- Enforce workflow: reproduce first, then diagnose root cause, then implement minimal fix.
+	- **Code (tests first)**
+		- Updated `tests/test_reading_concierge.py` with three demo E2E-style tests:
+			- `test_demo_e2e_different_queries_should_change_recommendation_order`
+			- `test_demo_e2e_explanations_follow_human_readable_language`
+			- `test_demo_e2e_recommendation_output_has_no_logic_inconsistency`
+		- Added helper `_demo_payload_with_query(...)` to keep multi-query scenarios consistent and reproducible.
+	- **Test (reproduce issue before fix)**
+		- `venv/Scripts/python.exe -m pytest tests/test_reading_concierge.py -q` → **1 failed, 11 passed**.
+		- Failure confirmed on query-variance case: two different queries returned identical ranking order (`['soc-1', 'sci-1']`).
+	- **Feedback / Root Cause**
+		- Coordinator/ranking flow did not use query text as an explicit ranking signal when a fixed candidate pool was provided.
+		- Result: ranking could remain query-insensitive and appear locked even for semantically distinct user intents.
+	- **Update (fix implementation)**
+		- Updated `reading_concierge/reading_concierge.py`:
+			- pass `query` into ranking payload,
+			- preserve candidate metadata (`description`, `genres`, `topics`) for ranking-time query matching.
+		- Updated `agents/rec_ranking_agent/rec_ranking_agent.py`:
+			- added lexical query-candidate alignment,
+			- blended semantic score with query alignment so query intent meaningfully affects final ordering.
+	- **Code Review + Regression Test**
+		- Static diagnostics (`get_errors`) on changed files: no errors.
+		- `venv/Scripts/python.exe -m pytest tests/test_reading_concierge.py tests/test_rec_ranking_agent.py -q` → **16 passed**.
+	- **Matching Requirements (requested troubleshooting goals)**
+		1. 不同查询结果一致性验证：**completed** (new failing-then-passing variance test).
+		2. 人类语言习惯检查：**completed** (explanation readability assertions added).
+		3. 逻辑错误检查：**completed** (rank continuity/uniqueness/field integrity assertions added).
+		4. 先排查再修复：**completed** (issue reproduced first, then root-cause fix implemented).

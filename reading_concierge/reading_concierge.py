@@ -533,10 +533,15 @@ def _scenario_policy(req: UserRequest) -> Dict[str, Any]:
     }
 
 
-def _build_ranking_candidates(content_outputs: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _build_ranking_candidates(content_outputs: Dict[str, Any], books: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     vectors = content_outputs.get("content_vectors") or []
     tags = content_outputs.get("book_tags") or []
     tags_by_id = {row.get("book_id"): row for row in tags if isinstance(row, dict)}
+    books_by_id = {
+        str(row.get("book_id") or row.get("id") or ""): row
+        for row in (books or [])
+        if isinstance(row, dict)
+    }
 
     candidates: List[Dict[str, Any]] = []
     for row in vectors:
@@ -544,12 +549,17 @@ def _build_ranking_candidates(content_outputs: Dict[str, Any]) -> List[Dict[str,
             continue
         bid = row.get("book_id")
         tag = tags_by_id.get(bid) or {}
+        source_book = books_by_id.get(str(bid)) or {}
+        title = source_book.get("title") or row.get("title") or bid
         diversity_signal = 0.2 + 0.2 * len(tag.get("diversity_indicators") or [])
         novelty_signal = 0.3 + 0.1 * len(tag.get("topics") or [])
         candidates.append(
             {
                 "book_id": bid,
-                "title": bid,
+                "title": title,
+                "description": source_book.get("description") or row.get("description") or "",
+                "genres": source_book.get("genres") or row.get("genres") or [],
+                "topics": tag.get("topics") or [],
                 "vector": row.get("vector") or [],
                 "kg_signal": min(1.0, 0.2 + 0.2 * len(content_outputs.get("kg_refs") or [])),
                 "novelty_score": min(1.0, novelty_signal),
@@ -626,8 +636,9 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
 
     content_outputs = content_data.get("outputs") or {}
     ranking_payload = {
+        "query": req.query,
         "profile_vector": profile_data.get("preference_vector") or {},
-        "candidates": _build_ranking_candidates(content_outputs),
+        "candidates": _build_ranking_candidates(content_outputs, books),
         "history": policy["profile"]["history"],
         "constraints": policy["ranking_constraints"],
         "scoring_weights": policy["ranking_weights"],

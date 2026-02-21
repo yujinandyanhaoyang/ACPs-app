@@ -103,6 +103,11 @@
     </div>
 
     <div class="card">
+      <h3>Final Recommendation Results (Natural Language)</h3>
+      <div id="finalNarrative" class="sub">(no recommendation narrative yet)</div>
+    </div>
+
+    <div class="card">
       <h3>Evaluation & Partner Tasks</h3>
       <pre id="evalBox">(evaluation pending)</pre>
       <pre id="tasksBox">(partner tasks pending)</pre>
@@ -160,6 +165,32 @@
       `).join('');
     }
 
+    function renderFinalNarrative(recommendations, explanations) {
+      const box = document.getElementById('finalNarrative');
+      if (!Array.isArray(recommendations) || recommendations.length === 0) {
+        box.innerHTML = '<span class="warn">No recommendation results returned for this query.</span>';
+        return;
+      }
+
+      const explainById = {};
+      if (Array.isArray(explanations)) {
+        for (const item of explanations) {
+          if (!item || typeof item !== 'object') continue;
+          const key = item.book_id;
+          if (!key) continue;
+          explainById[key] = item.justification || (item.bullet_summary || []).join(' | ') || '';
+        }
+      }
+
+      const lines = recommendations.map((row, idx) => {
+        const title = row.title || row.book_id || `Book ${idx + 1}`;
+        const reason = explainById[row.book_id] || 'This book matches your query and profile based on collaborative, semantic, and diversity signals.';
+        return `<p><b>${idx + 1}. ${title}</b><br/>${reason}</p>`;
+      });
+
+      box.innerHTML = lines.join('');
+    }
+
     async function runRecommendation() {
       try {
         const payload = {
@@ -186,11 +217,13 @@
         document.getElementById('resultState').innerHTML =
           `state=<b>${data.state}</b>, scenario=<b>${data.scenario}</b>, recommendations=<b>${(data.recommendations || []).length}</b>`;
         renderRecommendations(data.recommendations || []);
+        renderFinalNarrative(data.recommendations || [], data.explanations || []);
         document.getElementById('evalBox').textContent = toPretty(data.evaluation || {});
         document.getElementById('tasksBox').textContent = toPretty(data.partner_tasks || {});
         document.getElementById('rawBox').textContent = toPretty(data);
       } catch (err) {
         document.getElementById('resultState').innerHTML = '<span class="warn">Request failed</span>';
+        document.getElementById('finalNarrative').innerHTML = '<span class="warn">Recommendation generation failed.</span>';
         document.getElementById('rawBox').textContent = String(err);
       }
     }

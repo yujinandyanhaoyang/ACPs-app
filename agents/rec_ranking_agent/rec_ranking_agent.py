@@ -3,6 +3,7 @@ import sys
 import json
 import uuid
 import time
+import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import FastAPI
@@ -127,6 +128,32 @@ def _vector_similarity(candidate_vector: List[float], target_vector: List[float]
     return max(0.0, min(1.0, dot / (cand_norm * target_norm)))
 
 
+def _tokenize_text(value: Any) -> List[str]:
+    text = str(value or "").lower()
+    return [tok for tok in re.findall(r"[a-z0-9]+", text) if len(tok) >= 3]
+
+
+def _query_candidate_alignment(query: str, candidate: Dict[str, Any]) -> float:
+    query_tokens = set(_tokenize_text(query))
+    if not query_tokens:
+        return 0.0
+
+    candidate_text = " ".join(
+        [
+            str(candidate.get("title") or ""),
+            str(candidate.get("description") or ""),
+            " ".join(str(g) for g in (candidate.get("genres") or [])),
+            " ".join(str(t) for t in (candidate.get("topics") or [])),
+        ]
+    )
+    candidate_tokens = set(_tokenize_text(candidate_text))
+    if not candidate_tokens:
+        return 0.0
+
+    overlap = len(query_tokens & candidate_tokens)
+    return round(max(0.0, min(1.0, overlap / max(len(query_tokens), 1))), 4)
+
+
 def _flatten_profile_to_vector(profile_vector: Dict[str, Any], size: int = 12) -> List[float]:
     packed: List[float] = []
     for key in ["genres", "themes", "formats", "languages", "tones", "difficulty", "pacing"]:
@@ -211,6 +238,7 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
     min_new_items = int(constraints.get("min_new_items") or payload.get("min_new_items") or 0)
 
     user_vector = _flatten_profile_to_vector(profile_vector)
+    query_text = str(payload.get("query") or payload.get("query_text") or "")
     svd_map = _build_svd_map(payload)
     pool = _candidate_pool(payload)
     svd_backend_meta: Dict[str, Any] = {"backend": "provided-factors", "n_components": 0}
@@ -229,6 +257,9 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
         if not isinstance(candidate_vector, list):
             candidate_vector = []
         semantic = _vector_similarity([_safe_float(v) for v in candidate_vector], user_vector)
+        query_alignment = _query_candidate_alignment(query_text, candidate)
+        if query_text.strip():
+            semantic = round(semantic * 0.35 + query_alignment * 0.65, 4)
 
         collaborative = svd_map.get(cid)
         if collaborative is None:
