@@ -4,7 +4,6 @@ from __future__ import annotations
 import logging
 import os
 import json
-import inspect
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Iterable, Any
 
@@ -12,6 +11,19 @@ try:  # Optional dependency available at runtime in agents
     import openai  # type: ignore
 except Exception:  # pragma: no cover - keep base utils import-safe
     openai = None  # type: ignore
+
+_async_client: Any = None
+
+
+def _get_async_openai_client() -> Any:
+    """Lazily create and cache a single AsyncOpenAI client instance."""
+    global _async_client
+    if _async_client is None and openai is not None:
+        _async_client = openai.AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_BASE_URL"),
+        )
+    return _async_client
 
 # Beijing timezone (UTC+8)
 BEIJING_TZ = timezone(timedelta(hours=8))
@@ -109,12 +121,13 @@ async def call_openai_chat(
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> str:
-    """Call OpenAI-compatible chat completion API.
+    """Call OpenAI-compatible chat completion API using the async client.
 
-    - Works with sync or async clients (awaitable detection).
-    - Gracefully degrades when some parameters aren't supported (for test stubs).
+    Uses AsyncOpenAI so that ``await`` truly yields control back to the
+    event loop, enabling real parallelism inside ``asyncio.gather()``.
     """
-    if openai is None:  # pragma: no cover
+    client = _get_async_openai_client()
+    if client is None:  # pragma: no cover
         return ""
     kwargs: dict = {"messages": messages, "model": model}
     if temperature is not None:
@@ -122,12 +135,10 @@ async def call_openai_chat(
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
     try:
-        chat_completion = openai.chat.completions.create(**kwargs)
+        chat_completion = await client.chat.completions.create(**kwargs)
     except TypeError:
-        chat_completion = openai.chat.completions.create(
+        chat_completion = await client.chat.completions.create(
             messages=messages,
             model=model,
         )
-    if inspect.isawaitable(chat_completion):
-        chat_completion = await chat_completion  # type: ignore
     return getattr(chat_completion.choices[0].message, "content", "") or ""

@@ -3,6 +3,10 @@
         "/^if \\(Test-Path plan\\.md\\) \\{ git mv plan\\.md __plan_tmp__\\.md; git mv __plan_tmp__\\.md PLAN\\.md \\}; git status --short$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^venv\\\\Scripts\\\\python\\.exe scripts\\\\build_books_min_dataset\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

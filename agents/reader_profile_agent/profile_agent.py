@@ -246,7 +246,14 @@ def _collect_review_corpus(reviews: List[Dict[str, Any]]) -> str:
 def _heuristic_keywords(payload: Dict[str, Any]) -> List[str]:
     history = payload.get("history") or []
     reviews = payload.get("reviews") or []
+    query = (payload.get("query") or "").strip()
     pool: List[str] = []
+    # Prioritise tokens extracted from the user query
+    if query:
+        for token in query.lower().split():
+            cleaned = token.strip(",.!?\"')")
+            if len(cleaned) >= 3:
+                pool.append(cleaned)
     for entry in history:
         pool.extend(entry.get("genres") or [])
         pool.extend(entry.get("themes") or [])
@@ -307,6 +314,7 @@ async def _generate_intent_keywords(payload: Dict[str, Any]) -> Dict[str, Any]:
         }
     history = payload.get("history") or []
     reviews = payload.get("reviews") or []
+    query = (payload.get("query") or "").strip()
     history_lines = []
     for entry in history[:5]:
         title = entry.get("title") or "unknown"
@@ -314,9 +322,11 @@ async def _generate_intent_keywords(payload: Dict[str, Any]) -> Dict[str, Any]:
         themes = ", ".join(entry.get("themes") or [])
         rating = entry.get("rating", "?")
         history_lines.append(f"{title} | genres={genres or 'n/a'} | themes={themes or 'n/a'} | rating={rating}")
+    query_line = f"Current user query: {query}\n" if query else ""
     prompt = (
         "You are an assistant that extracts latent reading intents and topical keywords. "
         "Return JSON with keys 'keywords' (list of <=5 lowercase strings) and 'intent_summary' (string).\n"
+        f"{query_line}"
         f"History samples:\n{os.linesep.join(history_lines) or 'none'}\n"
         f"Recent reviews:\n{_collect_review_corpus(reviews) or 'none'}"
     )

@@ -15,7 +15,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from base import get_agent_logger, extract_text_from_message, call_openai_chat
-from services.model_backends import generate_text_embeddings
+from services.model_backends import generate_text_embeddings_async
 from acps_aip.aip_base_model import (
     Message,
     Task,
@@ -129,7 +129,7 @@ def _build_book_records(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return books
 
 
-def _heuristic_tags_for_book(book: Dict[str, Any]) -> Dict[str, Any]:
+def _heuristic_tags_for_book(book: Dict[str, Any], query: str = "") -> Dict[str, Any]:
     description = str(book.get("description") or "").lower()
     genres = [str(g).lower().strip() for g in (book.get("genres") or []) if str(g).strip()]
     review_snippets = " ".join(
@@ -143,6 +143,18 @@ def _heuristic_tags_for_book(book: Dict[str, Any]) -> Dict[str, Any]:
     for token in ["history", "romance", "science", "fantasy", "business", "technology", "mystery"]:
         if token in corpus:
             topic_counts[token] += 1
+
+    # --- Phase 3b: query-weighted tag boosting ---
+    if query:
+        query_tokens = {tok.strip().lower() for tok in query.split() if len(tok.strip()) >= 3}
+        # Boost existing topics that overlap with the query
+        for tok in query_tokens:
+            for topic in list(topic_counts):
+                if tok in topic or topic in tok:
+                    topic_counts[topic] += 2
+            # Promote query tokens found in the book corpus as new topics
+            if tok in corpus and tok not in topic_counts:
+                topic_counts[tok] += 2
 
     style = "narrative"
     if any(token in corpus for token in ["guide", "practical", "playbook", "manual"]):
@@ -209,7 +221,7 @@ def _extract_kg_refs(payload: Dict[str, Any], books: List[Dict[str, Any]]) -> Li
     return deduped
 
 
-def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
+async def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
     seed_texts: List[str] = []
     for book in books:
         seed_texts.append(
@@ -222,7 +234,9 @@ def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
                 ]
             )
         )
-    embeddings, backend = generate_text_embeddings(seed_texts, model_name=LLM_MODEL, fallback_dim=VECTOR_DIM)
+    embeddings, backend = await generate_text_embeddings_async(
+        seed_texts, model_name=LLM_MODEL, fallback_dim=VECTOR_DIM
+    )
 
     vectors: List[Dict[str, Any]] = []
     for idx, book in enumerate(books):
@@ -284,9 +298,10 @@ async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
     start_ts = time.perf_counter()
     books = _build_book_records(payload)
-    vectorization_result = _vectorize_books(books)
+    vectorization_result = await _vectorize_books(books)
     content_vectors = vectorization_result["content_vectors"]
-    heuristic_tags = [_heuristic_tags_for_book(book) for book in books]
+    query = (payload.get("query") or "").strip()
+    heuristic_tags = [_heuristic_tags_for_book(book, query=query) for book in books]
     llm_enrichment = await _llm_tag_enrichment(books)
     kg_refs = _extract_kg_refs(payload, books)
 

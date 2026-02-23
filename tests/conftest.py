@@ -55,28 +55,54 @@ class DummyCompletion:
 
 @pytest.fixture(autouse=True)
 def patch_openai(monkeypatch):
-    """Auto patch openai.chat.completions.create so tests run offline.
+    """Auto patch the OpenAI async client so tests run offline.
 
-    We produce different JSON to trigger accept / reject / failure branches.
+    Replaces ``base._get_async_openai_client`` with a lightweight fake that
+    returns deterministic ``DummyCompletion`` objects.
+
     Input cues:
       - contains keyword REJECT -> decision=reject with reason.
       - contains keyword BADJSON -> return malformed JSON to test error handling.
       - otherwise decision=accept with simple plan.
     """
-    import openai
+    import base as base_module
 
-    def fake_create(messages, model, **kwargs):  # noqa: D401
+    async def fake_create(*, messages, model, **kwargs):
         user_content = messages[-1]["content"].lower()
+        if '"book_ids"' in user_content or "book_ids" in user_content:
+            return DummyCompletion('{"book_ids":["b1","b2","b3"]}')
         if "badjson" in user_content:
             return DummyCompletion("not a json string")
         if "reject" in user_content:
             return DummyCompletion('{"decision":"reject","reason":"测试拒绝分支"}')
-        # accept
         return DummyCompletion(
             '{"decision":"accept","plan":"示例规划输出 plan for model %s"}' % model
         )
 
-    monkeypatch.setattr(openai.chat.completions, "create", fake_create)
+    async def fake_dashscope_embeddings(texts, model_name, base_url, api_key):
+        vectors = []
+        for idx, _ in enumerate(texts):
+            vectors.append([round(0.1 * (idx + 1), 4), 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8])
+        return vectors, {"backend": "dashscope", "model": model_name, "vector_dim": 8}
+
+    class _FakeCompletions:
+        create = staticmethod(fake_create)
+
+    class _FakeChat:
+        completions = _FakeCompletions()
+
+    class _FakeAsyncClient:
+        chat = _FakeChat()
+
+    monkeypatch.setattr(base_module, "_get_async_openai_client", lambda: _FakeAsyncClient())
+
+    import services.model_backends as model_backends_module
+
+    monkeypatch.setattr(
+        model_backends_module,
+        "_resolve_dashscope_embeddings",
+        fake_dashscope_embeddings,
+    )
 
 
 @pytest.fixture(scope="session")

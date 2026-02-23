@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import os
+import re
 from typing import Any, Dict, List, Sequence
+
+from base import call_openai_chat
+from services.book_retrieval import load_books, retrieve_books_by_query
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -37,6 +44,110 @@ def _normalize_books(case_payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return normalized
 
 
+def _safe_json_loads(raw: str) -> Dict[str, Any]:
+    text = (raw or "").strip()
+    if not text:
+        return {}
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.DOTALL)
+    if fenced:
+        text = fenced.group(1)
+    try:
+        obj = json.loads(text)
+        return obj if isinstance(obj, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_k: int) -> List[str]:
+    if not query.strip() or not candidates or not os.getenv("OPENAI_API_KEY"):
+        return []
+    model = os.getenv("OPENAI_MODEL", "qwen-plus")
+    rows = []
+    for book in candidates[:40]:
+        rows.append(
+            {
+                "book_id": book.get("book_id"),
+                "title": book.get("title"),
+                "author": book.get("author"),
+                "genres": book.get("genres") or [],
+                "description": str(book.get("description") or "")[:180],
+            }
+        )
+    prompt = (
+        "Select the best matching books for the user query from the provided candidates. "
+        "Return strict JSON only: {\"book_ids\": [\"...\"]}.\n"
+        f"query: {query}\n"
+        f"top_k: {max(1, top_k)}\n"
+        f"candidates: {json.dumps(rows, ensure_ascii=False)}"
+    )
+    try:
+        asyncio.get_running_loop()
+        return []
+    except RuntimeError:
+        raw = asyncio.run(
+            call_openai_chat(
+                [
+                    {"role": "system", "content": "You select candidate book IDs for retrieval."},
+                    {"role": "user", "content": prompt},
+                ],
+                model=model,
+                temperature=0.1,
+                max_tokens=256,
+            )
+        )
+    if not isinstance(raw, str):
+        return []
+    payload = _safe_json_loads(raw)
+    ids = payload.get("book_ids")
+    if not isinstance(ids, list):
+        return []
+    cleaned: List[str] = []
+    seen: set[str] = set()
+    for value in ids:
+        item = str(value or "").strip()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        cleaned.append(item)
+        if len(cleaned) >= max(1, top_k):
+            break
+    return cleaned
+
+
+def _retrieve_baseline_candidate_pool(case_payload: Dict[str, Any], top_k: int) -> List[Dict[str, Any]]:
+    query = str(case_payload.get("query") or "")
+    has_explicit_candidate_ids = bool(case_payload.get("candidate_ids")) and not bool(case_payload.get("books"))
+    if has_explicit_candidate_ids:
+        lexical_candidates = _normalize_books(case_payload)
+    else:
+        dataset_books = load_books()
+        lexical_candidates = retrieve_books_by_query(
+            query,
+            books=dataset_books,
+            top_k=max(top_k * 3, 12),
+        )
+    if not lexical_candidates:
+        lexical_candidates = _normalize_books(case_payload)
+
+    llm_ids = _llm_select_book_ids_sync(query, lexical_candidates, top_k=max(1, top_k))
+    if not llm_ids:
+        return lexical_candidates[: max(1, top_k)]
+
+    by_id = {str(book.get("book_id") or ""): book for book in lexical_candidates}
+    selected = [by_id[bid] for bid in llm_ids if bid in by_id]
+    if len(selected) < max(1, top_k):
+        seen = {str(book.get("book_id") or "") for book in selected}
+        for candidate in lexical_candidates:
+            cid = str(candidate.get("book_id") or "")
+            if cid in seen:
+                continue
+            selected.append(candidate)
+            seen.add(cid)
+            if len(selected) >= max(1, top_k):
+                break
+    return selected[: max(1, top_k)]
+
+
 def _history_genres(case_payload: Dict[str, Any]) -> set[str]:
     genres: set[str] = set()
     for row in case_payload.get("history") or []:
@@ -68,7 +179,9 @@ def _book_tokens(book: Dict[str, Any]) -> set[str]:
 
 
 def traditional_hybrid_rank(case_payload: Dict[str, Any], top_k: int = 5) -> List[Dict[str, Any]]:
-    books = _normalize_books(case_payload)
+    books = _retrieve_baseline_candidate_pool(case_payload, top_k=max(1, top_k))
+    if not books:
+        books = _normalize_books(case_payload)
     history_genres = _history_genres(case_payload)
     query_tokens = _query_tokens(case_payload)
 

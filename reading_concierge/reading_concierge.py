@@ -3,6 +3,8 @@ import sys
 import json
 import uuid
 import asyncio
+import re
+from collections import OrderedDict
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -21,8 +23,9 @@ if _PROJECT_ROOT not in sys.path:
 _DEMO_HTML_PATH = Path(_PROJECT_ROOT) / "web_demo" / "index.html"
 _BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_summary.json"
 
-from base import get_agent_logger
+from base import get_agent_logger, call_openai_chat
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
+from services.book_retrieval import load_books, retrieve_books_by_query
 from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
 from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
@@ -34,6 +37,9 @@ LOG_LEVEL = os.getenv("READING_CONCIERGE_LOG_LEVEL", "INFO").upper()
 DISCOVERY_BASE_URL = os.getenv("READING_DISCOVERY_BASE_URL")
 REGISTRY_BASE_URL = os.getenv("READING_REGISTRY_BASE_URL")
 PARTNER_MODE = os.getenv("READING_PARTNER_MODE", "auto").lower()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen-plus")
+BOOK_RETRIEVAL_TOP_K = int(os.getenv("BOOK_RETRIEVAL_TOP_K", "8"))
+BOOK_RETRIEVAL_CANDIDATE_POOL = int(os.getenv("BOOK_RETRIEVAL_CANDIDATE_POOL", "30"))
 
 _REMOTE_ENDPOINT_ENV = {
     "profile": "READER_PROFILE_RPC_URL",
@@ -60,7 +66,28 @@ app = FastAPI(
     description="Coordinator that orchestrates profile, content, and ranking agents.",
 )
 
-sessions: Dict[str, Dict[str, Any]] = {}
+MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
+sessions: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+
+
+def _lru_session_get(session_id: str) -> Dict[str, Any]:
+    """Return an existing session (moving it to most-recent) or create a new one.
+
+    When the cache exceeds *MAX_SESSIONS* entries the oldest session is evicted.
+    """
+    if session_id in sessions:
+        sessions.move_to_end(session_id)
+        return sessions[session_id]
+    # Evict oldest if at capacity
+    while len(sessions) >= MAX_SESSIONS:
+        sessions.popitem(last=False)
+    new_session: Dict[str, Any] = {
+        "messages": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "last_partner_results": {},
+    }
+    sessions[session_id] = new_session
+    return new_session
 
 
 class UserRequest(BaseModel):
@@ -411,35 +438,117 @@ def _extract_structured_result(rpc_response: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 
-def _derive_books_from_query(query: str, candidate_ids: List[str]) -> List[Dict[str, Any]]:
+def _try_parse_json(value: str) -> Any:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return json.loads(text)
+    except Exception:
+        pass
+
+    fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE)
+    if fenced:
+        try:
+            return json.loads(fenced.group(1).strip())
+        except Exception:
+            return None
+    return None
+
+
+async def _llm_select_book_ids(query: str, candidate_pool: List[Dict[str, Any]], top_k: int) -> List[str]:
+    if not candidate_pool:
+        return []
+
+    candidate_lines: List[str] = []
+    for row in candidate_pool:
+        bid = str(row.get("book_id") or "")
+        title = str(row.get("title") or "")
+        author = str(row.get("author") or "")
+        genres = ", ".join(str(g) for g in (row.get("genres") or []))
+        desc = str(row.get("description") or "")[:220]
+        candidate_lines.append(
+            f"- book_id={bid}; title={title}; author={author}; genres={genres}; description={desc}"
+        )
+
+    prompt = (
+        "You are a book recommendation selector.\n"
+        f"User query: {query}\n"
+        f"Choose up to {top_k} best-matching book_ids ONLY from the candidate list below.\n"
+        "Return strict JSON object with this schema: "
+        '{"book_ids": ["id1", "id2", ...]} and do not include any extra text.\n\n'
+        "Candidates:\n"
+        + "\n".join(candidate_lines)
+    )
+    messages = [
+        {"role": "system", "content": "Return valid JSON only."},
+        {"role": "user", "content": prompt},
+    ]
+    try:
+        raw = await call_openai_chat(
+            messages,
+            model=OPENAI_MODEL,
+            temperature=0.2,
+            max_tokens=400,
+        )
+    except Exception:
+        return []
+
+    parsed = _try_parse_json(raw)
+    if not isinstance(parsed, dict):
+        return []
+
+    raw_ids = parsed.get("book_ids")
+    if not isinstance(raw_ids, list):
+        return []
+
+    valid_ids = {str(row.get("book_id") or "") for row in candidate_pool}
+    selected: List[str] = []
+    seen: set[str] = set()
+    for item in raw_ids:
+        bid = str(item or "").strip()
+        if not bid or bid not in valid_ids or bid in seen:
+            continue
+        selected.append(bid)
+        seen.add(bid)
+        if len(selected) >= top_k:
+            break
+    return selected
+
+
+async def _derive_books_from_query(query: str, candidate_ids: List[str]) -> List[Dict[str, Any]]:
+    books = load_books()
+    if not books:
+        return []
+
     if candidate_ids:
-        return [
-            {
-                "book_id": cid,
-                "title": cid,
-                "description": f"Auto candidate generated for query: {query[:80]}",
-                "genres": [],
-            }
-            for cid in candidate_ids
-        ]
+        wanted = {str(cid) for cid in candidate_ids if str(cid).strip()}
+        return [row for row in books if str(row.get("book_id") or "") in wanted]
 
     if not query.strip():
         return []
 
-    return [
-        {
-            "book_id": "seed-001",
-            "title": "Seed Book One",
-            "description": f"Seed candidate inferred from query: {query[:80]}",
-            "genres": ["fiction"],
-        },
-        {
-            "book_id": "seed-002",
-            "title": "Seed Book Two",
-            "description": f"Alternative seed candidate inferred from query: {query[:80]}",
-            "genres": ["nonfiction"],
-        },
-    ]
+    lexical = retrieve_books_by_query(
+        query=query,
+        books=books,
+        top_k=max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL),
+    )
+    if not lexical:
+        return []
+
+    candidate_pool = lexical[: max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL)]
+    selected_ids = await _llm_select_book_ids(
+        query=query,
+        candidate_pool=candidate_pool,
+        top_k=BOOK_RETRIEVAL_TOP_K,
+    )
+
+    if not selected_ids:
+        return candidate_pool[:BOOK_RETRIEVAL_TOP_K]
+
+    by_id = {str(row.get("book_id") or ""): row for row in candidate_pool}
+    selected_books = [by_id[bid] for bid in selected_ids if bid in by_id]
+    return selected_books[:BOOK_RETRIEVAL_TOP_K]
 
 
 def _detect_scenario(req: UserRequest) -> str:
@@ -453,24 +562,18 @@ def _detect_scenario(req: UserRequest) -> str:
     return "warm"
 
 
-def _seed_cold_start_history(req: UserRequest) -> List[Dict[str, Any]]:
-    books = req.books or _derive_books_from_query(req.query, req.candidate_ids)
-    if not books:
-        books = [
-            {
-                "book_id": "cold-seed-001",
-                "title": "Cold Start Seed",
-                "genres": ["fiction"],
-            }
-        ]
+async def _seed_cold_start_history(req: UserRequest, books: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    local_books = books if books is not None else (req.books or await _derive_books_from_query(req.query, req.candidate_ids))
+    if not local_books:
+        return []
 
     seeded: List[Dict[str, Any]] = []
     preferred_language = (req.user_profile or {}).get("preferred_language", "unknown")
-    for book in books[:2]:
+    for book in local_books[:2]:
         seeded.append(
             {
                 "title": str(book.get("title") or book.get("book_id") or "seed_book"),
-                "genres": book.get("genres") or ["fiction"],
+                "genres": book.get("genres") or [],
                 "rating": 3,
                 "format": "unknown",
                 "language": preferred_language,
@@ -489,8 +592,7 @@ def _scenario_policy(req: UserRequest) -> Dict[str, Any]:
     if scenario == "cold":
         if not profile_user:
             profile_user = {"segment": "cold_start", "preferred_language": "unknown"}
-        if not profile_history and not profile_reviews:
-            profile_history = _seed_cold_start_history(req)
+    needs_cold_seed = scenario == "cold" and not profile_history and not profile_reviews
 
     ranking_constraints = {
         "top_k": req.constraints.get("top_k", 5),
@@ -528,6 +630,7 @@ def _scenario_policy(req: UserRequest) -> Dict[str, Any]:
             "history": profile_history,
             "reviews": profile_reviews,
         },
+        "needs_cold_seed": needs_cold_seed,
         "ranking_constraints": ranking_constraints,
         "ranking_weights": ranking_weights,
     }
@@ -575,17 +678,22 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     policy = _scenario_policy(req)
     scenario = policy["scenario"]
     strict_remote_validation = bool(req.constraints.get("strict_remote_validation", False))
+    books = req.books or await _derive_books_from_query(req.query, req.candidate_ids)
+
+    if policy.get("needs_cold_seed") and not policy["profile"]["history"]:
+        policy["profile"]["history"] = await _seed_cold_start_history(req, books)
 
     profile_payload = {
         "user_profile": policy["profile"]["user_profile"],
         "history": policy["profile"]["history"],
         "reviews": policy["profile"]["reviews"],
+        "query": req.query,
         "scenario": scenario,
     }
-    books = req.books or _derive_books_from_query(req.query, req.candidate_ids)
     content_payload = {
         "books": books,
         "candidate_ids": req.candidate_ids,
+        "query": req.query,
         "kg_mode": req.constraints.get("kg_mode", "local"),
         "use_remote_kg": req.constraints.get("use_remote_kg", False),
         "kg_endpoint": req.constraints.get("kg_endpoint"),
@@ -725,14 +833,7 @@ async def demo_status() -> Dict[str, Any]:
 @app.post("/user_api")
 async def user_api(req: UserRequest):
     session_id = req.session_id or f"session-{uuid.uuid4()}"
-    session = sessions.setdefault(
-        session_id,
-        {
-            "messages": [],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "last_partner_results": {},
-        },
-    )
+    session = _lru_session_get(session_id)
     session["messages"].append({"role": "user", "content": req.query})
 
     partner_tasks, partner_results = await _orchestrate_reading_flow(req)

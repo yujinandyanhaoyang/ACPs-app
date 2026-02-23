@@ -1,5 +1,6 @@
 import hashlib
 import math
+import os
 from collections import defaultdict
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
@@ -81,6 +82,46 @@ def generate_text_embeddings(
 	fallback_vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in text_list]
 	dim = len(fallback_vectors[0]) if fallback_vectors else 0
 	return fallback_vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
+
+
+async def _resolve_dashscope_embeddings(
+	texts: List[str],
+	model_name: str,
+	base_url: str,
+	api_key: str,
+) -> Tuple[List[List[float]], Dict[str, Any]]:
+	try:
+		import openai  # type: ignore
+		client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+		response = await client.embeddings.create(model=model_name, input=texts)
+		embeddings: List[List[float]] = []
+		for row in response.data or []:
+			vector = getattr(row, "embedding", None)
+			if isinstance(vector, list):
+				embeddings.append([round(_to_float(item), 6) for item in vector])
+		dim = len(embeddings[0]) if embeddings else 0
+		return embeddings, {"backend": "dashscope", "model": model_name, "vector_dim": dim}
+	except Exception:
+		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0}
+
+
+async def generate_text_embeddings_async(
+	texts: Iterable[str],
+	model_name: str,
+	fallback_dim: int = 12,
+) -> Tuple[List[List[float]], Dict[str, Any]]:
+	text_list = [str(text or "") for text in texts]
+	if not text_list:
+		return [], {"backend": "none", "model": None, "vector_dim": 0}
+
+	api_key = os.getenv("OPENAI_API_KEY") or ""
+	base_url = os.getenv("OPENAI_BASE_URL") or ""
+	if api_key and base_url:
+		vectors, meta = await _resolve_dashscope_embeddings(text_list, model_name, base_url, api_key)
+		if vectors:
+			return vectors, meta
+
+	return generate_text_embeddings(text_list, model_name=model_name, fallback_dim=fallback_dim)
 
 
 def _token_features(book: Dict[str, Any]) -> List[str]:

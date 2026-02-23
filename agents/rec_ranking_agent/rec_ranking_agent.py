@@ -15,7 +15,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 from base import get_agent_logger, extract_text_from_message, call_openai_chat
-from services.model_backends import estimate_collaborative_scores_with_svd
+from services.model_backends import estimate_collaborative_scores_with_svd, generate_text_embeddings_async
 from acps_aip.aip_base_model import (
     Message,
     Task,
@@ -32,6 +32,8 @@ AGENT_ID = os.getenv("REC_RANKING_AGENT_ID", "rec_ranking_agent_001")
 AIP_ENDPOINT = os.getenv("REC_RANKING_AGENT_ENDPOINT", "/rec-ranking/rpc")
 LOG_LEVEL = os.getenv("REC_RANKING_AGENT_LOG_LEVEL", "INFO").upper()
 LLM_MODEL = os.getenv("REC_RANKING_MODEL", os.getenv("OPENAI_MODEL", "qwen-plus"))
+EMBED_MODEL = os.getenv("BOOK_CONTENT_EMBED_MODEL", "text-embedding-v3")
+EMBED_VECTOR_DIM = max(8, int(os.getenv("BOOK_CONTENT_VECTOR_DIM", "12")))
 RANKING_VERSION = os.getenv("REC_RANKING_VERSION", "rec_ranking_v1")
 DEFAULT_TOP_K = max(1, int(os.getenv("REC_RANKING_TOP_K", "5")))
 DEFAULT_NOVELTY_THRESHOLD = float(os.getenv("REC_RANKING_NOVELTY_THRESHOLD", "0.45"))
@@ -130,7 +132,7 @@ def _vector_similarity(candidate_vector: List[float], target_vector: List[float]
 
 def _tokenize_text(value: Any) -> List[str]:
     text = str(value or "").lower()
-    return [tok for tok in re.findall(r"[a-z0-9]+", text) if len(tok) >= 3]
+    return [tok for tok in re.findall(r"[\w]+", text, re.UNICODE) if len(tok) >= 2]
 
 
 def _query_candidate_alignment(query: str, candidate: Dict[str, Any]) -> float:
@@ -165,6 +167,55 @@ def _flatten_profile_to_vector(profile_vector: Dict[str, Any], size: int = 12) -
     while len(packed) < size:
         packed.extend(packed)
     return packed[:size]
+
+
+def _profile_to_sentence(profile_vector: Dict[str, Any], query: str) -> str:
+    def _top_keys(section: Any, limit: int = 3) -> List[str]:
+        if not isinstance(section, dict):
+            return []
+        ranked = sorted(section.items(), key=lambda item: _safe_float(item[1]), reverse=True)
+        return [str(key) for key, _ in ranked[:limit] if str(key)]
+
+    parts: List[str] = []
+    genres = _top_keys(profile_vector.get("genres"))
+    themes = _top_keys(profile_vector.get("themes"))
+    tones = _top_keys(profile_vector.get("tones"))
+    pacing = _top_keys(profile_vector.get("pacing"), limit=2)
+    difficulty = _top_keys(profile_vector.get("difficulty"), limit=2)
+    formats = _top_keys(profile_vector.get("formats"), limit=2)
+    languages = _top_keys(profile_vector.get("languages"), limit=2)
+
+    if genres:
+        parts.append(f"genres: {', '.join(genres)}")
+    if themes:
+        parts.append(f"themes: {', '.join(themes)}")
+    if tones:
+        parts.append(f"tones: {', '.join(tones)}")
+    if pacing:
+        parts.append(f"pacing: {', '.join(pacing)}")
+    if difficulty:
+        parts.append(f"difficulty: {', '.join(difficulty)}")
+    if formats:
+        parts.append(f"formats: {', '.join(formats)}")
+    if languages:
+        parts.append(f"languages: {', '.join(languages)}")
+
+    summary = "Reader preferences: " + "; ".join(parts) if parts else "Reader preferences: unknown"
+    if query:
+        summary = f"{summary}. Current query: {query}"
+    return summary
+
+
+async def _profile_to_embedding(profile_vector: Dict[str, Any], query: str) -> Tuple[List[float], Dict[str, Any]]:
+    summary = _profile_to_sentence(profile_vector, query)
+    embeddings, backend = await generate_text_embeddings_async(
+        [summary],
+        model_name=EMBED_MODEL,
+        fallback_dim=EMBED_VECTOR_DIM,
+    )
+    if embeddings:
+        return embeddings[0], backend
+    return _flatten_profile_to_vector(profile_vector, size=EMBED_VECTOR_DIM), {"backend": "fallback"}
 
 
 def _candidate_pool(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -207,6 +258,13 @@ def _normalize_score_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not rows:
         return rows
 
+    if len(rows) < 3:
+        for row in rows:
+            for key in ["collaborative", "semantic", "knowledge", "diversity"]:
+                value = _safe_float(row.get("score_parts", {}).get(key), 0.0)
+                row["score_parts"][key] = round(max(0.0, min(1.0, value)), 4)
+        return rows
+
     for key in ["collaborative", "semantic", "knowledge", "diversity"]:
         values = [_safe_float(r.get("score_parts", {}).get(key), 0.0) for r in rows]
         mn = min(values)
@@ -219,7 +277,7 @@ def _normalize_score_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return rows
 
 
-def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+async def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     profile_vector = payload.get("profile_vector") or {}
     scoring_weights = _normalize_weights(
         {
@@ -237,8 +295,9 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
     )
     min_new_items = int(constraints.get("min_new_items") or payload.get("min_new_items") or 0)
 
-    user_vector = _flatten_profile_to_vector(profile_vector)
     query_text = str(payload.get("query") or payload.get("query_text") or "")
+    profile_summary = _profile_to_sentence(profile_vector, query_text)
+    user_vector, semantic_backend = await _profile_to_embedding(profile_vector, query_text)
     svd_map = _build_svd_map(payload)
     pool = _candidate_pool(payload)
     svd_backend_meta: Dict[str, Any] = {"backend": "provided-factors", "n_components": 0}
@@ -337,6 +396,9 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
         "metric_snapshot": metric_snapshot,
         "scoring_weights": scoring_weights,
         "collaborative_backend": svd_backend_meta,
+        "semantic_backend": semantic_backend,
+        "query": query_text,
+        "profile_summary": profile_summary,
         "constraints": {
             "top_k": top_k,
             "novelty_threshold": novelty_threshold,
@@ -345,8 +407,15 @@ def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dic
     }
 
 
-async def _generate_explanation_for_item(item: Dict[str, Any]) -> Dict[str, Any]:
+async def _generate_explanation_for_item(
+    item: Dict[str, Any],
+    query: str,
+    profile_summary: str,
+) -> Dict[str, Any]:
     parts = item.get("score_parts") or {}
+    raw_candidate = item.get("raw_candidate") or {}
+    description = str(raw_candidate.get("description") or "")[:500]
+    genres = raw_candidate.get("genres") or []
     bullet_summary = [
         f"Composite score: {item.get('composite_score', 0)}",
         f"Semantic alignment: {parts.get('semantic', 0)}",
@@ -359,16 +428,24 @@ async def _generate_explanation_for_item(item: Dict[str, Any]) -> Dict[str, Any]
         return {
             "book_id": item.get("book_id"),
             "bullet_summary": bullet_summary,
-            "justification": "Heuristic explanation generated without external model.",
+            "justification": (
+                f"Matches query '{query}' using available content signals; "
+                f"themes/genres considered: {', '.join(str(g) for g in genres[:3]) or 'n/a'}."
+            ),
             "source": "heuristic",
         }
 
     prompt = (
-        "Create one concise recommendation explanation based on scores. Return plain text only.\n"
+        "Create one concise recommendation explanation based on user intent and scoring signals. "
+        "Return plain text only.\n"
         + json.dumps(
             {
+                "query": query,
+                "profile_summary": profile_summary,
                 "book_id": item.get("book_id"),
                 "title": item.get("title"),
+                "description": description,
+                "genres": genres,
                 "score_parts": parts,
                 "composite_score": item.get("composite_score"),
             },
@@ -402,16 +479,33 @@ async def _generate_explanation_for_item(item: Dict[str, Any]) -> Dict[str, Any]
 
 
 async def _build_explanations(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    query = ""
+    profile_summary = ""
+    if rows:
+        meta = rows[0].get("_explain_meta") or {}
+        query = str(meta.get("query") or "")
+        profile_summary = str(meta.get("profile_summary") or "")
     explanations: List[Dict[str, Any]] = []
     for item in rows:
-        explanations.append(await _generate_explanation_for_item(item))
+        explanations.append(
+            await _generate_explanation_for_item(
+                item,
+                query=query,
+                profile_summary=profile_summary,
+            )
+        )
     return explanations
 
 
 async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
     start_ts = time.perf_counter()
 
-    ranked_rows, meta = _rank_candidates(payload)
+    ranked_rows, meta = await _rank_candidates(payload)
+    for row in ranked_rows:
+        row["_explain_meta"] = {
+            "query": meta.get("query") or "",
+            "profile_summary": meta.get("profile_summary") or "",
+        }
     explanations = await _build_explanations(ranked_rows)
 
     ranked_items = []
@@ -434,6 +528,7 @@ async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
         "scoring_weights": meta["scoring_weights"],
         "constraints": meta["constraints"],
         "collaborative_backend": meta["collaborative_backend"],
+        "semantic_backend": meta.get("semantic_backend"),
     }
 
     elapsed = (time.perf_counter() - start_ts) * 1000

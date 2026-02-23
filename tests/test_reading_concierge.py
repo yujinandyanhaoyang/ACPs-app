@@ -1,7 +1,9 @@
 import json
+import asyncio
 
 import pytest
 import reading_concierge.reading_concierge as concierge
+from services.book_retrieval import load_books
 
 
 def _post_user_api(client, payload):
@@ -180,12 +182,18 @@ def test_orchestration_needs_input_in_warm_mode_when_profile_missing(client_read
 
 @pytest.mark.usefixtures("patch_openai")
 def test_orchestration_cold_start_auto_mode_completes(client_reading_concierge):
+    available_books = load_books()
+    assert len(available_books) >= 2
+
     payload = {
         "query": "Need starter recommendations for reading science and culture.",
         "user_profile": {},
         "history": [],
         "reviews": [],
-        "candidate_ids": ["cold-1", "cold-2"],
+        "candidate_ids": [
+            str(available_books[0].get("book_id")),
+            str(available_books[1].get("book_id")),
+        ],
     }
     res = _post_user_api(client_reading_concierge, payload)
     assert res["scenario"] == "cold"
@@ -382,3 +390,69 @@ def test_demo_e2e_recommendation_output_has_no_logic_inconsistency(client_readin
         assert row.get("title")
         assert isinstance(row.get("score_parts"), dict)
         assert row.get("composite_score") is not None
+
+
+# ---------------------------------------------------------------------------
+# Phase 1c — LRU session eviction (D8)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.usefixtures("patch_openai")
+def test_session_lru_eviction(monkeypatch, client_reading_concierge):
+    """Verify that sessions are evicted when the cap is exceeded."""
+    # Lower the cap so we can trigger eviction cheaply
+    monkeypatch.setattr(concierge, "MAX_SESSIONS", 3)
+    concierge.sessions.clear()
+
+    base_payload = {
+        "query": "test eviction",
+        "user_profile": {"preferred_language": "en"},
+        "history": [{"title": "A", "genres": ["fiction"], "rating": 4, "language": "en"}],
+        "books": [{"book_id": "ev-1", "title": "Evict Book", "description": "d", "genres": ["fiction"]}],
+    }
+
+    # Fill 3 sessions
+    for i in range(3):
+        resp = client_reading_concierge.post(
+            "/user_api", json={**base_payload, "session_id": f"s-{i}"}
+        )
+        assert resp.status_code == 200
+
+    assert len(concierge.sessions) == 3
+    assert "s-0" in concierge.sessions
+
+    # 4th session should evict s-0 (oldest)
+    resp = client_reading_concierge.post(
+        "/user_api", json={**base_payload, "session_id": "s-new"}
+    )
+    assert resp.status_code == 200
+    assert len(concierge.sessions) == 3
+    assert "s-0" not in concierge.sessions
+    assert "s-new" in concierge.sessions
+
+    # Accessing s-1 again should refresh it (move to end), so s-2 becomes oldest
+    resp = client_reading_concierge.post(
+        "/user_api", json={**base_payload, "session_id": "s-1"}
+    )
+    assert resp.status_code == 200
+    assert "s-1" in concierge.sessions
+
+    # Adding another session should now evict s-2 (the oldest)
+    resp = client_reading_concierge.post(
+        "/user_api", json={**base_payload, "session_id": "s-final"}
+    )
+    assert resp.status_code == 200
+    assert "s-2" not in concierge.sessions
+    assert "s-1" in concierge.sessions
+    assert "s-final" in concierge.sessions
+
+    concierge.sessions.clear()
+
+
+def test_derive_books_does_not_fabricate_candidates_when_no_match():
+    rows = asyncio.run(
+        concierge._derive_books_from_query(
+            query="zzzz_unmatched_query_token_987654321",
+            candidate_ids=["not-a-real-book-id"],
+        )
+    )
+    assert rows == []
