@@ -88,3 +88,32 @@ ctx = client.get_book_context("book:gr_2767052")
 signals = client.compute_kg_signal(["book:gr_2767052", "book:gr_3"])
 # {"book:gr_2767052": 0.82, "book:gr_3": 1.0}
 ```
+
+---
+
+## CF Model (Phase P2)
+
+### Build command
+```bash
+venv/Scripts/python.exe scripts/build_cf_model.py --components 50
+```
+
+### Input
+| File | Description |
+|---|---|
+| `data/processed/goodreads/interactions_train.jsonl` | User-book interactions with `user_id`, `book_id`, `rating` |
+
+### Output files
+| File | Description |
+|---|---|
+| `data/processed/cf_item_factors.npy` | Item latent vectors (rows aligned to `cf_book_id_index.json`) |
+| `data/processed/cf_user_factors.npy` | User latent vectors (rows aligned to `cf_user_id_index.json`) |
+| `data/processed/cf_book_id_index.json` | `{book_id: row_index_in_item_factors}` mapping |
+| `data/processed/cf_user_id_index.json` | `{user_id: row_index_in_user_factors}` mapping |
+
+### Runtime loading contract
+- `services.model_backends.load_cf_item_vectors()` loads `cf_item_factors.npy` + `cf_book_id_index.json` on first call and caches `{book_id: latent_vector}` in memory.
+- Optional env overrides:
+	- `CF_ITEM_FACTORS_PATH`
+	- `CF_BOOK_INDEX_PATH`
+- `estimate_collaborative_scores_with_svd()` now uses this pre-factored store first (`backend=pretrained-svd`) and falls back to overlap/SVD only for uncovered candidates (`backend=pretrained-svd+overlap-fallback`).

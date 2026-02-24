@@ -1,8 +1,19 @@
 import hashlib
 import math
 import os
+import json
+import logging
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
+
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_DEFAULT_CF_ITEM_FACTORS_PATH = _PROJECT_ROOT / "data" / "processed" / "cf_item_factors.npy"
+_DEFAULT_CF_BOOK_INDEX_PATH = _PROJECT_ROOT / "data" / "processed" / "cf_book_id_index.json"
+_CF_ITEM_VECTORS_CACHE: Dict[str, List[float]] | None = None
+_DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"
+_LOGGER = logging.getLogger("services.model_backends")
 
 
 def hash_embedding(text: str, dim: int = 12) -> List[float]:
@@ -52,12 +63,65 @@ def _normalize_scores(raw_scores: Dict[str, float]) -> Dict[str, float]:
 	return {key: round((value - minimum) / span, 6) for key, value in raw_scores.items()}
 
 
+def _resolve_cf_artifact_paths() -> Tuple[Path, Path]:
+	item_path = Path(os.getenv("CF_ITEM_FACTORS_PATH") or _DEFAULT_CF_ITEM_FACTORS_PATH)
+	index_path = Path(os.getenv("CF_BOOK_INDEX_PATH") or _DEFAULT_CF_BOOK_INDEX_PATH)
+	return item_path, index_path
+
+
+def load_cf_item_vectors(force_reload: bool = False) -> Dict[str, List[float]]:
+	global _CF_ITEM_VECTORS_CACHE
+	if _CF_ITEM_VECTORS_CACHE is not None and not force_reload:
+		return _CF_ITEM_VECTORS_CACHE
+
+	item_path, index_path = _resolve_cf_artifact_paths()
+	if not item_path.exists() or not index_path.exists():
+		_CF_ITEM_VECTORS_CACHE = {}
+		return _CF_ITEM_VECTORS_CACHE
+
+	try:
+		import numpy as np
+
+		with index_path.open("r", encoding="utf-8") as f:
+			book_to_idx = json.load(f)
+		if not isinstance(book_to_idx, dict):
+			_CF_ITEM_VECTORS_CACHE = {}
+			return _CF_ITEM_VECTORS_CACHE
+
+		item_factors = np.load(item_path, allow_pickle=False)
+		if len(getattr(item_factors, "shape", ())) != 2:
+			_CF_ITEM_VECTORS_CACHE = {}
+			return _CF_ITEM_VECTORS_CACHE
+
+		row_count = int(item_factors.shape[0])
+		vectors: Dict[str, List[float]] = {}
+		for book_id, idx in book_to_idx.items():
+			try:
+				row_idx = int(idx)
+			except (TypeError, ValueError):
+				continue
+			if row_idx < 0 or row_idx >= row_count:
+				continue
+			vectors[str(book_id)] = [round(_to_float(v), 6) for v in item_factors[row_idx].tolist()]
+
+		_CF_ITEM_VECTORS_CACHE = vectors
+		return _CF_ITEM_VECTORS_CACHE
+	except Exception:
+		_CF_ITEM_VECTORS_CACHE = {}
+		return _CF_ITEM_VECTORS_CACHE
+
+
 def _resolve_sentence_transformer(model_name: str):
 	try:
 		from sentence_transformers import SentenceTransformer
 
 		return SentenceTransformer(model_name)
-	except Exception:
+	except Exception as exc:
+		_LOGGER.warning(
+			"event=sentence_transformer_load_failed model=%s fallback=hash-fallback error=%s",
+			model_name,
+			exc,
+		)
 		return None
 
 
@@ -70,14 +134,15 @@ def generate_text_embeddings(
 	if not text_list:
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
 
-	model = _resolve_sentence_transformer(model_name)
+	effective_model = str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
+	model = _resolve_sentence_transformer(effective_model)
 	if model is not None:
 		vectors = model.encode(text_list, normalize_embeddings=True)
 		vectors_as_list: List[List[float]] = []
 		for row in vectors:
 			vectors_as_list.append([round(_to_float(item), 6) for item in row.tolist()])
 		dim = len(vectors_as_list[0]) if vectors_as_list else 0
-		return vectors_as_list, {"backend": "sentence-transformers", "model": model_name, "vector_dim": dim}
+		return vectors_as_list, {"backend": "sentence-transformers", "model": effective_model, "vector_dim": dim}
 
 	fallback_vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in text_list]
 	dim = len(fallback_vectors[0]) if fallback_vectors else 0
@@ -144,38 +209,13 @@ def _book_identifier(book: Dict[str, Any], default_value: str) -> str:
 	return str(book.get("book_id") or book.get("id") or book.get("title") or default_value)
 
 
-def estimate_collaborative_scores_with_svd(
-	history: List[Dict[str, Any]],
-	candidates: List[Dict[str, Any]],
-	n_components: int = 8,
+def _estimate_overlap_raw_scores(
+	history_books: List[Dict[str, Any]],
+	indexed_candidates: List[Dict[str, Any]],
+	n_components: int,
 ) -> Tuple[Dict[str, float], Dict[str, Any]]:
-	if not candidates:
+	if not indexed_candidates:
 		return {}, {"backend": "none", "n_components": 0}
-
-	history_books: List[Dict[str, Any]] = []
-	for index, row in enumerate(history):
-		if not isinstance(row, dict):
-			continue
-		history_books.append(
-			{
-				"book_id": _book_identifier(row, f"history_{index}"),
-				"genres": row.get("genres") or [],
-				"themes": row.get("themes") or [],
-				"difficulty": row.get("difficulty"),
-				"rating": _to_float(row.get("rating"), 3.0),
-			}
-		)
-
-	indexed_candidates: List[Dict[str, Any]] = []
-	for index, row in enumerate(candidates):
-		if not isinstance(row, dict):
-			continue
-		indexed_candidates.append(
-			{
-				**row,
-				"book_id": _book_identifier(row, f"candidate_{index}"),
-			}
-		)
 
 	corpus = history_books + indexed_candidates
 	vocabulary: Dict[str, int] = {}
@@ -188,7 +228,7 @@ def estimate_collaborative_scores_with_svd(
 		fallback_scores: Dict[str, float] = {}
 		for index, candidate in enumerate(indexed_candidates):
 			fallback_scores[candidate["book_id"]] = round(0.5 + (index * 0.01), 6)
-		return _normalize_scores(fallback_scores), {"backend": "overlap-fallback", "n_components": 0}
+		return fallback_scores, {"backend": "overlap-fallback", "n_components": 0}
 
 	matrix: List[List[float]] = []
 	for book in corpus:
@@ -238,9 +278,101 @@ def estimate_collaborative_scores_with_svd(
 		vector = candidate_vectors[index] if index < len(candidate_vectors) else [0.0]
 		raw_scores[candidate["book_id"]] = _cosine_similarity(vector, weighted_user_vector)
 
+	return raw_scores, {
+		"backend": backend,
+		"n_components": used_components,
+	}
+
+
+def estimate_collaborative_scores_with_svd(
+	history: List[Dict[str, Any]],
+	candidates: List[Dict[str, Any]],
+	n_components: int = 8,
+) -> Tuple[Dict[str, float], Dict[str, Any]]:
+	if not candidates:
+		return {}, {"backend": "none", "n_components": 0}
+
+	history_books: List[Dict[str, Any]] = []
+	for index, row in enumerate(history):
+		if not isinstance(row, dict):
+			continue
+		history_books.append(
+			{
+				"book_id": _book_identifier(row, f"history_{index}"),
+				"genres": row.get("genres") or [],
+				"themes": row.get("themes") or [],
+				"difficulty": row.get("difficulty"),
+				"rating": _to_float(row.get("rating"), 3.0),
+			}
+		)
+
+	indexed_candidates: List[Dict[str, Any]] = []
+	for index, row in enumerate(candidates):
+		if not isinstance(row, dict):
+			continue
+		indexed_candidates.append(
+			{
+				**row,
+				"book_id": _book_identifier(row, f"candidate_{index}"),
+			}
+		)
+
+	pretrained_vectors = load_cf_item_vectors()
+	raw_scores: Dict[str, float] = {}
+	covered_candidate_ids: set[str] = set()
+	used_components = 0
+
+	if pretrained_vectors:
+		history_vectors: List[Tuple[List[float], float]] = []
+		for hrow in history_books:
+			vector = pretrained_vectors.get(str(hrow.get("book_id") or ""))
+			if not vector:
+				continue
+			rating = _to_float(hrow.get("rating"), 3.0)
+			history_vectors.append((vector, max(0.1, rating / 5.0)))
+
+		if history_vectors:
+			vector_dim = len(history_vectors[0][0])
+			weighted_user_vector = [0.0] * vector_dim
+			total_weight = 0.0
+			for vector, weight in history_vectors:
+				total_weight += weight
+				for dim_index, value in enumerate(vector[:vector_dim]):
+					weighted_user_vector[dim_index] += _to_float(value) * weight
+			if total_weight > 0:
+				weighted_user_vector = [value / total_weight for value in weighted_user_vector]
+
+			for candidate in indexed_candidates:
+				candidate_id = candidate["book_id"]
+				candidate_vector = pretrained_vectors.get(candidate_id)
+				if not candidate_vector:
+					continue
+				raw_scores[candidate_id] = _cosine_similarity(candidate_vector, weighted_user_vector)
+				covered_candidate_ids.add(candidate_id)
+			used_components = vector_dim
+
+	missing_candidates = [c for c in indexed_candidates if c["book_id"] not in covered_candidate_ids]
+	if missing_candidates:
+		fallback_scores, fallback_meta = _estimate_overlap_raw_scores(history_books, missing_candidates, n_components)
+		raw_scores.update(fallback_scores)
+		if covered_candidate_ids:
+			backend = "pretrained-svd+overlap-fallback"
+		else:
+			backend = str(fallback_meta.get("backend") or "overlap-fallback")
+		used_components = max(used_components, int(fallback_meta.get("n_components") or 0))
+	else:
+		backend = "pretrained-svd" if covered_candidate_ids else "none"
+
+	if not raw_scores:
+		fallback_scores, fallback_meta = _estimate_overlap_raw_scores(history_books, indexed_candidates, n_components)
+		raw_scores = fallback_scores
+		backend = str(fallback_meta.get("backend") or "overlap-fallback")
+		used_components = int(fallback_meta.get("n_components") or 0)
+
 	return _normalize_scores(raw_scores), {
 		"backend": backend,
 		"n_components": used_components,
 		"history_items": len(history_books),
 		"candidate_items": len(indexed_candidates),
+		"pretrained_candidate_coverage": round(len(covered_candidate_ids) / max(1, len(indexed_candidates)), 4),
 	}

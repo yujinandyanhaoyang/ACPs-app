@@ -195,3 +195,46 @@ def build_rpc_payload(
 @pytest.fixture
 def new_task_id():
     return f"task-{uuid.uuid4()}"
+
+
+@pytest.fixture
+def patch_embeddings_384d(monkeypatch):
+    """Patch embedding generation with deterministic 384-d vectors.
+
+    This fixture is opt-in and is used by tests that must exercise vector-size
+    code paths aligned with the offline SentenceTransformer default.
+    """
+
+    async def _fake_generate_text_embeddings_async(texts, model_name, fallback_dim=12):
+        vectors = []
+        text_list = [str(text or "") for text in texts]
+        for idx, text in enumerate(text_list):
+            base = ((len(text) + idx) % 31) / 31.0
+            vector = [round((base + (j % 17) / 17.0) % 1.0, 6) for j in range(384)]
+            vectors.append(vector)
+        return vectors, {
+            "backend": "deterministic-384d",
+            "model": model_name,
+            "vector_dim": 384,
+        }
+
+    import services.model_backends as model_backends_module
+
+    monkeypatch.setattr(
+        model_backends_module,
+        "generate_text_embeddings_async",
+        _fake_generate_text_embeddings_async,
+    )
+
+    if book_content_agent is not None:
+        monkeypatch.setattr(
+            book_content_agent,
+            "generate_text_embeddings_async",
+            _fake_generate_text_embeddings_async,
+        )
+    if rec_ranking_agent is not None:
+        monkeypatch.setattr(
+            rec_ranking_agent,
+            "generate_text_embeddings_async",
+            _fake_generate_text_embeddings_async,
+        )

@@ -26,6 +26,7 @@ _BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_su
 from base import get_agent_logger, call_openai_chat
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
 from services.book_retrieval import load_books, retrieve_books_by_query
+from services.model_backends import load_cf_item_vectors
 from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
 from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
@@ -528,15 +529,31 @@ async def _derive_books_from_query(query: str, candidate_ids: List[str]) -> List
     if not query.strip():
         return []
 
+    pool_target = max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL)
+    retrieval_pool = min(len(books), max(pool_target, pool_target * 4))
+
     lexical = retrieve_books_by_query(
         query=query,
         books=books,
-        top_k=max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL),
+        top_k=retrieval_pool,
     )
     if not lexical:
         return []
 
-    candidate_pool = lexical[: max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL)]
+    cf_vectors = load_cf_item_vectors()
+    if cf_vectors:
+        covered: List[Dict[str, Any]] = []
+        uncovered: List[Dict[str, Any]] = []
+        for row in lexical:
+            bid = str(row.get("book_id") or "")
+            if bid and bid in cf_vectors:
+                covered.append(row)
+            else:
+                uncovered.append(row)
+        candidate_pool = (covered + uncovered)[:pool_target]
+    else:
+        candidate_pool = lexical[:pool_target]
+
     selected_ids = await _llm_select_book_ids(
         query=query,
         candidate_pool=candidate_pool,
@@ -665,7 +682,13 @@ def _build_ranking_candidates(content_outputs: Dict[str, Any], books: List[Dict[
                 "genres": source_book.get("genres") or row.get("genres") or [],
                 "topics": tag.get("topics") or [],
                 "vector": row.get("vector") or [],
-                "kg_signal": min(1.0, float(row.get("kg_signal") or 0.2)),
+                "kg_signal": min(
+                    1.0,
+                    max(
+                        0.0,
+                        float(row["kg_signal"]) if "kg_signal" in row else 0.2,
+                    ),
+                ),
                 "novelty_score": min(1.0, novelty_signal),
                 "diversity_score": min(1.0, diversity_signal),
             }

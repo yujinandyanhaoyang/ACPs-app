@@ -43,7 +43,7 @@ def test_start_missing_required_fields_prompts_for_input(client_rec_ranking, new
     assert any("missing_fields" in (item.get("text") or "") for item in data_items)
 
 
-@pytest.mark.usefixtures("patch_openai")
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
 def test_start_completes_with_ranked_outputs(client_rec_ranking, new_task_id):
     payload = {
         "profile_vector": {
@@ -84,6 +84,7 @@ def test_start_completes_with_ranked_outputs(client_rec_ranking, new_task_id):
     assert "metric_snapshot" in outputs
     assert "explanations" in outputs
     assert outputs["collaborative_backend"]["backend"] == "provided-factors"
+    assert outputs["semantic_backend"]["backend"] == "deterministic-384d"
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -114,7 +115,12 @@ def test_continue_unblocks_after_missing_input(client_rec_ranking, new_task_id):
     summary = _products(cont)[0]["dataItems"][1]["text"]
     assert "Top recommendation" in summary
     outputs = _products(cont)[0]["dataItems"][0]["data"]["outputs"]
-    assert outputs["collaborative_backend"]["backend"] in {"sklearn-truncated-svd", "overlap-fallback"}
+    assert outputs["collaborative_backend"]["backend"] in {
+        "sklearn-truncated-svd",
+        "overlap-fallback",
+        "pretrained-svd",
+        "pretrained-svd+overlap-fallback",
+    }
 
 
 @pytest.mark.usefixtures("patch_openai")

@@ -43,7 +43,7 @@ def test_start_missing_candidates_prompts_for_input(client_book_content, new_tas
     assert any("missing_fields" in (item.get("text") or "") for item in data_items)
 
 
-@pytest.mark.usefixtures("patch_openai")
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
 def test_start_completes_with_valid_books(client_book_content, new_task_id):
     payload = {
         "books": [
@@ -71,6 +71,8 @@ def test_start_completes_with_valid_books(client_book_content, new_task_id):
     assert structured["type"] == "data"
     outputs = structured["data"]["outputs"]
     assert len(outputs["content_vectors"]) == 2
+    assert outputs["content_vectors"][0]["vector_dim"] == 384
+    assert outputs["embedding_backend"]["backend"] == "deterministic-384d"
     assert "kg_refs" in outputs
     assert "book_tags" in outputs
     assert "embedding_backend" in outputs

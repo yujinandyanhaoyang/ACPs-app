@@ -27,30 +27,30 @@
 **Why first**: The `knowledge` scoring dimension in the ranking agent is always near-zero because `_extract_kg_refs()` returns stub URL strings derived from book IDs. Building a real graph is the prerequisite for meaningful knowledge-enhanced ranking and for demonstrating graph RAG as required by PLAN.md.
 
 ### P1a — Define graph schema and build it from the Goodreads dataset
-- [x] Create `scripts/build_knowledge_graph.py`
+- [X] Create `scripts/build_knowledge_graph.py`
   - Load `data/processed/goodreads/books_master.jsonl`
   - Extract three edge types: `author → book`, `publisher → book`, `genre → book`
   - Build a `networkx.Graph` object; also persist as `data/processed/knowledge_graph.json` (node-link format via `networkx.node_link_data`) for caching and reproducibility
   - Also write `data/processed/kg_author_index.json` and `kg_genre_index.json` for O(1) node lookups without loading the full graph
-- [x] Add a `KGSchema` section to `docs/data-spec.md` documenting node types (`book`, `author`, `publisher`, `genre`), edge types, and field contracts
-- [x] Add `networkx` to `requirements.txt`
+- [X] Add a `KGSchema` section to `docs/data-spec.md` documenting node types (`book`, `author`, `publisher`, `genre`), edge types, and field contracts
+- [X] Add `networkx` to `requirements.txt`
 
 ### P1b — Create `services/kg_client.py` (NetworkX local client)
-- [x] Implement `LocalKGClient` using NetworkX:
+- [X] Implement `LocalKGClient` using NetworkX:
   - `load()` — reads `knowledge_graph.json` once; builds an in-memory `networkx.Graph`; cached at module level
   - `get_neighbors(node_id, edge_type=None) -> List[str]` — returns adjacent node IDs, optionally filtered by edge type
   - `get_book_context(book_id) -> Dict[str, List[str]]` — returns `{"authors": [...], "genres": [...], "co_genre_books": [...]}` for a given book node
   - `compute_kg_signal(book_ids: List[str]) -> Dict[str, float]` — for each book, returns a normalized connectivity score with soft floor (pool-minimum connected books score ≥ 0.1; disconnected books score 0.0)
-- [x] Add `tests/test_kg_client.py` with a 5-node fixture graph covering: load, `get_neighbors`, `get_book_context`, `compute_kg_signal` (33 tests, all passing)
+- [X] Add `tests/test_kg_client.py` with a 5-node fixture graph covering: load, `get_neighbors`, `get_book_context`, `compute_kg_signal` (33 tests, all passing)
 
 ### P1c — Integrate `LocalKGClient` into `book_content_agent`
-- [x] Rewrite `_extract_kg_refs()` in `agents/book_content_agent/book_content_agent.py`:
+- [X] Rewrite `_extract_kg_refs()` in `agents/book_content_agent/book_content_agent.py`:
   - Call `LocalKGClient.get_book_context(book_id)` for each input book
   - Return the union of connected node IDs (author nodes + genre nodes)
   - Replace stub URL strings with real graph node identifiers (e.g., `"author:Isaac_Asimov"`, `"genre:science_fiction"`)
-- [x] Update `_analyze_content()` to call `LocalKGClient.compute_kg_signal(book_ids)` and embed the result into each book's `kg_signal` field in each content vector entry
-- [x] Fix `_build_ranking_candidates()` in `reading_concierge/reading_concierge.py`: changed global constant formula to `row.get("kg_signal", 0.2)` so each candidate reads its own per-book signal
-- [x] `kg_signal` now reflects genuine graph connectivity depth (81/81 tests pass, 5 HTTP e2e skipped)
+- [X] Update `_analyze_content()` to call `LocalKGClient.compute_kg_signal(book_ids)` and embed the result into each book's `kg_signal` field in each content vector entry
+- [X] Fix `_build_ranking_candidates()` in `reading_concierge/reading_concierge.py`: changed global constant formula to `row.get("kg_signal", 0.2)` so each candidate reads its own per-book signal
+- [X] `kg_signal` now reflects genuine graph connectivity depth (81/81 tests pass, 5 HTTP e2e skipped)
 
 ---
 
@@ -61,22 +61,30 @@
 **Why second**: The current `estimate_collaborative_scores_with_svd()` builds a term-frequency matrix over genre tokens — this is content-based dimensionality reduction, not collaborative filtering. `interactions_train.jsonl` (72k+ ratings) exists but is never loaded by any agent.
 
 ### P2a — Build a pre-factored user-item matrix
-- [ ] Create `scripts/build_cf_model.py`
+- [X] Create `scripts/build_cf_model.py`
   - Parse `data/processed/goodreads/interactions_train.jsonl`
   - Build a sparse user × book rating matrix (use `scipy.sparse.csr_matrix`)
   - Apply `sklearn.decomposition.TruncatedSVD` (k=50 components)
   - Serialize latent factors: `data/processed/cf_item_factors.npy` (book latent vectors) + `data/processed/cf_user_factors.npy`
   - Also write `data/processed/cf_book_id_index.json` (book_id → matrix column index)
-- [ ] Document the offline build in `docs/data-spec.md` under a "CF Model" section
+- [X] Document the offline build in `docs/data-spec.md` under a "CF Model" section
 
 ### P2b — Load pre-factored item vectors in the ranking agent
-- [ ] In `services/model_backends.py`, add `load_cf_item_vectors() -> Dict[str, List[float]]`:
+- [X] In `services/model_backends.py`, add `load_cf_item_vectors() -> Dict[str, List[float]]`:
   - Reads `cf_item_factors.npy` + `cf_book_id_index.json` at first call; caches result
   - Returns `{book_id: latent_vector}` for all indexed books
-- [ ] Modify `estimate_collaborative_scores_with_svd()` to check the pre-factored store first:
+- [X] Modify `estimate_collaborative_scores_with_svd()` to check the pre-factored store first:
   - If a candidate's `book_id` is in the CF index, use its pre-factored vector for cosine similarity against the user's weighted-history estimate
   - Fall back to the current genre-overlap SVD path only for books not in the index
-- [ ] Add `test_cf_model.py` with: load → lookup known book_id → verify latent vector dimensionality
+- [X] Add `test_cf_model.py` with: load → lookup known book_id → verify latent vector dimensionality
+
+**Implementation notes (2026-02-24):**
+- Generated CF artifacts from current Goodreads train split: 3,356 users, 5,521 books, 160,122 interactions, 50 latent components.
+- Added mixed backend behavior in collaborative scoring:
+  - `pretrained-svd` when all candidates are covered by CF index
+  - `pretrained-svd+overlap-fallback` when only a subset is covered
+  - existing overlap/SVD path retained as fallback when pretrained vectors are unavailable
+- Added tests in `tests/test_cf_model.py` and updated `tests/test_rec_ranking_agent.py` backend assertion to include pretrained backend labels.
 
 **Acceptance criteria**: `collaborative_backend` in ranking output is `"pretrained-svd"` for at least 50% of candidates when the Goodreads dataset is present.
 
