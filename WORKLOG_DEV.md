@@ -6,11 +6,25 @@
 
 **Goal**: Build a multi-agent, ACPs-protocol personalized book recommendation system that produces real, query-faithful book recommendations with traceable agent reasoning (see `PLAN.md` and `CLAUDE.md` for full spec).
 
-**Current state**: Infrastructure/scaffolding complete. The system passes structural and integration tests, but **does not yet perform real recommendation** — book retrieval remains hardcoded stubs (`_derive_books_from_query` returns three fixed placeholder records regardless of user query). All benchmark results produced prior to 2026-02-21 measure hardcoded outputs and are not indicative of recommendation quality.
+**Current state** (as of 2026-02-24): All debug phases are complete. The system performs real end-to-end recommendation — LLM-backed book retrieval from the Goodreads dataset, DashScope / hash-fallback shared embedding space, query-aware profile/content/ranking pipeline, contextual LLM explanations, scenario-based orchestration (cold/warm/explore), and Phase IV baseline benchmarks. All unit and integration tests pass.
 
-**Unsolved issues**: See `PassedWorkBug.md` (defect inventory D1–D12) and `DEBUG_PLAN.md` (6-phase remediation plan). Active fix work is tracked in the dated entries below.
+**Completed checklist:**
+- [x] Phase 1a–c: async OpenAI client, `.gitignore`/`.env.example`, LRU session eviction
+- [x] Phase 2-pre, 2a, 2b: real-book dataset pipeline, LLM retrieval, cold-start fix
+- [x] Phase 3a–b: query propagation to profile/content agents
+- [x] Phase 4a–d: DashScope embedding backend, profile-content vector alignment
+- [x] Phase 5a–c: Unicode tokenizer, enriched explanation prompt, min-pool normalization guard
+- [x] Phase 6a–b: LLM candidate retrieval in baseline rankers, test updates for async/query/embeddings
 
-**Next work item**: `DEBUG_PLAN.md` Phase 2a — rewrite `_derive_books_from_query()` with LLM-backed real book retrieval to fix D1 (hardcoded stubs) and Root Cause A.
+**PLAN.md gap status** (2026-02-24 full audit):
+- Data (一): 3/4 — KG not built
+- Agents (二): 6/10 — KG RAG absent; CF is content-based not user-item; no BERT; hash-fallback degrades semantics
+- Architecture (三): 5/7 — Registry/mTLS stubs; ACS `endPoints` empty
+- Testing (四): 5/7 — Ablation is algebraic not empirical; baselines are heuristic stubs; test split unused
+
+**Active plan**: `NEXT_STEPS.md` (priority to-do list for remaining PLAN.md gaps).
+
+**Stale plan files removed** (2026-02-24): `PassedWorkBug.md`, `DEBUG_PLAN.md`, `PHASE_IV_RND_PLAN.md`, `PHASE_IV_ROUND2_PLAN.md`, `PHASE_IV_ROUND3_PLAN.md`.
 
 ---
 
@@ -96,3 +110,47 @@
   - `DEBUG_PLAN.md`: `[x] Phase 1a`, `[x] Phase 1b`, `[x] Phase 1c`. Phases 2–6 remain open.
 - **Next Step**
   - `DEBUG_PLAN.md` Phase 2a: rewrite `_derive_books_from_query()` with LLM-backed real book retrieval (fixes D1, Root Cause A).
+
+---
+
+## 2026-02-24 (Phases 2–6 inspection complete, checklist fully verified)
+
+- **Inspection**
+  - Systematically reviewed and verified all Phase 2–6 items in `DEBUG_PLAN.md` against source code and tests.
+- **Phase 2**
+  - Real-book pipeline (`load_books`, `retrieve_books_by_query`), LLM-backed `_derive_books_from_query()` (async), cold-start seeding from dataset.
+- **Phase 3**
+  - Query passed to profile/content payloads; intent extraction and tag boosting query-weighted.
+- **Phase 4**
+  - DashScope embedding backend, `BOOK_CONTENT_EMBED_MODEL`, profile-content vector alignment; separate `EMBED_MODEL` / `LLM_MODEL` in book content agent.
+- **Phase 5**
+  - Unicode tokenizer (`re.UNICODE`), enriched explanation prompt (query, author, description, genres, profile summary), min-pool normalization guard (< 3 candidates).
+- **Phase 6**
+  - Baseline rankers use LLM candidate retrieval (`_llm_select_book_ids_sync`); tests updated for async, query fields, embedding mocks.
+- **Checklist Update**
+  - `DEBUG_PLAN.md`: all Phase 2–6 items marked `[x]`.
+- **Sync**
+  - Project Status Summary and checklist synchronization written to this worklog.
+
+---
+
+## 2026-02-24 (Stale-file cleanup + PLAN.md gap audit + new plan creation)
+
+- **Code-level PLAN.md audit performed**
+  - Systematically reviewed all four PLAN.md sections: data tasks, agent implementation, architecture, testing/optimization.
+  - Findings documented in analysis session; summary written to Project Status Summary above.
+- **Stale plan files removed**
+  - `PassedWorkBug.md` — superseded; all defects tracked or resolved.
+  - `DEBUG_PLAN.md` — all phases complete; removed.
+  - `PHASE_IV_RND_PLAN.md`, `PHASE_IV_ROUND2_PLAN.md`, `PHASE_IV_ROUND3_PLAN.md` — Phase IV cycles complete; removed.
+- **New active plan created**
+  - `NEXT_STEPS.md` added to the project root.
+  - Covers all remaining PLAN.md gaps with prioritized, dependency-ordered implementation tasks:
+    - P1 (critical): Knowledge graph construction (NetworkX local + optional Neo4j)
+    - P2 (critical): True user-item collaborative filtering from interaction data
+    - P3 (important): SentenceTransformer offline embedding fallback
+    - P4 (important): ACS `endPoints` population + conformance smoke test
+    - P5 (recommended): Empirical ablation study using held-out test split
+    - P6 (recommended): Principled baseline reimplementation + MACRec-style proxy
+    - P7 (optional): mTLS enforcement scaffold
+- **Test status at close-of-day**: all unit + integration tests pass (no regressions).

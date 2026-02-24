@@ -327,7 +327,7 @@ async def _generate_intent_keywords(payload: Dict[str, Any]) -> Dict[str, Any]:
         "You are an assistant that extracts latent reading intents and topical keywords. "
         "Return JSON with keys 'keywords' (list of <=5 lowercase strings) and 'intent_summary' (string).\n"
         f"{query_line}"
-        f"History samples:\n{os.linesep.join(history_lines) or 'none'}\n"
+        f"History samples:\n{chr(10).join(history_lines) or 'none'}\n"
         f"Recent reviews:\n{_collect_review_corpus(reviews) or 'none'}"
     )
     try:

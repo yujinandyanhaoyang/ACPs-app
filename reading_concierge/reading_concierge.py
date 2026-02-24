@@ -660,11 +660,12 @@ def _build_ranking_candidates(content_outputs: Dict[str, Any], books: List[Dict[
             {
                 "book_id": bid,
                 "title": title,
+                "author": source_book.get("author") or "",
                 "description": source_book.get("description") or row.get("description") or "",
                 "genres": source_book.get("genres") or row.get("genres") or [],
                 "topics": tag.get("topics") or [],
                 "vector": row.get("vector") or [],
-                "kg_signal": min(1.0, 0.2 + 0.2 * len(content_outputs.get("kg_refs") or [])),
+                "kg_signal": min(1.0, float(row.get("kg_signal") or 0.2)),
                 "novelty_score": min(1.0, novelty_signal),
                 "diversity_score": min(1.0, diversity_signal),
             }

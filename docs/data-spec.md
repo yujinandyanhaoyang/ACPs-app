@@ -43,3 +43,48 @@ venv/Scripts/python.exe scripts/build_books_min_dataset.py
 - `science fiction space`
 - `history civilization`
 - `business startup`
+
+---
+
+## KG Schema (Knowledge Graph — Phase P1)
+
+### Build command
+```bash
+venv/Scripts/python.exe scripts/build_knowledge_graph.py
+```
+
+### Output files
+| File | Description |
+|---|---|
+| `data/processed/knowledge_graph.json` | Full NetworkX node-link JSON (undirected Graph) |
+| `data/processed/kg_author_index.json` | `{author_node_id: [book_node_id, ...]}` lookup table |
+| `data/processed/kg_genre_index.json` | `{genre_node_id: [book_node_id, ...]}` lookup table |
+
+### Node types
+| type | ID format | Key attributes |
+|---|---|---|
+| `book` | `book:gr_2767052` | `book_id`, `title` |
+| `author` | `author:suzanne_collins` | `name` |
+| `genre` | `genre:young_adult` | `name` |
+| `publisher` | `publisher:scholastic_press` | `name` |
+
+### Edge types
+| type attribute | connects | meaning |
+|---|---|---|
+| `written_by` | book ─ author | book was written by this author |
+| `has_genre` | book ─ genre | book belongs to this genre |
+| `published_by` | book ─ publisher | book was published by this publisher (sparse) |
+
+### Genre filtering
+Goodreads user-shelf tags (`to_read`, `favorites`, `currently_reading`, `owned`, etc.) are excluded from genre nodes. Only genre-like tokens are kept. The full exclusion list is in `scripts/build_knowledge_graph.py::_SHELF_TAGS`.
+
+### Access pattern
+Use `services/kg_client.LocalKGClient` to query the graph:
+```python
+from services.kg_client import LocalKGClient
+client = LocalKGClient()
+ctx = client.get_book_context("book:gr_2767052")
+# {"authors": ["author:suzanne_collins"], "genres": ["genre:young_adult", ...], "co_genre_books": [...]}
+signals = client.compute_kg_signal(["book:gr_2767052", "book:gr_3"])
+# {"book:gr_2767052": 0.82, "book:gr_3": 1.0}
+```

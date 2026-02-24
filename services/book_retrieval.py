@@ -78,7 +78,7 @@ def retrieve_books_by_query(
             g = str(genre).replace("_", " ").lower()
             if any(part in q_tokens for part in g.split()):
                 genre_bonus += 0.05
-        score = coverage + min(0.15, genre_bonus) + max(0.0, 0.001 * (len(pool) - idx))
+        score = coverage + min(0.15, genre_bonus) + 0.001 * (1.0 - idx / max(1, len(pool)))
         scored.append((score, book))
 
     scored.sort(key=lambda row: row[0], reverse=True)

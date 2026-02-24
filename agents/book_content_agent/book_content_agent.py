@@ -16,6 +16,7 @@ if _PROJECT_ROOT not in sys.path:
 
 from base import get_agent_logger, extract_text_from_message, call_openai_chat
 from services.model_backends import generate_text_embeddings_async
+from services.kg_client import kg_client as _kg_client
 from acps_aip.aip_base_model import (
     Message,
     Task,
@@ -31,7 +32,8 @@ load_dotenv()
 AGENT_ID = os.getenv("BOOK_CONTENT_AGENT_ID", "book_content_agent_001")
 AIP_ENDPOINT = os.getenv("BOOK_CONTENT_AGENT_ENDPOINT", "/book-content/rpc")
 LOG_LEVEL = os.getenv("BOOK_CONTENT_AGENT_LOG_LEVEL", "INFO").upper()
-LLM_MODEL = os.getenv("BOOK_CONTENT_EMBED_MODEL", os.getenv("OPENAI_MODEL", "qwen-plus"))
+EMBED_MODEL = os.getenv("BOOK_CONTENT_EMBED_MODEL", "text-embedding-v3")
+LLM_MODEL = os.getenv("OPENAI_MODEL", "qwen-plus")
 EMBEDDING_VERSION = os.getenv("BOOK_CONTENT_EMBED_VERSION", "book_content_v1")
 VECTOR_DIM = max(8, int(os.getenv("BOOK_CONTENT_VECTOR_DIM", "12")))
 DEFAULT_KG_MODE = os.getenv("BOOK_CONTENT_DEFAULT_KG_MODE", "local")
@@ -195,29 +197,38 @@ def _heuristic_tags_for_book(book: Dict[str, Any], query: str = "") -> Dict[str,
 
 
 def _extract_kg_refs(payload: Dict[str, Any], books: List[Dict[str, Any]]) -> List[str]:
-    refs: List[str] = []
-    kg_edges = payload.get("kg_edges") or []
-    for edge in kg_edges:
+    """Return KG node IDs for the given books using the local NetworkX graph.
+
+    Priority:
+      1. Explicit ``kg_edges`` / ``kg_node_id`` overrides from the caller payload.
+      2. Real local-KG lookup via LocalKGClient (author + genre nodes).
+    """
+    seen: set = set()
+    deduped: List[str] = []
+
+    def _add(ref: str) -> None:
+        if ref and ref not in seen:
+            seen.add(ref)
+            deduped.append(ref)
+
+    # --- 1. Explicit overrides from the caller ---
+    for edge in (payload.get("kg_edges") or []):
         if isinstance(edge, dict):
             node_id = edge.get("node_id") or edge.get("target") or edge.get("id")
             if node_id:
-                refs.append(str(node_id))
+                _add(str(node_id))
 
     for book in books:
         if book.get("kg_node_id"):
-            refs.append(str(book.get("kg_node_id")))
+            _add(str(book["kg_node_id"]))
 
-    if not refs and payload.get("kg_endpoint") and (payload.get("use_remote_kg") or str(payload.get("kg_mode", "")).lower() == "remote"):
-        endpoint = str(payload.get("kg_endpoint")).rstrip("/")
-        refs.extend([f"{endpoint}/nodes/{book['book_id']}" for book in books[:5]])
+    # --- 2. Real local-KG lookup ---
+    if _kg_client.is_available():
+        for book in books:
+            ctx = _kg_client.get_book_context(book["book_id"])
+            for node_id in (ctx.get("authors") or []) + (ctx.get("genres") or []):
+                _add(node_id)
 
-    seen = set()
-    deduped: List[str] = []
-    for item in refs:
-        if item in seen:
-            continue
-        seen.add(item)
-        deduped.append(item)
     return deduped
 
 
@@ -235,7 +246,7 @@ async def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
             )
         )
     embeddings, backend = await generate_text_embeddings_async(
-        seed_texts, model_name=LLM_MODEL, fallback_dim=VECTOR_DIM
+        seed_texts, model_name=EMBED_MODEL, fallback_dim=VECTOR_DIM
     )
 
     vectors: List[Dict[str, Any]] = []
@@ -246,7 +257,7 @@ async def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "book_id": book["book_id"],
                 "vector": vector,
                 "vector_dim": len(vector),
-                "embedding_model": LLM_MODEL,
+                "embedding_model": EMBED_MODEL,
                 "embedding_version": EMBEDDING_VERSION,
                 "embedding_backend": backend.get("backend"),
             }
@@ -304,6 +315,14 @@ async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
     heuristic_tags = [_heuristic_tags_for_book(book, query=query) for book in books]
     llm_enrichment = await _llm_tag_enrichment(books)
     kg_refs = _extract_kg_refs(payload, books)
+
+    # Compute per-book KG connectivity signal and embed into each vector entry
+    book_ids = [b["book_id"] for b in books]
+    kg_signals: Dict[str, float] = (
+        _kg_client.compute_kg_signal(book_ids) if _kg_client.is_available() else {}
+    )
+    for vec in content_vectors:
+        vec["kg_signal"] = kg_signals.get(str(vec["book_id"]), 0.0)
 
     outputs = {
         "content_vectors": content_vectors,

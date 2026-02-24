@@ -416,6 +416,7 @@ async def _generate_explanation_for_item(
     raw_candidate = item.get("raw_candidate") or {}
     description = str(raw_candidate.get("description") or "")[:500]
     genres = raw_candidate.get("genres") or []
+    author = str(raw_candidate.get("author") or "")
     bullet_summary = [
         f"Composite score: {item.get('composite_score', 0)}",
         f"Semantic alignment: {parts.get('semantic', 0)}",
@@ -435,22 +436,16 @@ async def _generate_explanation_for_item(
             "source": "heuristic",
         }
 
+    book_line = f"Book: {item.get('title') or ''}" + (f" by {author}" if author else "")
+    genre_str = ", ".join(str(g) for g in genres[:5]) if genres else "n/a"
     prompt = (
-        "Create one concise recommendation explanation based on user intent and scoring signals. "
-        "Return plain text only.\n"
-        + json.dumps(
-            {
-                "query": query,
-                "profile_summary": profile_summary,
-                "book_id": item.get("book_id"),
-                "title": item.get("title"),
-                "description": description,
-                "genres": genres,
-                "score_parts": parts,
-                "composite_score": item.get("composite_score"),
-            },
-            ensure_ascii=False,
-        )
+        f"User query: {query}\n"
+        f"User preference: {profile_summary}\n"
+        f"{book_line}\n"
+        f"Description: {description}\n"
+        f"Genres: {genre_str}\n"
+        f"Scores: {json.dumps(parts, ensure_ascii=False)}\n"
+        "Generate a concise recommendation explanation."
     )
     try:
         raw = await call_openai_chat(
