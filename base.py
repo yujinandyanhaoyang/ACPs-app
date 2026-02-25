@@ -5,7 +5,7 @@ import logging
 import os
 import json
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Iterable, Any
+from typing import Optional, Iterable, Any, Dict, List
 
 try:  # Optional dependency available at runtime in agents
     import openai  # type: ignore
@@ -19,9 +19,18 @@ def _get_async_openai_client() -> Any:
     """Lazily create and cache a single AsyncOpenAI client instance."""
     global _async_client
     if _async_client is None and openai is not None:
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL")
+
+        # DashScope compatible-mode needs an extra proxy header; keep it optional for plain OpenAI.
+        default_headers: Optional[Dict[str, str]] = None
+        if base_url and "dashscope.aliyuncs.com" in base_url and api_key:
+            default_headers = {"X-DashScope-Proxy-Authorization": f"Bearer {api_key}"}
+
         _async_client = openai.AsyncOpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL"),
+            api_key=api_key,
+            base_url=base_url,
+            default_headers=default_headers,
         )
     return _async_client
 
@@ -142,3 +151,113 @@ async def call_openai_chat(
             model=model,
         )
     return getattr(chat_completion.choices[0].message, "content", "") or ""
+
+
+def _normalize_acs_skills(skills: Any) -> List[Dict[str, str]]:
+    normalized: List[Dict[str, str]] = []
+    if not isinstance(skills, list):
+        return normalized
+    for item in skills:
+        if isinstance(item, str):
+            sid = item.strip()
+            if sid:
+                normalized.append({"id": sid, "name": sid})
+            continue
+        if isinstance(item, dict):
+            sid = str(item.get("id") or item.get("name") or "").strip()
+            if sid:
+                normalized.append(
+                    {
+                        "id": sid,
+                        "name": str(item.get("name") or sid),
+                        "description": str(item.get("description") or "").strip(),
+                    }
+                )
+    return normalized
+
+
+def _normalize_acs_endpoints(endpoints: Any, endpoint_override_url: Optional[str] = None) -> List[Dict[str, str]]:
+    if endpoint_override_url:
+        return [
+            {
+                "transport": "JSONRPC",
+                "url": endpoint_override_url,
+                "description": "Primary orchestration endpoint",
+            }
+        ]
+
+    if isinstance(endpoints, dict):
+        endpoints = list(endpoints.values())
+    if isinstance(endpoints, str):
+        endpoints = [
+            {
+                "transport": "JSONRPC",
+                "url": endpoints,
+                "description": "RPC endpoint",
+            }
+        ]
+
+    normalized: List[Dict[str, str]] = []
+    if not isinstance(endpoints, list):
+        return normalized
+
+    for item in endpoints:
+        if isinstance(item, str):
+            url = item.strip()
+            if url:
+                normalized.append(
+                    {
+                        "transport": "JSONRPC",
+                        "url": url,
+                        "description": "RPC endpoint",
+                    }
+                )
+            continue
+        if not isinstance(item, dict):
+            continue
+        url = str(item.get("url") or item.get("URI") or item.get("endpoint") or "").strip()
+        if not url:
+            continue
+        normalized.append(
+            {
+                "transport": str(item.get("transport") or "JSONRPC").upper(),
+                "url": url,
+                "description": str(item.get("description") or "").strip(),
+            }
+        )
+    return normalized
+
+
+def _load_acs_descriptor(json_path: str, endpoint_override_url: Optional[str] = None) -> Dict[str, Any]:
+    with open(json_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    raw = payload.get("acs") if isinstance(payload, dict) and isinstance(payload.get("acs"), dict) else payload
+    if not isinstance(raw, dict):
+        raw = {}
+
+    skills = _normalize_acs_skills(raw.get("skills") or [])
+    endpoints = _normalize_acs_endpoints(
+        raw.get("endPoints") or raw.get("endpoints") or raw.get("endpoint") or [],
+        endpoint_override_url=endpoint_override_url,
+    )
+
+    descriptor: Dict[str, Any] = {
+        "aic": str(raw.get("aic") or "").strip(),
+        "protocolVersion": str(raw.get("protocolVersion") or "01.00").strip() or "01.00",
+        "name": str(raw.get("name") or "").strip(),
+        "description": str(raw.get("description") or "").strip(),
+        "version": str(raw.get("version") or "1.0.0").strip() or "1.0.0",
+        "skills": skills,
+        "endPoints": endpoints,
+    }
+
+    for key in ["provider", "securitySchemes", "capabilities", "active"]:
+        if key in raw:
+            descriptor[key] = raw[key]
+    return descriptor
+
+
+def register_acs_route(app: Any, json_path: str, endpoint_override_url: Optional[str] = None) -> None:
+    @app.get("/acs")
+    async def _acs_descriptor() -> Dict[str, Any]:
+        return _load_acs_descriptor(json_path, endpoint_override_url=endpoint_override_url)

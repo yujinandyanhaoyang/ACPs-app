@@ -3,6 +3,7 @@ import sys
 import json
 import uuid
 import time
+from pathlib import Path
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set
 
@@ -14,7 +15,7 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, os.pardir, os.pardir)
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from base import get_agent_logger, extract_text_from_message, call_openai_chat
+from base import get_agent_logger, extract_text_from_message, call_openai_chat, register_acs_route
 from acps_aip.aip_base_model import (
     Message,
     Task,
@@ -44,6 +45,9 @@ app = FastAPI(
     title="Reader Profile Agent",
     description="ACPs-compliant agent that synthesizes user preference vectors for reading journeys.",
 )
+
+_ACS_JSON_PATH = str(Path(_CURRENT_DIR) / "config.example.json")
+register_acs_route(app, _ACS_JSON_PATH)
 
 _PROFILE_CONTEXT: dict[str, Dict[str, Any]] = {}
 
@@ -544,3 +548,23 @@ agent_handlers = CommandHandlers(
 )
 
 add_aip_rpc_router(app, AIP_ENDPOINT, agent_handlers)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    from acps_aip.mtls_config import load_mtls_context, build_uvicorn_ssl_kwargs
+
+    host = os.getenv("READER_PROFILE_HOST", "0.0.0.0")
+    port = int(os.getenv("READER_PROFILE_PORT", "8211"))
+    config_path = os.getenv("READER_PROFILE_MTLS_CONFIG_PATH", _ACS_JSON_PATH)
+    cert_dir = os.getenv("AGENT_MTLS_CERT_DIR")
+
+    ssl_context = load_mtls_context(config_path, purpose="server", cert_dir=cert_dir)
+    ssl_kwargs = build_uvicorn_ssl_kwargs(config_path, cert_dir=cert_dir) if ssl_context else {}
+
+    uvicorn.run(
+        "agents.reader_profile_agent.profile_agent:app",
+        host=host,
+        port=port,
+        **ssl_kwargs,
+    )

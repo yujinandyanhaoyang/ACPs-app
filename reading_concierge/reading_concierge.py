@@ -23,7 +23,7 @@ if _PROJECT_ROOT not in sys.path:
 _DEMO_HTML_PATH = Path(_PROJECT_ROOT) / "web_demo" / "index.html"
 _BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_summary.json"
 
-from base import get_agent_logger, call_openai_chat
+from base import get_agent_logger, call_openai_chat, register_acs_route
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
 from services.book_retrieval import load_books, retrieve_books_by_query
 from services.model_backends import load_cf_item_vectors
@@ -41,6 +41,7 @@ PARTNER_MODE = os.getenv("READING_PARTNER_MODE", "auto").lower()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen-plus")
 BOOK_RETRIEVAL_TOP_K = int(os.getenv("BOOK_RETRIEVAL_TOP_K", "8"))
 BOOK_RETRIEVAL_CANDIDATE_POOL = int(os.getenv("BOOK_RETRIEVAL_CANDIDATE_POOL", "30"))
+READING_CONCIERGE_BASE_URL = str(os.getenv("READING_CONCIERGE_BASE_URL", "http://localhost:8100")).rstrip("/")
 
 _REMOTE_ENDPOINT_ENV = {
     "profile": "READER_PROFILE_RPC_URL",
@@ -65,6 +66,13 @@ logger = get_agent_logger("agent.reading_concierge", "READING_CONCIERGE_LOG_LEVE
 app = FastAPI(
     title="Reading Concierge",
     description="Coordinator that orchestrates profile, content, and ranking agents.",
+)
+
+_ACS_JSON_PATH = str(Path(_CURRENT_DIR) / "reading_concierge.json")
+register_acs_route(
+    app,
+    _ACS_JSON_PATH,
+    endpoint_override_url=f"{READING_CONCIERGE_BASE_URL}/user_api",
 )
 
 MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
@@ -892,3 +900,23 @@ async def user_api(req: UserRequest):
         len(recommendations),
     )
     return response
+
+
+if __name__ == "__main__":
+    import uvicorn
+    from acps_aip.mtls_config import load_mtls_context, build_uvicorn_ssl_kwargs
+
+    host = os.getenv("READING_CONCIERGE_HOST", "0.0.0.0")
+    port = int(os.getenv("READING_CONCIERGE_PORT", "8100"))
+    config_path = os.getenv("READING_CONCIERGE_MTLS_CONFIG_PATH", _ACS_JSON_PATH)
+    cert_dir = os.getenv("AGENT_MTLS_CERT_DIR")
+
+    ssl_context = load_mtls_context(config_path, purpose="server", cert_dir=cert_dir)
+    ssl_kwargs = build_uvicorn_ssl_kwargs(config_path, cert_dir=cert_dir) if ssl_context else {}
+
+    uvicorn.run(
+        "reading_concierge.reading_concierge:app",
+        host=host,
+        port=port,
+        **ssl_kwargs,
+    )

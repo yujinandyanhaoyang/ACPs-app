@@ -7,7 +7,7 @@ mTLS (Mutual TLS) 配置模块
 import os
 import ssl
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -150,3 +150,146 @@ def load_mtls_config_from_json(
         cert_dir = json_dir.parent / "certs"
 
     return MTLSConfig(cert_dir=str(cert_dir), aic=aic, ca_cert_name=ca_cert_name)
+
+
+def _is_truthy(value: Optional[str]) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def mtls_enabled() -> bool:
+    """Return whether mTLS should be enabled for service startup.
+
+    Controlled by env var ``AGENT_MTLS_ENABLED`` (default: disabled).
+    """
+    return _is_truthy(os.getenv("AGENT_MTLS_ENABLED", "false"))
+
+
+def _resolve_explicit_mtls_paths(
+    json_path: str,
+    payload: Dict[str, Any],
+    cert_dir: Optional[str] = None,
+) -> Optional[Tuple[str, str, str]]:
+    mtls = payload.get("mtls") if isinstance(payload, dict) else None
+    if not isinstance(mtls, dict):
+        return None
+
+    cert_path = str(mtls.get("cert_path") or "").strip()
+    key_path = str(mtls.get("key_path") or "").strip()
+    ca_path = str(mtls.get("ca_path") or mtls.get("ca_cert_path") or "").strip()
+    if not cert_path or not key_path or not ca_path:
+        return None
+
+    json_base = Path(json_path).parent.resolve()
+    cert_base = Path(cert_dir).resolve() if cert_dir else None
+
+    def _resolve_file(raw_path: str) -> Path:
+        candidate = Path(raw_path)
+        if candidate.is_absolute():
+            return candidate
+
+        probe_paths = []
+        if cert_base is not None:
+            probe_paths.append((cert_base / candidate).resolve())
+            probe_paths.append((cert_base / candidate.name).resolve())
+        probe_paths.append((json_base / candidate).resolve())
+
+        for probe in probe_paths:
+            if probe.exists():
+                return probe
+        return probe_paths[0]
+
+    cert_file = _resolve_file(cert_path)
+    key_file = _resolve_file(key_path)
+    ca_file = _resolve_file(ca_path)
+
+    for file_path in [cert_file, key_file, ca_file]:
+        if not file_path.exists():
+            raise FileNotFoundError(f"Missing certificate file: {file_path}")
+
+    return str(cert_file), str(key_file), str(ca_file)
+
+
+def resolve_mtls_cert_paths(
+    json_path: str,
+    cert_dir: Optional[str] = None,
+    ca_cert_name: str = "ca.crt",
+) -> Tuple[str, str, str]:
+    """Resolve cert/key/CA paths from config JSON.
+
+    Priority:
+    1) explicit ``mtls.cert_path/key_path/ca_path`` fields in JSON;
+    2) fallback to AIC-based naming via ``MTLSConfig``.
+    """
+    import json
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    explicit = _resolve_explicit_mtls_paths(json_path, payload, cert_dir=cert_dir)
+    if explicit is not None:
+        return explicit
+
+    cfg = load_mtls_config_from_json(json_path, cert_dir=cert_dir, ca_cert_name=ca_cert_name)
+    return cfg.get_cert_paths()
+
+
+def load_mtls_context(
+    json_path: str,
+    *,
+    purpose: str = "server",
+    cert_dir: Optional[str] = None,
+    ca_cert_name: str = "ca.crt",
+) -> Optional[ssl.SSLContext]:
+    """Load and return an mTLS SSLContext when enabled.
+
+    Returns ``None`` when ``AGENT_MTLS_ENABLED`` is disabled.
+    """
+    if not mtls_enabled():
+        logger.info("mTLS disabled via AGENT_MTLS_ENABLED=false")
+        return None
+
+    cert_file, key_file, ca_cert_file = resolve_mtls_cert_paths(
+        json_path,
+        cert_dir=cert_dir,
+        ca_cert_name=ca_cert_name,
+    )
+
+    if str(purpose).strip().lower() == "client":
+        ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        ssl_context.load_verify_locations(cafile=ca_cert_file)
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+        return ssl_context
+
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+    ssl_context.load_verify_locations(cafile=ca_cert_file)
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+    ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return ssl_context
+
+
+def build_uvicorn_ssl_kwargs(
+    json_path: str,
+    *,
+    cert_dir: Optional[str] = None,
+    ca_cert_name: str = "ca.crt",
+) -> Dict[str, Any]:
+    """Build uvicorn SSL keyword arguments when mTLS is enabled."""
+    if not mtls_enabled():
+        return {}
+
+    cert_file, key_file, ca_cert_file = resolve_mtls_cert_paths(
+        json_path,
+        cert_dir=cert_dir,
+        ca_cert_name=ca_cert_name,
+    )
+    return {
+        "ssl_certfile": cert_file,
+        "ssl_keyfile": key_file,
+        "ssl_ca_certs": ca_cert_file,
+        "ssl_cert_reqs": ssl.CERT_REQUIRED,
+        "ssl_version": ssl.PROTOCOL_TLS_SERVER,
+    }

@@ -15,7 +15,13 @@
       "description": "mTLS for ACPs inter-agent communication"
     }
   },
-  "endPoints": [],
+  "endPoints": [
+    {
+      "transport": "JSONRPC",
+      "url": "http://localhost:8100/user_api",
+      "description": "Primary orchestration endpoint"
+    }
+  ],
   "capabilities": {
     "streaming": false,
     "notification": false,

@@ -128,6 +128,11 @@ def test_build_markdown_report_contains_required_sections():
     assert "### Findings" in markdown
     assert "### Recommendations" in markdown
     assert "Winner method:" in markdown
+    assert "## Method Comparison" in markdown
+    assert "NDCG@k range across methods" in markdown
+    assert "traditional_hybrid" in markdown
+    assert "multi_agent_proxy" in markdown
+    assert "llm_only" in markdown
 
 
 def test_findings_and_recommendations_rules_produce_outputs():

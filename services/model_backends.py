@@ -12,6 +12,7 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_CF_ITEM_FACTORS_PATH = _PROJECT_ROOT / "data" / "processed" / "cf_item_factors.npy"
 _DEFAULT_CF_BOOK_INDEX_PATH = _PROJECT_ROOT / "data" / "processed" / "cf_book_id_index.json"
 _CF_ITEM_VECTORS_CACHE: Dict[str, List[float]] | None = None
+_SENTENCE_MODEL_CACHE: Dict[str, Any] = {}
 _DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"
 _LOGGER = logging.getLogger("services.model_backends")
 
@@ -112,10 +113,15 @@ def load_cf_item_vectors(force_reload: bool = False) -> Dict[str, List[float]]:
 
 
 def _resolve_sentence_transformer(model_name: str):
+	cached = _SENTENCE_MODEL_CACHE.get(model_name)
+	if cached is not None:
+		return cached
 	try:
 		from sentence_transformers import SentenceTransformer
 
-		return SentenceTransformer(model_name)
+		model = SentenceTransformer(model_name)
+		_SENTENCE_MODEL_CACHE[model_name] = model
+		return model
 	except Exception as exc:
 		_LOGGER.warning(
 			"event=sentence_transformer_load_failed model=%s fallback=hash-fallback error=%s",
@@ -186,7 +192,21 @@ async def generate_text_embeddings_async(
 		if vectors:
 			return vectors, meta
 
-	return generate_text_embeddings(text_list, model_name=model_name, fallback_dim=fallback_dim)
+	effective_model = str(model_name or "").strip()
+	if not (api_key and base_url):
+		remote_like_model = (
+			effective_model.startswith("text-embedding")
+			or effective_model.startswith("qwen")
+		)
+		if remote_like_model:
+			_LOGGER.info(
+				"event=offline_model_switch from_model=%s to_model=%s reason=offline_no_api",
+				effective_model,
+				_DEFAULT_OFFLINE_EMBED_MODEL,
+			)
+			effective_model = _DEFAULT_OFFLINE_EMBED_MODEL
+
+	return generate_text_embeddings(text_list, model_name=effective_model, fallback_dim=fallback_dim)
 
 
 def _token_features(book: Dict[str, Any]) -> List[str]:

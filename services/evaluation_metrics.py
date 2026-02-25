@@ -1,5 +1,51 @@
 import math
+import json
+from pathlib import Path
 from typing import Any, Dict, List, Sequence
+
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_DEFAULT_TEST_INTERACTIONS_PATH = _PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_test.jsonl"
+
+
+def load_test_interactions(n: int = 100, test_path: Path | None = None) -> List[Dict[str, Any]]:
+	"""Load up to *n* held-out interactions for empirical evaluation.
+
+	Each returned row contains at least: ``user_id``, ``book_id``, ``rating``.
+	Rows with missing ``user_id`` or ``book_id`` are skipped.
+	"""
+	path = test_path or _DEFAULT_TEST_INTERACTIONS_PATH
+	if n <= 0 or not path.exists():
+		return []
+
+	rows: List[Dict[str, Any]] = []
+	with path.open("r", encoding="utf-8") as f:
+		for line in f:
+			line = line.strip()
+			if not line:
+				continue
+			try:
+				payload = json.loads(line)
+			except json.JSONDecodeError:
+				continue
+			if not isinstance(payload, dict):
+				continue
+
+			user_id = str(payload.get("user_id") or "").strip()
+			book_id = str(payload.get("book_id") or "").strip()
+			if not user_id or not book_id:
+				continue
+
+			rows.append(
+				{
+					"user_id": user_id,
+					"book_id": book_id,
+					"rating": _safe_float(payload.get("rating"), 0.0),
+				}
+			)
+			if len(rows) >= n:
+				break
+	return rows
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -64,6 +110,16 @@ def build_ablation_report(
 	recommendations: List[Dict[str, Any]],
 	scoring_weights: Dict[str, Any],
 ) -> Dict[str, Any]:
+	"""Return an algebraic component decomposition for one recommendation list.
+
+	This function does **not** perform empirical ablation runs on held-out data;
+	it computes estimated component contribution as:
+
+	``component_mean_score * max(weight, 0)``.
+
+	For empirical ablation (re-running the full pipeline with one component removed
+	at a time), use ``scripts/run_ablation.py``.
+	"""
 	score_keys = ["collaborative", "semantic", "knowledge", "diversity"]
 	weights = {key: _safe_float(scoring_weights.get(key), 0.0) for key in score_keys}
 	if not recommendations:

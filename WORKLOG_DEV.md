@@ -6,7 +6,7 @@
 
 **Goal**: Build a multi-agent, ACPs-protocol personalized book recommendation system that produces real, query-faithful book recommendations with traceable agent reasoning (see `PLAN.md` and `CLAUDE.md` for full spec).
 
-**Current state** (as of 2026-02-24): All debug phases are complete. The system performs real end-to-end recommendation — LLM-backed book retrieval from the Goodreads dataset, DashScope / hash-fallback shared embedding space, query-aware profile/content/ranking pipeline, contextual LLM explanations, scenario-based orchestration (cold/warm/explore), and Phase IV baseline benchmarks. All unit and integration tests pass.
+**Current state** (as of 2026-02-25): Core multi-agent recommendation flow is complete and stable. The system performs real end-to-end recommendation — dataset retrieval, query-aware profile/content/ranking pipeline, KG-enhanced signals, CF + semantic + diversity fusion, contextual explanations, scenario-based orchestration (cold/warm/explore), benchmark comparison, and empirical ablation. Focused verification suites pass.
 
 **Completed checklist:**
 - [x] Phase 1a–c: async OpenAI client, `.gitignore`/`.env.example`, LRU session eviction
@@ -22,7 +22,7 @@
 - Architecture (三): 5/7 — Registry/mTLS stubs; ACS `endPoints` empty
 - Testing (四): 5/7 — Ablation is algebraic not empirical; baselines are heuristic stubs; test split unused
 
-**Active plan**: `NEXT_STEPS.md` (priority to-do list for remaining PLAN.md gaps).
+**Active plan**: none. `NEXT_STEPS.md` items are completed and archived in this worklog.
 
 **Stale plan files removed** (2026-02-24): `PassedWorkBug.md`, `DEBUG_PLAN.md`, `PHASE_IV_RND_PLAN.md`, `PHASE_IV_ROUND2_PLAN.md`, `PHASE_IV_ROUND3_PLAN.md`.
 
@@ -154,3 +154,25 @@
     - P6 (recommended): Principled baseline reimplementation + MACRec-style proxy
     - P7 (optional): mTLS enforcement scaffold
 - **Test status at close-of-day**: all unit + integration tests pass (no regressions).
+
+---
+
+## 2026-02-25 (PLAN.md item-by-item re-audit + NEXT_STEPS closeout)
+
+- **Request executed**
+  - Re-ran a full checklist audit against `PLAN.md` core tasks (data, agents, architecture, testing/optimization).
+  - Cross-checked each item against current code, docs, artifacts, and focused test evidence.
+
+- **Current completion status (PLAN.md)**
+  - Overall: **10 satisfied / 7 partially satisfied / 0 missing**.
+  - Data tasks: dataset + split + KG are in place; review-cleaning/deep quality controls remain partial.
+  - Agent tasks: profile/content/ranking agents are implemented and integrated; strict “BERT-only” and fully explicit KG-RAG wording remains partial.
+  - Architecture tasks: ACPs orchestration and ACS endpoints are in place; explicit ATR/ADP-standard artifact coverage remains partial.
+  - Testing/optimization: unit tests, benchmark compare, and empirical ablation are implemented; MACRec/ARAG are proxy baselines rather than strict reproductions.
+
+- **Verification evidence (executed today)**
+  - `pytest -q tests/test_acs_conformance.py tests/test_phase4_benchmark_compare.py tests/test_run_ablation.py`
+  - Result: **12 passed**.
+
+- **Closeout update**
+  - `NEXT_STEPS.md` marked complete and removed from active project files.

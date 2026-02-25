@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-02-25T05:10:11Z",
+  "top_k": 5,
+  "requested_users": 80,
+  "candidate_users": 406,
+  "evaluated_users": 61,
+  "filters": {
+    "min_history": 5,
+    "min_ground_truth": 2,
+    "min_ground_truth_rating": 4.0
+  },
+  "rows": [
+    {
+      "scenario": "full",
+      "weights": {
+        "collaborative": 0.25,
+        "semantic": 0.35,
+        "knowledge": 0.2,
+        "diversity": 0.2
+      },
+      "evaluated_users": 61,
+      "precision_at_5": 0.006557,
+      "recall_at_5": 0.008743,
+      "ndcg_at_5": 0.008362,
+      "delta_ndcg_at_5_vs_full": 0.0,
+      "diversity": 0.7,
+      "novelty": 0.7
+    },
+    {
+      "scenario": "ablate_collaborative",
+      "weights": {
+        "collaborative": 0.0,
+        "semantic": 0.466667,
+        "knowledge": 0.266667,
+        "diversity": 0.266667
+      },
+      "evaluated_users": 61,
+      "precision_at_5": 0.006557,
+      "recall_at_5": 0.008743,
+      "ndcg_at_5": 0.009407,
+      "delta_ndcg_at_5_vs_full": 0.001045,
+      "diversity": 0.7,
+      "novelty": 0.7
+    },
+    {
+      "scenario": "ablate_semantic",
+      "weights": {
+        "collaborative": 0.384615,
+        "semantic": 0.0,
+        "knowledge": 0.307692,
+        "diversity": 0.307692
+      },
+      "evaluated_users": 61,
+      "precision_at_5": 0.006557,
+      "recall_at_5": 0.008743,
+      "ndcg_at_5": 0.008362,
+      "delta_ndcg_at_5_vs_full": 0.0,
+      "diversity": 0.7,
+      "novelty": 0.7
+    },
+    {
+      "scenario": "ablate_knowledge",
+      "weights": {
+        "collaborative": 0.3125,
+        "semantic": 0.4375,
+        "knowledge": 0.0,
+        "diversity": 0.25
+      },
+      "evaluated_users": 61,
+      "precision_at_5": 0.006557,
+      "recall_at_5": 0.008743,
+      "ndcg_at_5": 0.005708,
+      "delta_ndcg_at_5_vs_full": -0.002654,
+      "diversity": 0.7,
+      "novelty": 0.7
+    },
+    {
+      "scenario": "ablate_diversity",
+      "weights": {
+        "collaborative": 0.3125,
+        "semantic": 0.4375,
+        "knowledge": 0.25,
+        "diversity": 0.0
+      },
+      "evaluated_users": 61,
+      "precision_at_5": 0.006557,
+      "recall_at_5": 0.008743,
+      "ndcg_at_5": 0.008362,
+      "delta_ndcg_at_5_vs_full": 0.0,
+      "diversity": 0.7,
+      "novelty": 0.7
+    }
+  ]
+}

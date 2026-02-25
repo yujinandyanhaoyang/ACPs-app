@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-19T13:42:32Z",
+  "generated_at": "2026-02-25T11:27:18Z",
   "case_count": 8,
   "methods": [
     {
@@ -13,9 +13,9 @@
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.6309,
             "diversity": 0.5,
-            "novelty": 0.45
+            "novelty": 0.5
           },
-          "latency_ms": 13752.3788,
+          "latency_ms": 12520.9779,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -28,26 +28,26 @@
             {
               "rank": 1,
               "book_id": "b2",
-              "title": "b2",
-              "composite_score": 0.515,
+              "title": "Hyperion",
+              "composite_score": 0.3667,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.0
+                "semantic": 0.3478,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "novelty_score": 0.4
+              "novelty_score": 0.5
             },
             {
               "rank": 2,
               "book_id": "b1",
-              "title": "b1",
-              "composite_score": 0.365,
+              "title": "Foundation",
+              "composite_score": 0.3556,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 1.0
+                "semantic": 0.316,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
               "novelty_score": 0.5
             }
@@ -60,10 +60,10 @@
             "precision_at_k": 1.0,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.4,
-            "novelty": 0.4
+            "diversity": 0.5,
+            "novelty": 0.5
           },
-          "latency_ms": 8549.7957,
+          "latency_ms": 2525.4135,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -76,91 +76,51 @@
             {
               "rank": 1,
               "book_id": "b4",
-              "title": "b4",
-              "composite_score": 0.525,
+              "title": "Homegoing",
+              "composite_score": 0.3983,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.4
+                "semantic": 0.4131,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "novelty_score": 0.4
+              "novelty_score": 0.5
             },
             {
               "rank": 2,
               "book_id": "b3",
-              "title": "b3",
-              "composite_score": 0.275,
+              "title": "The Left Hand of Darkness",
+              "composite_score": 0.3857,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 0.4
+                "semantic": 0.3628,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "novelty_score": 0.4
+              "novelty_score": 0.5
             }
           ]
         },
         {
           "case_id": "cold_start",
-          "state": "completed",
+          "state": "needs_input",
           "metrics": {
-            "precision_at_k": 0.3333,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.3,
-            "novelty": 0.3
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 9461.7454,
+          "latency_ms": 1259.9483,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
           "fallback_rate": 0.0,
           "remote_success_rate": 0.0,
-          "task_count": 3,
+          "task_count": 2,
           "remote_attempted_count": 0,
           "fallback_count": 0,
-          "recommendations": [
-            {
-              "rank": 1,
-              "book_id": "c1",
-              "title": "c1",
-              "composite_score": 0.61,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.3
-              },
-              "novelty_score": 0.3
-            },
-            {
-              "rank": 2,
-              "book_id": "c2",
-              "title": "c2",
-              "composite_score": 0.2322,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.1605,
-                "knowledge": 0.2,
-                "diversity": 0.3
-              },
-              "novelty_score": 0.3
-            },
-            {
-              "rank": 3,
-              "book_id": "c3",
-              "title": "c3",
-              "composite_score": 0.16,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 0.3
-              },
-              "novelty_score": 0.3
-            }
-          ]
+          "recommendations": []
         },
         {
           "case_id": "warm_nonfiction",
@@ -168,11 +128,11 @@
           "metrics": {
             "precision_at_k": 0.6667,
             "recall_at_k": 1.0,
-            "ndcg_at_k": 0.9197,
-            "diversity": 0.6667,
-            "novelty": 0.4667
+            "ndcg_at_k": 1.0,
+            "diversity": 0.5556,
+            "novelty": 0.5667
           },
-          "latency_ms": 9153.7146,
+          "latency_ms": 2515.1959,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -185,41 +145,41 @@
             {
               "rank": 1,
               "book_id": "b5",
-              "title": "b5",
-              "composite_score": 0.5448,
+              "title": "Inspired",
+              "composite_score": 0.6388,
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.5138,
-                "knowledge": 0.2,
+                "collaborative": 0.2753,
+                "semantic": 1.0,
+                "knowledge": 0.1,
                 "diversity": 1.0
               },
-              "novelty_score": 0.5
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
-              "book_id": "b6",
-              "title": "b6",
-              "composite_score": 0.515,
+              "book_id": "b7",
+              "title": "Designing Data-Intensive Applications",
+              "composite_score": 0.6301,
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.0
+                "collaborative": 1.0,
+                "semantic": 0.648,
+                "knowledge": 0.1,
+                "diversity": 0.6667
               },
-              "novelty_score": 0.4
+              "novelty_score": 0.6000000000000001
             },
             {
               "rank": 3,
-              "book_id": "b7",
-              "title": "b7",
-              "composite_score": 0.365,
+              "book_id": "b6",
+              "title": "Zero to One",
+              "composite_score": 0.02,
               "score_parts": {
-                "collaborative": 0.5,
+                "collaborative": 0.0,
                 "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 1.0
+                "knowledge": 0.1,
+                "diversity": 0.0
               },
-              "novelty_score": 0.5
+              "novelty_score": 0.4
             }
           ]
         },
@@ -229,11 +189,11 @@
           "metrics": {
             "precision_at_k": 0.6667,
             "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.3333,
-            "novelty": 0.5333
+            "ndcg_at_k": 0.9197,
+            "diversity": 0.6667,
+            "novelty": 0.6667
           },
-          "latency_ms": 10175.1359,
+          "latency_ms": 2409.1367,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -246,41 +206,41 @@
             {
               "rank": 1,
               "book_id": "b8",
-              "title": "b8",
-              "composite_score": 0.515,
+              "title": "Kindred",
+              "composite_score": 0.6887,
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
+                "collaborative": 0.3316,
+                "semantic": 0.8759,
+                "knowledge": 0.1,
                 "diversity": 1.0
               },
-              "novelty_score": 0.6000000000000001
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
-              "book_id": "b9",
-              "title": "b9",
-              "composite_score": 0.365,
+              "book_id": "b10",
+              "title": "Babel",
+              "composite_score": 0.67,
               "score_parts": {
-                "collaborative": 0.5,
+                "collaborative": 0.0,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.0
+                "knowledge": 0.1,
+                "diversity": 1.0
               },
-              "novelty_score": 0.5
+              "novelty_score": 0.7
             },
             {
               "rank": 3,
-              "book_id": "b10",
-              "title": "b10",
-              "composite_score": 0.3462,
+              "book_id": "b9",
+              "title": "The Silk Roads",
+              "composite_score": 0.17,
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.9247,
-                "knowledge": 0.2,
+                "collaborative": 1.0,
+                "semantic": 0.0,
+                "knowledge": 0.1,
                 "diversity": 0.0
               },
-              "novelty_score": 0.5
+              "novelty_score": 0.6000000000000001
             }
           ]
         },
@@ -291,10 +251,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.5,
-            "novelty": 0.5
+            "diversity": 0.65,
+            "novelty": 0.65
           },
-          "latency_ms": 7549.9274,
+          "latency_ms": 2289.8752,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 1.0,
@@ -307,91 +267,51 @@
             {
               "rank": 1,
               "book_id": "rs1",
-              "title": "rs1",
-              "composite_score": 0.615,
+              "title": "Accelerate",
+              "composite_score": 0.4147,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.5
+                "semantic": 0.3706,
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "novelty_score": 0.5
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
               "book_id": "rs2",
-              "title": "rs2",
-              "composite_score": 0.265,
+              "title": "The Phoenix Project",
+              "composite_score": 0.3828,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 0.5
+                "semantic": 0.3367,
+                "knowledge": 0.1,
+                "diversity": 0.6
               },
-              "novelty_score": 0.5
+              "novelty_score": 0.6000000000000001
             }
           ]
         },
         {
           "case_id": "remote_stress_cold",
-          "state": "completed",
+          "state": "needs_input",
           "metrics": {
-            "precision_at_k": 0.3333,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.3,
-            "novelty": 0.3
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 9914.082,
+          "latency_ms": 1210.0146,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 1.0,
           "fallback_rate": 1.0,
           "remote_success_rate": 0.0,
-          "task_count": 3,
-          "remote_attempted_count": 3,
-          "fallback_count": 3,
-          "recommendations": [
-            {
-              "rank": 1,
-              "book_id": "rsc1",
-              "title": "rsc1",
-              "composite_score": 0.61,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.3
-              },
-              "novelty_score": 0.3
-            },
-            {
-              "rank": 2,
-              "book_id": "rsc3",
-              "title": "rsc3",
-              "composite_score": 0.5768,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.9263,
-                "knowledge": 0.2,
-                "diversity": 0.3
-              },
-              "novelty_score": 0.3
-            },
-            {
-              "rank": 3,
-              "book_id": "rsc2",
-              "title": "rsc2",
-              "composite_score": 0.16,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 0.3
-              },
-              "novelty_score": 0.3
-            }
-          ]
+          "task_count": 2,
+          "remote_attempted_count": 2,
+          "fallback_count": 2,
+          "recommendations": []
         },
         {
           "case_id": "remote_strict_warm",
@@ -403,7 +323,7 @@
             "diversity": 0.0,
             "novelty": 0.0
           },
-          "latency_ms": 2.6625,
+          "latency_ms": 1.6522,
           "strict_remote_validation": true,
           "strict_failure": 1.0,
           "remote_attempt_rate": 1.0,
@@ -417,18 +337,18 @@
       ],
       "summary": {
         "cases": 8.0,
-        "precision_at_k": 0.5,
-        "recall_at_k": 0.875,
-        "ndcg_at_k": 0.8188,
-        "diversity": 0.375,
-        "novelty": 0.3688,
-        "latency_ms_mean": 8569.9303,
+        "precision_at_k": 0.4167,
+        "recall_at_k": 0.625,
+        "ndcg_at_k": 0.5688,
+        "diversity": 0.359,
+        "novelty": 0.3604,
+        "latency_ms_mean": 3091.5268,
         "strict_failure_rate": 0.125,
         "remote_attempt_rate": 0.375,
         "fallback_rate": 0.25,
         "remote_success_rate": 0.125,
-        "objective_score": 0.66096,
-        "objective_score_latency_aware": 0.489561
+        "objective_score": 0.500195,
+        "objective_score_latency_aware": 0.438364
       }
     },
     {
@@ -438,13 +358,13 @@
           "case_id": "warm_sf",
           "state": "completed",
           "metrics": {
-            "precision_at_k": 0.5,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 0.6309,
-            "diversity": 0.2,
-            "novelty": 0.315
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.55
           },
-          "latency_ms": 0.0884,
+          "latency_ms": 526.914,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -456,29 +376,29 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "b2",
-              "title": "Hyperion",
+              "book_id": "gr_6452760",
+              "title": "Stones Into Schools: Promoting Peace With Books, Not Bombs, in Afghanistan and Pakistan",
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.14285714285714285,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 1.0,
+                "semantic": 0.1429,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.375,
-              "novelty_score": 0.33
+              "composite_score": 0.5714,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "b1",
-              "title": "Foundation",
+              "book_id": "gr_8073",
+              "title": "Cloudy With a Chance of Meatballs",
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 0.0,
+                "semantic": 0.1429,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.335,
-              "novelty_score": 0.3
+              "composite_score": 0.0714,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -486,13 +406,13 @@
           "case_id": "explore_diverse",
           "state": "completed",
           "metrics": {
-            "precision_at_k": 1.0,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.2,
-            "novelty": 0.315
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.55
           },
-          "latency_ms": 0.0369,
+          "latency_ms": 151.6592,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -504,29 +424,29 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "b3",
-              "title": "The Left Hand of Darkness",
+              "book_id": "gr_7769",
+              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
               "score_parts": {
-                "collaborative": 0.0,
-                "semantic": 0.14285714285714285,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 1.0,
+                "semantic": 0.1429,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.21,
-              "novelty_score": 0.3
+              "composite_score": 0.5714,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "b4",
-              "title": "Homegoing",
+              "book_id": "gr_775597",
+              "title": "Caps for Sale: A Tale of a Peddler, Some Monkeys and Their Monkey Business",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.14285714285714285,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "semantic": 0.2857,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.2,
-              "novelty_score": 0.33
+              "composite_score": 0.1429,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -537,10 +457,10 @@
             "precision_at_k": 0.3333,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.2,
-            "novelty": 0.33
+            "diversity": 0.0,
+            "novelty": 0.5333
           },
-          "latency_ms": 0.0361,
+          "latency_ms": 51.7429,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -555,26 +475,26 @@
               "book_id": "c1",
               "title": "c1",
               "score_parts": {
-                "collaborative": 0.0,
+                "collaborative": 1.0,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.51,
-              "novelty_score": 0.3
+              "composite_score": 1.0,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
               "book_id": "c2",
               "title": "c2",
               "score_parts": {
-                "collaborative": 0.0,
+                "collaborative": 0.5,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.5,
-              "novelty_score": 0.33
+              "composite_score": 0.75,
+              "novelty_score": 0.5
             },
             {
               "rank": 3,
@@ -583,11 +503,11 @@
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.49,
-              "novelty_score": 0.36
+              "composite_score": 0.5,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -595,13 +515,13 @@
           "case_id": "warm_nonfiction",
           "state": "completed",
           "metrics": {
-            "precision_at_k": 0.6667,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.2,
-            "novelty": 0.33
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5333
           },
-          "latency_ms": 0.0428,
+          "latency_ms": 137.1311,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -613,42 +533,42 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "b5",
-              "title": "Inspired",
+              "book_id": "gr_16071764",
+              "title": "Lean In: Women, Work, and the Will to Lead",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.375,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "semantic": 0.25,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.6412,
-              "novelty_score": 0.3
+              "composite_score": 0.625,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "b7",
-              "title": "Designing Data-Intensive Applications",
+              "book_id": "gr_69242",
+              "title": "Made to Stick: Why Some Ideas Survive and Others Die",
               "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 0.375,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 0.5,
+                "semantic": 0.25,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.6213,
-              "novelty_score": 0.36
+              "composite_score": 0.375,
+              "novelty_score": 0.5
             },
             {
               "rank": 3,
-              "book_id": "b6",
-              "title": "Zero to One",
+              "book_id": "gr_13588394",
+              "title": "The Signal and the Noise: Why So Many Predictions Fail - But Some Don't",
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 0.0,
+                "semantic": 0.25,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.325,
-              "novelty_score": 0.33
+              "composite_score": 0.125,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -656,13 +576,13 @@
           "case_id": "explore_cross_domain",
           "state": "completed",
           "metrics": {
-            "precision_at_k": 0.6667,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.2,
-            "novelty": 0.33
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.6924
           },
-          "latency_ms": 0.0713,
+          "latency_ms": 145.5077,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -674,42 +594,42 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "b9",
-              "title": "The Silk Roads",
+              "book_id": "gr_2002",
+              "title": "Harry Potter Schoolbooks Box Set: Two Classic Books from the Library of Hogwarts School of Witchcraft and Wizardry",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.125,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "semantic": 0.25,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.5437,
-              "novelty_score": 0.33
+              "composite_score": 0.625,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "b8",
-              "title": "Kindred",
+              "book_id": "gr_23522",
+              "title": "Mythology: Timeless Tales of Gods and Heroes",
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.25,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 0.0229,
+                "semantic": 0.125,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.4225,
-              "novelty_score": 0.3
+              "composite_score": 0.0739,
+              "novelty_score": 0.9771
             },
             {
               "rank": 3,
-              "book_id": "b10",
-              "title": "Babel",
+              "book_id": "gr_29925",
+              "title": "Gods and Generals (The Civil War Trilogy, #1)",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.25,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "semantic": 0.125,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.2275,
-              "novelty_score": 0.36
+              "composite_score": 0.0625,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -717,13 +637,13 @@
           "case_id": "remote_stress_warm",
           "state": "completed",
           "metrics": {
-            "precision_at_k": 0.5,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 1.0,
-            "diversity": 0.2,
-            "novelty": 0.315
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.55
           },
-          "latency_ms": 0.0308,
+          "latency_ms": 131.8105,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -735,29 +655,29 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "rs1",
-              "title": "Accelerate",
+              "book_id": "gr_12691",
+              "title": "Marley and Me: Life and Love With the World's Worst Dog",
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.25,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 1.0,
+                "semantic": 0.375,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.4225,
-              "novelty_score": 0.3
+              "composite_score": 0.6875,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "rs2",
-              "title": "The Phoenix Project",
+              "book_id": "gr_6346975",
+              "title": "Moonwalking with Einstein: The Art and Science of Remembering Everything",
               "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.125,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 0.0,
+                "semantic": 0.375,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.3688,
-              "novelty_score": 0.33
+              "composite_score": 0.1875,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -768,10 +688,10 @@
             "precision_at_k": 0.3333,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.2,
-            "novelty": 0.33
+            "diversity": 0.0,
+            "novelty": 0.5333
           },
-          "latency_ms": 0.0339,
+          "latency_ms": 251.2754,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -786,26 +706,26 @@
               "book_id": "rsc1",
               "title": "rsc1",
               "score_parts": {
-                "collaborative": 0.0,
+                "collaborative": 1.0,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.51,
-              "novelty_score": 0.3
+              "composite_score": 1.0,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
               "book_id": "rsc2",
               "title": "rsc2",
               "score_parts": {
-                "collaborative": 0.0,
+                "collaborative": 0.5,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.5,
-              "novelty_score": 0.33
+              "composite_score": 0.75,
+              "novelty_score": 0.5
             },
             {
               "rank": 3,
@@ -814,11 +734,11 @@
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.49,
-              "novelty_score": 0.36
+              "composite_score": 0.5,
+              "novelty_score": 1.0
             }
           ]
         },
@@ -826,13 +746,13 @@
           "case_id": "remote_strict_warm",
           "state": "completed",
           "metrics": {
-            "precision_at_k": 0.5,
-            "recall_at_k": 1.0,
-            "ndcg_at_k": 0.6309,
-            "diversity": 0.2,
-            "novelty": 0.315
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.55
           },
-          "latency_ms": 0.0298,
+          "latency_ms": 141.8683,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -844,47 +764,47 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "rss2",
-              "title": "Software Architecture: The Hard Parts",
+              "book_id": "gr_7769",
+              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.4,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "semantic": 0.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.64,
-              "novelty_score": 0.33
+              "composite_score": 0.5,
+              "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "rss1",
-              "title": "Building Microservices",
+              "book_id": "gr_949709",
+              "title": "There Was An Old Lady Who Swallowed A Fly (Classic Books)",
               "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 0.2,
-                "knowledge": 0.2,
-                "diversity": 0.2
+                "collaborative": 0.0,
+                "semantic": 0.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
               },
-              "composite_score": 0.58,
-              "novelty_score": 0.3
+              "composite_score": 0.0,
+              "novelty_score": 1.0
             }
           ]
         }
       ],
       "summary": {
         "cases": 8.0,
-        "precision_at_k": 0.5625,
-        "recall_at_k": 1.0,
-        "ndcg_at_k": 0.9077,
-        "diversity": 0.2,
-        "novelty": 0.3225,
-        "latency_ms_mean": 0.0462,
+        "precision_at_k": 0.0833,
+        "recall_at_k": 0.25,
+        "ndcg_at_k": 0.25,
+        "diversity": 0.0,
+        "novelty": 0.5615,
+        "latency_ms_mean": 192.2386,
         "strict_failure_rate": 0.0,
         "remote_attempt_rate": 0.0,
         "fallback_rate": 0.0,
         "remote_success_rate": 0.0,
-        "objective_score": 0.71057,
-        "objective_score_latency_aware": 0.710569
+        "objective_score": 0.214475,
+        "objective_score_latency_aware": 0.21063
       }
     },
     {
@@ -897,10 +817,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.6309,
-            "diversity": 0.45,
-            "novelty": 0.43
+            "diversity": 0.5,
+            "novelty": 0.5
           },
-          "latency_ms": 0.0362,
+          "latency_ms": 2416.7622,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -914,27 +834,27 @@
               "rank": 1,
               "book_id": "b2",
               "title": "Hyperion",
+              "composite_score": 0.3667,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.24285714285714285,
-                "knowledge": 0.25,
-                "diversity": 0.45
+                "collaborative": 0.5,
+                "semantic": 0.3478,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "composite_score": 0.3245,
-              "novelty_score": 0.49
+              "novelty_score": 0.5
             },
             {
               "rank": 2,
               "book_id": "b1",
               "title": "Foundation",
+              "composite_score": 0.3556,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.1,
-                "knowledge": 0.25,
-                "diversity": 0.45
+                "collaborative": 0.5,
+                "semantic": 0.316,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "composite_score": 0.2685,
-              "novelty_score": 0.37
+              "novelty_score": 0.5
             }
           ]
         },
@@ -945,10 +865,10 @@
             "precision_at_k": 1.0,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.45,
-            "novelty": 0.43
+            "diversity": 0.5,
+            "novelty": 0.5
           },
-          "latency_ms": 0.025,
+          "latency_ms": 2454.472,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -962,27 +882,27 @@
               "rank": 1,
               "book_id": "b4",
               "title": "Homegoing",
+              "composite_score": 0.3896,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.24285714285714285,
-                "knowledge": 0.25,
-                "diversity": 0.45
+                "collaborative": 0.5,
+                "semantic": 0.4131,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "composite_score": 0.3245,
-              "novelty_score": 0.49
+              "novelty_score": 0.5
             },
             {
               "rank": 2,
               "book_id": "b3",
               "title": "The Left Hand of Darkness",
+              "composite_score": 0.372,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.24285714285714285,
-                "knowledge": 0.25,
-                "diversity": 0.45
+                "collaborative": 0.5,
+                "semantic": 0.3628,
+                "knowledge": 0.1,
+                "diversity": 0.5
               },
-              "composite_score": 0.3185,
-              "novelty_score": 0.37
+              "novelty_score": 0.5
             }
           ]
         },
@@ -993,10 +913,10 @@
             "precision_at_k": 0.3333,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.5,
-            "diversity": 0.2,
-            "novelty": 0.49
+            "diversity": 0.7,
+            "novelty": 0.7
           },
-          "latency_ms": 0.0306,
+          "latency_ms": 2559.4784,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1008,42 +928,42 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "c3",
-              "title": "c3",
+              "book_id": "c2",
+              "title": "c2",
+              "composite_score": 0.635,
               "score_parts": {
-                "collaborative": 0.2,
+                "collaborative": 0.5,
                 "semantic": 1.0,
-                "knowledge": 0.25,
-                "diversity": 0.2
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "composite_score": 0.5205,
-              "novelty_score": 0.61
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
-              "book_id": "c2",
-              "title": "c2",
+              "book_id": "c3",
+              "title": "c3",
+              "composite_score": 0.41,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 1.0,
-                "knowledge": 0.25,
-                "diversity": 0.2
+                "collaborative": 1.0,
+                "semantic": 0.0,
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "composite_score": 0.5145,
-              "novelty_score": 0.49
+              "novelty_score": 0.7
             },
             {
               "rank": 3,
               "book_id": "c1",
               "title": "c1",
+              "composite_score": 0.1691,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 1.0,
-                "knowledge": 0.25,
-                "diversity": 0.2
+                "collaborative": 0.0,
+                "semantic": 0.026,
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "composite_score": 0.5085,
-              "novelty_score": 0.37
+              "novelty_score": 0.7
             }
           ]
         },
@@ -1054,10 +974,10 @@
             "precision_at_k": 0.6667,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.6167,
-            "novelty": 0.49
+            "diversity": 0.5556,
+            "novelty": 0.5667
           },
-          "latency_ms": 0.0331,
+          "latency_ms": 2549.4505,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1069,42 +989,42 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "b7",
-              "title": "Designing Data-Intensive Applications",
+              "book_id": "b5",
+              "title": "Inspired",
+              "composite_score": 0.6388,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.475,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 0.2753,
+                "semantic": 1.0,
+                "knowledge": 0.1,
+                "diversity": 1.0
               },
-              "composite_score": 0.4867,
-              "novelty_score": 0.61
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
-              "book_id": "b5",
-              "title": "Inspired",
+              "book_id": "b7",
+              "title": "Designing Data-Intensive Applications",
+              "composite_score": 0.6301,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.475,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 1.0,
+                "semantic": 0.648,
+                "knowledge": 0.1,
+                "diversity": 0.6667
               },
-              "composite_score": 0.4747,
-              "novelty_score": 0.37
+              "novelty_score": 0.6000000000000001
             },
             {
               "rank": 3,
               "book_id": "b6",
               "title": "Zero to One",
+              "composite_score": 0.02,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.1,
-                "knowledge": 0.25,
-                "diversity": 0.45
+                "collaborative": 0.0,
+                "semantic": 0.0,
+                "knowledge": 0.1,
+                "diversity": 0.0
               },
-              "composite_score": 0.2745,
-              "novelty_score": 0.49
+              "novelty_score": 0.4
             }
           ]
         },
@@ -1115,10 +1035,10 @@
             "precision_at_k": 0.6667,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.9197,
-            "diversity": 0.7833,
-            "novelty": 0.49
+            "diversity": 0.6667,
+            "novelty": 0.6667
           },
-          "latency_ms": 0.0309,
+          "latency_ms": 2587.8666,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1132,40 +1052,40 @@
               "rank": 1,
               "book_id": "b8",
               "title": "Kindred",
+              "composite_score": 0.6095,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.35,
-                "knowledge": 0.25,
-                "diversity": 0.95
+                "collaborative": 0.3316,
+                "semantic": 0.8759,
+                "knowledge": 0.1,
+                "diversity": 1.0
               },
-              "composite_score": 0.506,
-              "novelty_score": 0.37
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
               "book_id": "b10",
               "title": "Babel",
+              "composite_score": 0.57,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.35,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.1,
+                "diversity": 1.0
               },
-              "composite_score": 0.443,
-              "novelty_score": 0.61
+              "novelty_score": 0.7
             },
             {
               "rank": 3,
               "book_id": "b9",
               "title": "The Silk Roads",
+              "composite_score": 0.27,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.225,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 1.0,
+                "semantic": 0.0,
+                "knowledge": 0.1,
+                "diversity": 0.0
               },
-              "composite_score": 0.3933,
-              "novelty_score": 0.49
+              "novelty_score": 0.6000000000000001
             }
           ]
         },
@@ -1176,10 +1096,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.7,
-            "novelty": 0.43
+            "diversity": 0.65,
+            "novelty": 0.65
           },
-          "latency_ms": 0.0222,
+          "latency_ms": 2570.0025,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1193,27 +1113,27 @@
               "rank": 1,
               "book_id": "rs1",
               "title": "Accelerate",
+              "composite_score": 0.4147,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.35,
-                "knowledge": 0.25,
+                "collaborative": 0.5,
+                "semantic": 0.3706,
+                "knowledge": 0.1,
                 "diversity": 0.7
               },
-              "composite_score": 0.431,
-              "novelty_score": 0.37
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
               "book_id": "rs2",
               "title": "The Phoenix Project",
+              "composite_score": 0.3828,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.225,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 0.5,
+                "semantic": 0.3367,
+                "knowledge": 0.1,
+                "diversity": 0.6
               },
-              "composite_score": 0.3933,
-              "novelty_score": 0.49
+              "novelty_score": 0.6000000000000001
             }
           ]
         },
@@ -1224,10 +1144,10 @@
             "precision_at_k": 0.3333,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.5,
-            "diversity": 0.2,
-            "novelty": 0.49
+            "diversity": 0.7,
+            "novelty": 0.7
           },
-          "latency_ms": 0.0373,
+          "latency_ms": 2812.8572,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1241,40 +1161,40 @@
               "rank": 1,
               "book_id": "rsc3",
               "title": "rsc3",
+              "composite_score": 0.76,
               "score_parts": {
-                "collaborative": 0.2,
+                "collaborative": 1.0,
                 "semantic": 1.0,
-                "knowledge": 0.25,
-                "diversity": 0.2
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "composite_score": 0.5205,
-              "novelty_score": 0.61
+              "novelty_score": 0.7
             },
             {
               "rank": 2,
               "book_id": "rsc2",
               "title": "rsc2",
+              "composite_score": 0.285,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 1.0,
-                "knowledge": 0.25,
-                "diversity": 0.2
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "composite_score": 0.5145,
-              "novelty_score": 0.49
+              "novelty_score": 0.7
             },
             {
               "rank": 3,
               "book_id": "rsc1",
               "title": "rsc1",
+              "composite_score": 0.192,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 1.0,
-                "knowledge": 0.25,
-                "diversity": 0.2
+                "collaborative": 0.0,
+                "semantic": 0.0915,
+                "knowledge": 0.1,
+                "diversity": 0.7
               },
-              "composite_score": 0.5085,
-              "novelty_score": 0.37
+              "novelty_score": 0.7
             }
           ]
         },
@@ -1285,10 +1205,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.6309,
-            "diversity": 0.7,
-            "novelty": 0.43
+            "diversity": 0.6,
+            "novelty": 0.6
           },
-          "latency_ms": 0.0234,
+          "latency_ms": 2536.3521,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1302,27 +1222,27 @@
               "rank": 1,
               "book_id": "rss2",
               "title": "Software Architecture: The Hard Parts",
+              "composite_score": 0.4202,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.5,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 0.5,
+                "semantic": 0.4433,
+                "knowledge": 0.1,
+                "diversity": 0.6
               },
-              "composite_score": 0.4895,
-              "novelty_score": 0.49
+              "novelty_score": 0.6000000000000001
             },
             {
               "rank": 2,
               "book_id": "rss1",
               "title": "Building Microservices",
+              "composite_score": 0.3842,
               "score_parts": {
-                "collaborative": 0.2,
-                "semantic": 0.30000000000000004,
-                "knowledge": 0.25,
-                "diversity": 0.7
+                "collaborative": 0.5,
+                "semantic": 0.3405,
+                "knowledge": 0.1,
+                "diversity": 0.6
               },
-              "composite_score": 0.4135,
-              "novelty_score": 0.37
+              "novelty_score": 0.6000000000000001
             }
           ]
         }
@@ -1332,26 +1252,482 @@
         "precision_at_k": 0.5625,
         "recall_at_k": 1.0,
         "ndcg_at_k": 0.7727,
-        "diversity": 0.5125,
-        "novelty": 0.46,
-        "latency_ms_mean": 0.0298,
+        "diversity": 0.609,
+        "novelty": 0.6104,
+        "latency_ms_mean": 2560.9052,
         "strict_failure_rate": 0.0,
         "remote_attempt_rate": 0.0,
         "fallback_rate": 0.0,
         "remote_success_rate": 0.0,
-        "objective_score": 0.70832,
-        "objective_score_latency_aware": 0.708319
+        "objective_score": 0.73301,
+        "objective_score_latency_aware": 0.681792
+      }
+    },
+    {
+      "method": "llm_only",
+      "runs": [
+        {
+          "case_id": "warm_sf",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 207.7654,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "gr_6452760",
+              "title": "Stones Into Schools: Promoting Peace With Books, Not Bombs, in Afghanistan and Pakistan",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "gr_8073",
+              "title": "Cloudy With a Chance of Meatballs",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "explore_diverse",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 176.1602,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "gr_775597",
+              "title": "Caps for Sale: A Tale of a Peddler, Some Monkeys and Their Monkey Business",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "gr_7769",
+              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "cold_start",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 72.0908,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "c1",
+              "title": "c1",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "c2",
+              "title": "c2",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 3,
+              "book_id": "c3",
+              "title": "c3",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "warm_nonfiction",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 239.5934,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "gr_16071764",
+              "title": "Lean In: Women, Work, and the Will to Lead",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "gr_69242",
+              "title": "Made to Stick: Why Some Ideas Survive and Others Die",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 3,
+              "book_id": "gr_13588394",
+              "title": "The Signal and the Noise: Why So Many Predictions Fail - But Some Don't",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "explore_cross_domain",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 188.4894,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "gr_23522",
+              "title": "Mythology: Timeless Tales of Gods and Heroes",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "gr_29925",
+              "title": "Gods and Generals (The Civil War Trilogy, #1)",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 3,
+              "book_id": "gr_2002",
+              "title": "Harry Potter Schoolbooks Box Set: Two Classic Books from the Library of Hogwarts School of Witchcraft and Wizardry",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 177.9693,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "gr_12691",
+              "title": "Marley and Me: Life and Love With the World's Worst Dog",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "gr_6346975",
+              "title": "Moonwalking with Einstein: The Art and Science of Remembering Everything",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "remote_stress_cold",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 61.501,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "rsc1",
+              "title": "rsc1",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "rsc2",
+              "title": "rsc2",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 3,
+              "book_id": "rsc3",
+              "title": "rsc3",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        },
+        {
+          "case_id": "remote_strict_warm",
+          "state": "completed",
+          "metrics": {
+            "precision_at_k": 0.0,
+            "recall_at_k": 0.0,
+            "ndcg_at_k": 0.0,
+            "diversity": 0.0,
+            "novelty": 0.5
+          },
+          "latency_ms": 426.0528,
+          "strict_remote_validation": false,
+          "strict_failure": 0.0,
+          "remote_attempt_rate": 0.0,
+          "fallback_rate": 0.0,
+          "remote_success_rate": 0.0,
+          "task_count": 0,
+          "remote_attempted_count": 0,
+          "fallback_count": 0,
+          "recommendations": [
+            {
+              "rank": 1,
+              "book_id": "gr_7769",
+              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            },
+            {
+              "rank": 2,
+              "book_id": "gr_949709",
+              "title": "There Was An Old Lady Who Swallowed A Fly (Classic Books)",
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.0
+              },
+              "composite_score": 1.0,
+              "novelty_score": 0.5
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "cases": 8.0,
+        "precision_at_k": 0.0833,
+        "recall_at_k": 0.25,
+        "ndcg_at_k": 0.25,
+        "diversity": 0.0,
+        "novelty": 0.5,
+        "latency_ms_mean": 193.7028,
+        "strict_failure_rate": 0.0,
+        "remote_attempt_rate": 0.0,
+        "fallback_rate": 0.0,
+        "remote_success_rate": 0.0,
+        "objective_score": 0.208325,
+        "objective_score_latency_aware": 0.204451
       }
     }
   ],
   "leaderboard": [
     {
-      "method": "traditional_hybrid",
-      "objective_score": 0.71057,
-      "objective_score_latency_aware": 0.710569,
-      "ndcg_at_k": 0.9077,
+      "method": "multi_agent_proxy",
+      "objective_score": 0.73301,
+      "objective_score_latency_aware": 0.681792,
+      "ndcg_at_k": 0.7727,
       "precision_at_k": 0.5625,
-      "latency_ms_mean": 0.0462,
+      "latency_ms_mean": 2560.9052,
       "strict_failure_rate": 0.0,
       "remote_attempt_rate": 0.0,
       "fallback_rate": 0.0,
@@ -1359,39 +1735,52 @@
       "rank": 1
     },
     {
-      "method": "multi_agent_proxy",
-      "objective_score": 0.70832,
-      "objective_score_latency_aware": 0.708319,
-      "ndcg_at_k": 0.7727,
-      "precision_at_k": 0.5625,
-      "latency_ms_mean": 0.0298,
-      "strict_failure_rate": 0.0,
-      "remote_attempt_rate": 0.0,
-      "fallback_rate": 0.0,
-      "remote_success_rate": 0.0,
-      "rank": 2
-    },
-    {
       "method": "acps_multi_agent",
-      "objective_score": 0.66096,
-      "objective_score_latency_aware": 0.489561,
-      "ndcg_at_k": 0.8188,
-      "precision_at_k": 0.5,
-      "latency_ms_mean": 8569.9303,
+      "objective_score": 0.500195,
+      "objective_score_latency_aware": 0.438364,
+      "ndcg_at_k": 0.5688,
+      "precision_at_k": 0.4167,
+      "latency_ms_mean": 3091.5268,
       "strict_failure_rate": 0.125,
       "remote_attempt_rate": 0.375,
       "fallback_rate": 0.25,
       "remote_success_rate": 0.125,
+      "rank": 2
+    },
+    {
+      "method": "traditional_hybrid",
+      "objective_score": 0.214475,
+      "objective_score_latency_aware": 0.21063,
+      "ndcg_at_k": 0.25,
+      "precision_at_k": 0.0833,
+      "latency_ms_mean": 192.2386,
+      "strict_failure_rate": 0.0,
+      "remote_attempt_rate": 0.0,
+      "fallback_rate": 0.0,
+      "remote_success_rate": 0.0,
       "rank": 3
+    },
+    {
+      "method": "llm_only",
+      "objective_score": 0.208325,
+      "objective_score_latency_aware": 0.204451,
+      "ndcg_at_k": 0.25,
+      "precision_at_k": 0.0833,
+      "latency_ms_mean": 193.7028,
+      "strict_failure_rate": 0.0,
+      "remote_attempt_rate": 0.0,
+      "fallback_rate": 0.0,
+      "remote_success_rate": 0.0,
+      "rank": 4
     }
   ],
   "winner": {
-    "method": "traditional_hybrid",
-    "objective_score": 0.71057,
-    "objective_score_latency_aware": 0.710569,
-    "ndcg_at_k": 0.9077,
+    "method": "multi_agent_proxy",
+    "objective_score": 0.73301,
+    "objective_score_latency_aware": 0.681792,
+    "ndcg_at_k": 0.7727,
     "precision_at_k": 0.5625,
-    "latency_ms_mean": 0.0462,
+    "latency_ms_mean": 2560.9052,
     "strict_failure_rate": 0.0,
     "remote_attempt_rate": 0.0,
     "fallback_rate": 0.0,

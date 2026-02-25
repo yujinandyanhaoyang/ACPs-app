@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import inspect
 import json
 import os
 import sys
@@ -16,13 +17,14 @@ if _PROJECT_ROOT not in sys.path:
 
 import reading_concierge.reading_concierge as concierge_module
 from reading_concierge.reading_concierge import app as concierge_app
-from services.baseline_rankers import traditional_hybrid_rank, multi_agent_proxy_rank
+from services.baseline_rankers import traditional_hybrid_rank, multi_agent_sequential_rank, llm_only_rank
 from services.phase4_benchmark import aggregate_method_runs, evaluate_method_case, rank_methods
 
 
-BASELINE_METHODS: Dict[str, Callable[[Dict[str, Any], int], List[Dict[str, Any]]]] = {
+BASELINE_METHODS: Dict[str, Callable[..., Any]] = {
     "traditional_hybrid": traditional_hybrid_rank,
-    "multi_agent_proxy": multi_agent_proxy_rank,
+    "multi_agent_proxy": multi_agent_sequential_rank,
+    "llm_only": llm_only_rank,
 }
 
 
@@ -163,13 +165,17 @@ async def _run_acps_case(client: httpx.AsyncClient, case: Dict[str, Any]) -> Dic
     }
 
 
-def _run_baseline_case(method_name: str, case: Dict[str, Any]) -> Dict[str, Any]:
+async def _run_baseline_case(method_name: str, case: Dict[str, Any]) -> Dict[str, Any]:
     top_k = int(((case.get("constraints") or {}).get("top_k") or 5))
     ground_truth = ((case.get("constraints") or {}).get("ground_truth_ids") or [])
 
     ranker = BASELINE_METHODS[method_name]
     start = time.perf_counter()
-    recommendations = ranker(case, top_k=top_k)
+    recommendations_or_coro = ranker(case, top_k=top_k)
+    if inspect.isawaitable(recommendations_or_coro):
+        recommendations = await recommendations_or_coro
+    else:
+        recommendations = recommendations_or_coro
     latency_ms = round((time.perf_counter() - start) * 1000, 4)
     metrics = evaluate_method_case(recommendations, ground_truth, top_k)
 
@@ -325,6 +331,26 @@ def _build_markdown_report(report: Dict[str, Any], summary: Dict[str, Any]) -> s
     overall = reliability.get("overall") or {}
     decision = _build_findings_and_recommendations(summary)
 
+    method_rows = report.get("methods") or []
+    method_summaries: List[Dict[str, Any]] = []
+    for method_row in method_rows:
+        if not isinstance(method_row, dict):
+            continue
+        method_name = str(method_row.get("method") or "").strip()
+        method_summary = method_row.get("summary") or {}
+        if not method_name or not isinstance(method_summary, dict):
+            continue
+        method_summaries.append({"method": method_name, **method_summary})
+
+    ndcg_values = [
+        float(row.get("ndcg_at_k") or 0.0)
+        for row in method_summaries
+        if row.get("ndcg_at_k") is not None
+    ]
+    ndcg_min = min(ndcg_values) if ndcg_values else 0.0
+    ndcg_max = max(ndcg_values) if ndcg_values else 0.0
+    ndcg_span = ndcg_max - ndcg_min
+
     def _fmt_num(value: Any) -> str:
         if value is None:
             return "n/a"
@@ -341,6 +367,8 @@ def _build_markdown_report(report: Dict[str, Any], summary: Dict[str, Any]) -> s
         f"- Case count: {case_count}",
         f"- Winner method: {winner_method}",
         f"- Winner objective score: {_fmt_num(winner_score)}",
+        f"- Method count: {len(method_summaries)}",
+        f"- NDCG@k range across methods: {_fmt_num(ndcg_min)} ~ {_fmt_num(ndcg_max)} (span={_fmt_num(ndcg_span)})",
         "",
         "## ACPs Quality",
         f"- Precision@k: {_fmt_num(quality.get('precision_at_k'))}",
@@ -378,6 +406,33 @@ def _build_markdown_report(report: Dict[str, Any], summary: Dict[str, Any]) -> s
     for item in decision.get("recommendations") or []:
         lines.append(f"- {item}")
 
+    lines.extend([
+        "",
+        "## Method Comparison",
+        "| Method | Objective | NDCG@k | Precision@k | Recall@k | Latency mean (ms) |",
+        "|---|---:|---:|---:|---:|---:|",
+    ])
+    for row in sorted(
+        method_summaries,
+        key=lambda item: float(item.get("objective_score") or -999.0),
+        reverse=True,
+    ):
+        lines.append(
+            "| "
+            + str(row.get("method") or "n/a")
+            + " | "
+            + _fmt_num(row.get("objective_score"))
+            + " | "
+            + _fmt_num(row.get("ndcg_at_k"))
+            + " | "
+            + _fmt_num(row.get("precision_at_k"))
+            + " | "
+            + _fmt_num(row.get("recall_at_k"))
+            + " | "
+            + _fmt_num(row.get("latency_ms_mean"))
+            + " |"
+        )
+
     return "\n".join(lines) + "\n"
 
 
@@ -394,7 +449,7 @@ async def run_benchmark(cases: List[Dict[str, Any]]) -> Dict[str, Any]:
     for method_name in BASELINE_METHODS:
         runs = []
         for case in cases:
-            runs.append(_run_baseline_case(method_name, case))
+            runs.append(await _run_baseline_case(method_name, case))
         reports.append({"method": method_name, "runs": runs, "summary": aggregate_method_runs(runs)})
 
     leaderboard = rank_methods(reports)
