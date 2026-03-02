@@ -15,6 +15,7 @@ _CF_ITEM_VECTORS_CACHE: Dict[str, List[float]] | None = None
 _SENTENCE_MODEL_CACHE: Dict[str, Any] = {}
 _DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"
 _LOGGER = logging.getLogger("services.model_backends")
+_ZH_CHAR_NGRAM_MODEL = "zh-char-ngram-v1"
 
 
 def hash_embedding(text: str, dim: int = 12) -> List[float]:
@@ -31,6 +32,30 @@ def hash_embedding(text: str, dim: int = 12) -> List[float]:
 				break
 		digest = hashlib.sha256(digest).digest()
 	return values
+
+
+def _char_ngram_embedding(text: str, dim: int = 128, ngram: int = 2) -> List[float]:
+	normalized = (text or "").strip().lower()
+	if not normalized:
+		return [0.0] * max(dim, 16)
+
+	buckets = [0.0] * max(dim, 16)
+	gram_size = max(1, int(ngram))
+	if len(normalized) < gram_size:
+		grams = [normalized]
+	else:
+		grams = [normalized[idx : idx + gram_size] for idx in range(len(normalized) - gram_size + 1)]
+
+	for gram in grams:
+		digest = hashlib.md5(gram.encode("utf-8")).digest()
+		bucket = int.from_bytes(digest[:4], "big") % len(buckets)
+		sign = 1.0 if digest[4] % 2 == 0 else -1.0
+		buckets[bucket] += sign
+
+	norm = math.sqrt(sum(value * value for value in buckets))
+	if norm <= 0:
+		return [0.0] * len(buckets)
+	return [round(value / norm, 6) for value in buckets]
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -141,6 +166,11 @@ def generate_text_embeddings(
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
 
 	effective_model = str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
+	if effective_model == _ZH_CHAR_NGRAM_MODEL:
+		vectors = [_char_ngram_embedding(text, dim=max(64, fallback_dim), ngram=2) for text in text_list]
+		dim = len(vectors[0]) if vectors else 0
+		return vectors, {"backend": "char-ngram", "model": effective_model, "vector_dim": dim}
+
 	model = _resolve_sentence_transformer(effective_model)
 	if model is not None:
 		vectors = model.encode(text_list, normalize_embeddings=True)

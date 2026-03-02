@@ -464,7 +464,7 @@ async def _generate_explanation_for_item(
         return {
             "book_id": item.get("book_id"),
             "bullet_summary": bullet_summary,
-            "justification": (raw or "").strip() or "Model returned empty explanation.",
+            "justification": (raw or "").strip() or "Model returned an empty explanation, so this summary is used.",
             "source": "llm",
         }
     except Exception as exc:  # pragma: no cover

@@ -35,7 +35,9 @@ except ImportError as exc:  # pragma: no cover
     raise SystemExit("networkx is required: pip install networkx") from exc
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
+_MERGED_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "books_master_merged.jsonl"
+_GOODREADS_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
+BOOKS_PATH = _MERGED_BOOKS_PATH if _MERGED_BOOKS_PATH.exists() else _GOODREADS_BOOKS_PATH
 OUT_DIR = PROJECT_ROOT / "data" / "processed"
 
 OUT_GRAPH = OUT_DIR / "knowledge_graph.json"

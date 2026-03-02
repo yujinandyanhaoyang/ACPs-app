@@ -4,6 +4,9 @@ import argparse
 import csv
 import hashlib
 import json
+import os
+import subprocess
+import sys
 import re
 from collections import defaultdict
 from pathlib import Path
@@ -12,6 +15,27 @@ from typing import Dict, Iterable, List, Tuple
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = PROJECT_ROOT / "data" / "raw" / "goodreads"
 OUT_DIR = PROJECT_ROOT / "data" / "processed" / "goodreads"
+
+
+def _enforce_compliance_in_ci() -> None:
+    if os.getenv("CI", "").lower() != "true":
+        return
+    if os.getenv("SKIP_DATA_COMPLIANCE_CHECK", "").lower() in {"1", "true", "yes"}:
+        return
+
+    checker = PROJECT_ROOT / "scripts" / "check_data_compliance.py"
+    result = subprocess.run(
+        [sys.executable, str(checker)],
+        cwd=str(PROJECT_ROOT),
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Data compliance check failed in CI before ingestion.\n"
+            + (result.stdout or "")
+            + (result.stderr or "")
+        )
 
 
 def _clean_text(value: str) -> str:
@@ -159,6 +183,8 @@ def _split_interactions(
 
 
 def main() -> None:
+    _enforce_compliance_in_ci()
+
     parser = argparse.ArgumentParser(description="Preprocess Goodreads goodbooks-10k into normalized JSONL files.")
     parser.add_argument("--raw-dir", type=Path, default=RAW_DIR)
     parser.add_argument("--out-dir", type=Path, default=OUT_DIR)

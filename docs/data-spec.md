@@ -1,48 +1,75 @@
-# Data Spec (Phase 2 Pre)
+# Data Spec (Phase 1 Bilingual Contract)
 
 ## Goal
-Provide a minimal, real-book dataset contract that unblocks Phase 2 retrieval work in `DEBUG_PLAN.md`.
+Define a bilingual (Chinese + English) normalized contract that supports ingestion, cross-language deduplication, and merged-catalog retrieval without changing ACP orchestration semantics.
 
 ## Source strategy
-- Phase 2 Tier A selected source: Goodreads interaction-focused subset + Open Library metadata enrichment.
-- See `docs/dataset-decision.md` for the decision matrix and rollout plan.
-- `data/raw/books_min_sample.jsonl` is retained for smoke tests only and is not a production evaluation dataset.
+- English: Goodreads-style interactions + metadata enrichment.
+- Chinese: approved Chinese source(s) with provenance and license checks documented in `docs/data-license.md`.
+- Fallback and compliance requirements are defined in `docs/dataset-decision.md` and enforced by `scripts/check_data_compliance.py` in CI.
 
-## Required fields
-Each normalized book record must include:
-- `book_id` (string, unique)
+## Required fields (master records)
+Each normalized book record in `books_master*.jsonl` must include:
+- `book_id` (string, globally unique)
+- `canonical_work_id` (string, cross-language dedup anchor)
 - `title` (string, non-empty)
-- `author` (string, may be `"Unknown"` when missing)
-- `description` (string, may be empty)
-- `genres` (array of lowercase strings; can be empty)
+- `language` (`zh` | `en` | `mixed`)
+- `source` (string, e.g. `goodreads`, `douban`, `openlibrary`)
+- `author` (string, `"Unknown"` allowed when missing)
+- `description` (string, empty allowed)
+- `genres` (array[string], normalized tokens)
 
-## Recommended optional fields
+## Optional fields (recommended)
+- `original_title` (string)
+- `translated_titles` (array[string])
+- `aliases` (array[string])
 - `publisher` (string)
 - `published_year` (int)
-- `source` (string, dataset provenance)
+- `isbn10` (string)
+- `isbn13` (string)
+- `script` (`hans` | `hant` | `latin`)
+- `source_book_id` (string)
 
-## Storage layout
-- Raw sample input: `data/raw/books_min_sample.jsonl`
-- Processed output: `data/processed/books_min.jsonl`
+## Interaction fields
+Each record in `interactions_*.jsonl` must include:
+- `user_id` (string)
+- `book_id` (string, must exist in corresponding master dataset)
+- `rating` (float)
+- `source` (string)
+
+Optional:
+- `timestamp` (string or null)
+- `review_text` (string)
+
+## Storage layout (Phase 1)
+- English master: `data/processed/goodreads/books_master.jsonl`
+- Chinese master: `data/processed/books_master_zh.jsonl`
+- Chinese interactions:
+	- `data/processed/interactions_train_zh.jsonl`
+	- `data/processed/interactions_valid_zh.jsonl`
+	- `data/processed/interactions_test_zh.jsonl`
+- Cross-language artifacts:
+	- `data/processed/book_canonical_map.json`
+	- `data/processed/books_master_merged.jsonl`
 
 ## Quality checks
-- Drop rows with empty `title`
-- Ensure `book_id` uniqueness (deduplicate by first seen)
-- Normalize `genres` to lowercase snake-case tokens
-- Normalize text whitespace for `title`, `author`, `description`
+- Drop rows with empty `title`.
+- Enforce `book_id` uniqueness per source dataset.
+- Normalize `language` to `zh`/`en`/`mixed`.
+- Normalize `genres` and text whitespace.
+- Keep UTF-8 encoding for all reads/writes.
+- For interactions, drop rows with missing `user_id`/`book_id` or unknown `book_id`.
 
-## Build command
-Run preprocessing:
-
+## Build commands
 ```bash
-venv/Scripts/python.exe scripts/build_books_min_dataset.py
+venv/Scripts/python.exe scripts/prepare_chinese_sources.py --inputs-dir data/raw/chinese_sources
+venv/Scripts/python.exe scripts/preprocess_goodreads.py
+venv/Scripts/python.exe scripts/preprocess_chinese_dataset.py
+venv/Scripts/python.exe scripts/build_cross_language_canonical_map.py
 ```
 
-## Retrieval fallback expectation
-`services/book_retrieval.py` must be able to return non-empty candidate sets for common queries such as:
-- `science fiction space`
-- `history civilization`
-- `business startup`
+## Retrieval expectation
+`services/book_retrieval.py` should be able to consume merged bilingual records and return non-empty results for both Chinese and English intents.
 
 ---
 

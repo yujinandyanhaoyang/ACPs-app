@@ -32,3 +32,7 @@ coverage.xml
 
 # Cursor
 .cursor/
+
+# Large temporary/raw artifacts
+*.part
+data/raw/chinese_sources/douban/*.part

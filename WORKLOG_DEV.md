@@ -176,3 +176,44 @@
 
 - **Closeout update**
   - `NEXT_STEPS.md` marked complete and removed from active project files.
+
+---
+
+## 2026-03-01 (Repository hygiene cleanup + plan-file retirement)
+
+- **Scope**
+  - Performed a repo hygiene pass focused on removing temporary/smoke/run-artifact files while preserving implementation source code and test code.
+
+- **Cleanup actions completed**
+  - Removed temporary test/smoke leftovers:
+    - `temp_test_phase1.py`
+    - `temp_test_phase2.py`
+    - `temp_test_concierge_phase2.py`
+    - `scripts/ablation_report_smoke.json`
+    - `scripts/phase0_embedding_benchmark.stdout.txt`
+  - Removed generated Phase 2/3 report artifacts:
+    - `scripts/phase2_routing_validation_report.json`
+    - `scripts/phase2_routing_validation_report.md`
+    - `scripts/phase3_ab_experiment_log.jsonl`
+    - `scripts/phase3_ab_summary.json`
+    - `scripts/phase3_ab_summary.md`
+    - `scripts/phase3_release_gates_report.json`
+    - `scripts/phase3_release_gates_report.md`
+  - Removed generated benchmark outputs:
+    - `scripts/phase0_embedding_benchmark_report.json`
+    - `scripts/phase0_embedding_benchmark_report.md`
+    - `scripts/phase4_benchmark_report.json`
+    - `scripts/phase4_benchmark_report.md`
+    - `scripts/phase4_benchmark_summary.json`
+
+- **Planning-file retirement completed**
+  - Removed completed plan documents:
+    - `FRONTEND_PLAN.md`
+    - `plan-dualChineseEnglishDatasetSupport.md`
+
+- **Verification**
+  - For each deletion batch, workspace file search re-checks were run and returned no matches for removed paths.
+
+- **Status note**
+  - Implementation scripts and tests were intentionally retained.
+  - Data ingestion outputs/sources remain in place (e.g., `data/raw/chinese_sources/...`) and were not removed in this cleanup pass.

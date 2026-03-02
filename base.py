@@ -20,6 +20,8 @@ def _get_async_openai_client() -> Any:
     global _async_client
     if _async_client is None and openai is not None:
         api_key = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
+        if not api_key:
+            return None
         base_url = os.getenv("OPENAI_BASE_URL")
 
         # DashScope compatible-mode needs an extra proxy header; keep it optional for plain OpenAI.
@@ -135,6 +137,9 @@ async def call_openai_chat(
     Uses AsyncOpenAI so that ``await`` truly yields control back to the
     event loop, enabling real parallelism inside ``asyncio.gather()``.
     """
+    if os.getenv("AGENT_DISABLE_LLM", "").strip().lower() in {"1", "true", "yes"}:
+        return ""
+
     client = _get_async_openai_client()
     if client is None:  # pragma: no cover
         return ""

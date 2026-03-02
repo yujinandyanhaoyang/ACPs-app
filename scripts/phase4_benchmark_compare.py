@@ -116,11 +116,34 @@ async def _run_acps_case(client: httpx.AsyncClient, case: Dict[str, Any]) -> Dic
     }
 
     start = time.perf_counter()
-    async with _RemoteStressPatch(_is_remote_stress_case(case)):
-        response = await client.post("/user_api", json=payload)
-    latency_ms = round((time.perf_counter() - start) * 1000, 4)
-    response.raise_for_status()
-    body = response.json()
+    try:
+        async with _RemoteStressPatch(_is_remote_stress_case(case)):
+            response = await client.post("/user_api", json=payload)
+        latency_ms = round((time.perf_counter() - start) * 1000, 4)
+        response.raise_for_status()
+        body = response.json()
+    except Exception as exc:
+        latency_ms = round((time.perf_counter() - start) * 1000, 4)
+        top_k = int((payload.get("constraints") or {}).get("top_k") or 1)
+        ground_truth = (payload.get("constraints") or {}).get("ground_truth_ids") or []
+        degraded_metrics = evaluate_method_case([], ground_truth, top_k)
+        strict_remote_validation = bool((payload.get("constraints") or {}).get("strict_remote_validation", False))
+        return {
+            "case_id": case.get("case_id"),
+            "state": "failed",
+            "metrics": degraded_metrics,
+            "latency_ms": latency_ms,
+            "strict_remote_validation": strict_remote_validation,
+            "strict_failure": 1.0 if strict_remote_validation else 0.0,
+            "remote_attempt_rate": 0.0,
+            "fallback_rate": 0.0,
+            "remote_success_rate": 0.0,
+            "task_count": 0,
+            "remote_attempted_count": 0,
+            "fallback_count": 0,
+            "recommendations": [],
+            "error": str(exc),
+        }
 
     metrics = ((body.get("evaluation") or {}).get("metrics") or {})
     recommendations = body.get("recommendations") or []

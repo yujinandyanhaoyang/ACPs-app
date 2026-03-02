@@ -1,10 +1,10 @@
-# Dataset Decision Matrix (Phase 2)
+# Dataset Decision Matrix (Phase 1/2)
 
 ## Decision Summary
-For the current phase, use:
+For current implementation phases, use:
 
-- **Tier A (now):** Goodreads interaction-focused subset + Open Library metadata enrichment
-- **Tier B (next):** Larger Goodreads/Amazon Books slice for full offline evaluation
+- **Tier A (now):** Goodreads interaction-focused subset + approved Chinese source + Open Library metadata enrichment
+- **Tier B (next):** Larger Goodreads/Amazon Books slice and expanded Chinese interactions for full offline evaluation
 
 This is the fastest path to satisfy `PLAN.md` requirements while avoiding hardcoded recommendation behavior.
 
@@ -20,13 +20,20 @@ This is the fastest path to satisfy `PLAN.md` requirements while avoiding hardco
 ## Selected Exact Source Strategy
 
 ### Tier A (implement first)
-- **Primary interactions:** public Goodreads interaction split (ratings/reviews + user/book IDs)
+- **Primary interactions (EN):** public Goodreads interaction split (ratings/reviews + user/book IDs)
+- **Primary metadata (ZH):** approved Chinese metadata + optional interactions from approved source
 - **Metadata completion:** Open Library dumps/APIs for title/author/subjects/publisher/year backfill
-- **Output target:** unified normalized files under `data/processed/`:
-  - `books_master.jsonl`
-  - `interactions_train.jsonl`
-  - `interactions_valid.jsonl`
-  - `interactions_test.jsonl`
+- **Output target:** normalized files under `data/processed/`:
+  - `goodreads/books_master.jsonl`
+  - `goodreads/interactions_train.jsonl`
+  - `goodreads/interactions_valid.jsonl`
+  - `goodreads/interactions_test.jsonl`
+  - `books_master_zh.jsonl`
+  - `interactions_train_zh.jsonl`
+  - `interactions_valid_zh.jsonl`
+  - `interactions_test_zh.jsonl`
+  - `book_canonical_map.json`
+  - `books_master_merged.jsonl`
 
 ### Why this exact choice
 1. Provides collaborative filtering signal immediately (user-item interactions).
@@ -36,15 +43,19 @@ This is the fastest path to satisfy `PLAN.md` requirements while avoiding hardco
 
 ## Minimum Field Contract
 
-### `books_master.jsonl`
+### `books_master*.jsonl`
 - `book_id`
+- `canonical_work_id`
 - `title`
+- `language` (`zh` | `en` | `mixed`)
 - `author`
 - `description`
 - `genres` (or subjects mapped to genres)
+- `source`
 - `publisher` (optional)
 - `published_year` (optional)
-- `source`
+- `isbn10` / `isbn13` (optional)
+- `script` (optional)
 
 ### `interactions_*.jsonl`
 - `user_id`
@@ -57,7 +68,7 @@ This is the fastest path to satisfy `PLAN.md` requirements while avoiding hardco
 ## Split Policy
 - Random split by interaction rows: **80/10/10** (train/valid/test)
 - Enforce no empty `book_id`/`user_id`
-- Remove interactions whose `book_id` is absent from `books_master`
+- Remove interactions whose `book_id` is absent from corresponding source master files
 
 ## Compliance Checklist (must pass before model training)
 - Record exact download source and license terms in `docs/data-license.md`

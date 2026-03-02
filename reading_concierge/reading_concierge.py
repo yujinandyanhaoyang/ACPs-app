@@ -25,8 +25,12 @@ _BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_su
 
 from base import get_agent_logger, call_openai_chat, register_acs_route
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
-from services.book_retrieval import load_books, retrieve_books_by_query
-from services.model_backends import load_cf_item_vectors
+from services.book_retrieval import (
+    load_books,
+    load_books_dual_corpus,
+    retrieve_books_by_variant_with_diagnostics,
+    detect_query_language,
+)
 from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
 from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
@@ -525,55 +529,74 @@ async def _llm_select_book_ids(query: str, candidate_pool: List[Dict[str, Any]],
     return selected
 
 
-async def _derive_books_from_query(query: str, candidate_ids: List[str]) -> List[Dict[str, Any]]:
-    books = load_books()
+async def _derive_books_from_query(
+    query: str,
+    candidate_ids: List[str],
+    retrieval_variant: str | None = None,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    query_language = detect_query_language(query or "")
+    diagnostics: Dict[str, Any] = {
+        "query_language": query_language,
+        "route": "none",
+        "input_candidate_ids": len(candidate_ids or []),
+        "books_loaded": 0,
+        "variant": str(retrieval_variant or "metadata-first-fusion"),
+        "primary_corpus": "mixed",
+        "fallback_used": False,
+        "candidate_counts": {},
+        "fusion_component_avgs": {},
+        "candidate_pool_count": 0,
+        "selector": "none",
+        "selected_count": 0,
+    }
+
+    corpora = load_books_dual_corpus()
+    books_en = list(corpora.get("en") or [])
+    books_zh = list(corpora.get("zh") or [])
+    books = books_en + books_zh
+    diagnostics["books_loaded"] = len(books)
     if not books:
-        return []
+        diagnostics["route"] = "empty_dataset"
+        return [], diagnostics
 
     if candidate_ids:
         wanted = {str(cid) for cid in candidate_ids if str(cid).strip()}
-        return [row for row in books if str(row.get("book_id") or "") in wanted]
+        by_id: Dict[str, Dict[str, Any]] = {}
+        for row in books:
+            bid = str(row.get("book_id") or "")
+            if bid and bid not in by_id:
+                by_id[bid] = row
+        selected = [by_id[bid] for bid in wanted if bid in by_id]
+        diagnostics["route"] = "candidate_ids"
+        diagnostics["selected_count"] = len(selected)
+        return selected, diagnostics
 
     if not query.strip():
-        return []
+        diagnostics["route"] = "empty_query"
+        return [], diagnostics
 
     pool_target = max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL)
-    retrieval_pool = min(len(books), max(pool_target, pool_target * 4))
-
-    lexical = retrieve_books_by_query(
+    selected, retrieval_diag = retrieve_books_by_variant_with_diagnostics(
         query=query,
-        books=books,
-        top_k=retrieval_pool,
+        top_k=pool_target,
+        variant=retrieval_variant,
+        books_en=books_en,
+        books_zh=books_zh,
     )
-    if not lexical:
-        return []
+    diagnostics["variant"] = retrieval_diag.get("variant", diagnostics["variant"])
+    diagnostics["primary_corpus"] = retrieval_diag.get("primary_corpus", "mixed")
+    diagnostics["fallback_used"] = bool(retrieval_diag.get("fallback_used", False))
+    diagnostics["candidate_counts"] = retrieval_diag.get("candidate_counts") or {}
+    diagnostics["fusion_component_avgs"] = retrieval_diag.get("fusion_component_avgs") or {}
+    diagnostics["candidate_pool_count"] = int((retrieval_diag.get("candidate_counts") or {}).get("scored_total", 0))
+    diagnostics["selector"] = "metadata_fusion"
 
-    cf_vectors = load_cf_item_vectors()
-    if cf_vectors:
-        covered: List[Dict[str, Any]] = []
-        uncovered: List[Dict[str, Any]] = []
-        for row in lexical:
-            bid = str(row.get("book_id") or "")
-            if bid and bid in cf_vectors:
-                covered.append(row)
-            else:
-                uncovered.append(row)
-        candidate_pool = (covered + uncovered)[:pool_target]
-    else:
-        candidate_pool = lexical[:pool_target]
-
-    selected_ids = await _llm_select_book_ids(
-        query=query,
-        candidate_pool=candidate_pool,
-        top_k=BOOK_RETRIEVAL_TOP_K,
-    )
-
-    if not selected_ids:
-        return candidate_pool[:BOOK_RETRIEVAL_TOP_K]
-
-    by_id = {str(row.get("book_id") or ""): row for row in candidate_pool}
-    selected_books = [by_id[bid] for bid in selected_ids if bid in by_id]
-    return selected_books[:BOOK_RETRIEVAL_TOP_K]
+    if not selected:
+        diagnostics["route"] = "routed_empty"
+        return [], diagnostics
+    diagnostics["route"] = "routed_metadata_fusion"
+    diagnostics["selected_count"] = len(selected)
+    return selected, diagnostics
 
 
 def _detect_scenario(req: UserRequest) -> str:
@@ -588,7 +611,16 @@ def _detect_scenario(req: UserRequest) -> str:
 
 
 async def _seed_cold_start_history(req: UserRequest, books: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
-    local_books = books if books is not None else (req.books or await _derive_books_from_query(req.query, req.candidate_ids))
+    if books is not None:
+        local_books = books
+    elif req.books:
+        local_books = req.books
+    else:
+        local_books, _ = await _derive_books_from_query(
+            req.query,
+            req.candidate_ids,
+            retrieval_variant=str((req.constraints or {}).get("retrieval_variant") or "").strip() or None,
+        )
     if not local_books:
         return []
 
@@ -710,7 +742,24 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     policy = _scenario_policy(req)
     scenario = policy["scenario"]
     strict_remote_validation = bool(req.constraints.get("strict_remote_validation", False))
-    books = req.books or await _derive_books_from_query(req.query, req.candidate_ids)
+    if req.books:
+        books = req.books
+        retrieval_diag = {
+            "query_language": detect_query_language(req.query or ""),
+            "route": "request_books",
+            "input_candidate_ids": len(req.candidate_ids or []),
+            "books_loaded": len(req.books),
+            "lexical_count": len(req.books),
+            "candidate_pool_count": len(req.books),
+            "selector": "request_payload",
+            "selected_count": len(req.books),
+        }
+    else:
+        books, retrieval_diag = await _derive_books_from_query(
+            req.query,
+            req.candidate_ids,
+            retrieval_variant=str((req.constraints or {}).get("retrieval_variant") or "").strip() or None,
+        )
 
     if policy.get("needs_cold_seed") and not policy["profile"]["history"]:
         policy["profile"]["history"] = await _seed_cold_start_history(req, books)
@@ -806,6 +855,10 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
         "ranking_constraints": policy["ranking_constraints"],
         "ranking_weights": policy["ranking_weights"],
         "strict_remote_validation": strict_remote_validation,
+        "detected_query_language": retrieval_diag.get("query_language", {}).get("language", "mixed"),
+        "language_confidence": retrieval_diag.get("query_language", {}).get("confidence", 0.0),
+        "language_stats": retrieval_diag.get("query_language", {}).get("stats", {}),
+        "retrieval_diagnostics": retrieval_diag,
     }
 
     return partner_tasks, partner_results

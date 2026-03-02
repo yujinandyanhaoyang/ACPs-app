@@ -63,8 +63,8 @@ def _demo_payload_with_query(query: str) -> dict:
 def test_demo_page_route_available(client_reading_concierge):
     resp = client_reading_concierge.get("/demo")
     assert resp.status_code == 200
-    assert "ACPs Multi-Agent Reading Recsys Demo" in resp.text
-    assert "Final Recommendation Results (Natural Language)" in resp.text
+    assert "Reading Concierge" in resp.text
+    assert "Natural Language Query" in resp.text
 
 
 def test_demo_status_route_available(client_reading_concierge):
@@ -199,6 +199,79 @@ def test_orchestration_cold_start_auto_mode_completes(client_reading_concierge):
     assert res["scenario"] == "cold"
     assert res["state"] == "completed"
     assert len(res["recommendations"]) >= 1
+    policy = res["partner_results"]["_policy"]
+    assert policy["detected_query_language"] in {"zh", "en", "mixed"}
+    assert "language_confidence" in policy
+    assert isinstance(policy.get("retrieval_diagnostics"), dict)
+    retrieval_diag = policy["retrieval_diagnostics"]
+    assert "primary_corpus" in retrieval_diag
+    assert "fallback_used" in retrieval_diag
+    assert isinstance(retrieval_diag.get("candidate_counts"), dict)
+    assert isinstance(retrieval_diag.get("fusion_component_avgs"), dict)
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_chinese_text_round_trip_smoke(client_reading_concierge):
+    zh_books = []
+    for idx in range(100):
+        zh_books.append(
+            {
+                "book_id": f"zh-{idx:03d}",
+                "title": f"白鹿原样本{idx}",
+                "description": f"中国乡土文学测试样本 {idx}",
+                "genres": ["乡土文学", "现实主义"],
+                "language": "zh",
+            }
+        )
+
+    payload = {
+        "query": "我想看一些中国乡土文学小说",
+        "user_profile": {"preferred_language": "zh"},
+        "history": [],
+        "reviews": [],
+        "books": zh_books
+        + [
+            {
+                "book_id": "en-001",
+                "title": "Some English Book",
+                "description": "An unrelated English description.",
+                "genres": ["fiction"],
+                "language": "en",
+            }
+        ],
+        "constraints": {"scenario": "cold", "top_k": 1},
+    }
+
+    resp = client_reading_concierge.post("/user_api", json=payload)
+    assert resp.status_code == 200
+    raw = resp.text
+    body = resp.json()
+
+    assert "�" not in raw
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_retrieval_variant_is_reflected_in_policy_diagnostics(client_reading_concierge):
+    payload = {
+        "query": "recommend science fiction books",
+        "user_profile": {"preferred_language": "en"},
+        "history": [],
+        "reviews": [],
+        "books": [],
+        "candidate_ids": [],
+        "constraints": {
+            "scenario": "cold",
+            "top_k": 3,
+            "retrieval_variant": "baseline",
+        },
+    }
+
+    res = _post_user_api(client_reading_concierge, payload)
+    policy = res["partner_results"]["_policy"]
+    retrieval_diag = policy["retrieval_diagnostics"]
+    assert retrieval_diag.get("variant") == "baseline"
+    assert res["state"] == "completed"
+    assert res["recommendations"]
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -449,10 +522,12 @@ def test_session_lru_eviction(monkeypatch, client_reading_concierge):
 
 
 def test_derive_books_does_not_fabricate_candidates_when_no_match():
-    rows = asyncio.run(
+    rows, diagnostics = asyncio.run(
         concierge._derive_books_from_query(
             query="zzzz_unmatched_query_token_987654321",
             candidate_ids=["not-a-real-book-id"],
         )
     )
     assert rows == []
+    assert diagnostics["route"] == "candidate_ids"
+    assert diagnostics["selected_count"] == 0

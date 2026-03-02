@@ -272,6 +272,8 @@ async def _vectorize_books(books: List[Dict[str, Any]]) -> Dict[str, Any]:
 async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
     if not books:
         return {"source": "none", "llm_tags": []}
+    if os.getenv("AGENT_DISABLE_LLM", "").lower() in {"1", "true", "yes", "on"}:
+        return {"source": "heuristic", "llm_tags": []}
     if not os.getenv("OPENAI_API_KEY"):
         return {"source": "heuristic", "llm_tags": []}
 
@@ -300,6 +302,8 @@ async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
             temperature=0.2,
             max_tokens=256,
         )
+        if not raw or not str(raw).strip():
+            return {"source": "heuristic", "llm_tags": []}
         data = json.loads(raw)
         llm_tags = data.get("llm_tags") if isinstance(data, dict) else []
         if not isinstance(llm_tags, list):
