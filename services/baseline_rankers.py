@@ -16,7 +16,7 @@ from services.book_retrieval import load_books, retrieve_books_by_query
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_INTERACTIONS_TRAIN_PATH = _PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_train.jsonl"
+_INTERACTIONS_TRAIN_PATH = _PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
 _POPULARITY_COUNTS_CACHE: Dict[str, int] | None = None
 
 

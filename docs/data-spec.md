@@ -6,7 +6,8 @@ Provide a minimal, real-book dataset contract that unblocks Phase 2 retrieval wo
 ## Source strategy
 - Phase 2 Tier A selected source: Goodreads interaction-focused subset + Open Library metadata enrichment.
 - See `docs/dataset-decision.md` for the decision matrix and rollout plan.
-- `data/raw/books_min_sample.jsonl` is retained for smoke tests only and is not a production evaluation dataset.
+- Raw data is resolved from `RAW_DATA_ROOT` and defaults to `data/raw/` only when the env override is absent.
+- `RAW_DATA_ROOT/books_min_sample.jsonl` is retained for smoke tests only and is not a production evaluation dataset.
 
 ## Required fields
 Each normalized book record must include:
@@ -22,7 +23,7 @@ Each normalized book record must include:
 - `source` (string, dataset provenance)
 
 ## Storage layout
-- Raw sample input: `data/raw/books_min_sample.jsonl`
+- Raw sample input: `RAW_DATA_ROOT/books_min_sample.jsonl`
 - Processed output: `data/processed/books_min.jsonl`
 
 ## Quality checks

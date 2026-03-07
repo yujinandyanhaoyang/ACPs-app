@@ -9,8 +9,10 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
+from services.data_paths import get_raw_data_path
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-RAW_DIR = PROJECT_ROOT / "data" / "raw" / "goodreads"
+RAW_DIR = get_raw_data_path("goodreads")
 OUT_DIR = PROJECT_ROOT / "data" / "processed" / "goodreads"
 
 

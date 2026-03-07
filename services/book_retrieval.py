@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MERGED_ENRICHED_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged_enriched.jsonl"
+MERGED_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged.jsonl"
 GOODREADS_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
 BOOKS_MIN_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "books_min.jsonl"
 DATASET_ENV_KEY = "BOOK_RETRIEVAL_DATASET_PATH"
@@ -20,9 +22,38 @@ def _resolve_dataset_path(dataset_path: Path | None = None) -> Path:
     if env_path:
         return Path(env_path)
 
+    if MERGED_ENRICHED_DATASET_PATH.exists():
+        return MERGED_ENRICHED_DATASET_PATH
+    if MERGED_DATASET_PATH.exists():
+        return MERGED_DATASET_PATH
     if GOODREADS_DATASET_PATH.exists():
         return GOODREADS_DATASET_PATH
     return BOOKS_MIN_DATASET_PATH
+
+
+def get_active_retrieval_corpus_info(dataset_path: Path | None = None) -> Dict[str, Any]:
+    path = _resolve_dataset_path(dataset_path)
+    source = "unknown"
+    if dataset_path is not None:
+        source = "explicit"
+    elif str(os.getenv(DATASET_ENV_KEY) or "").strip():
+        source = "env"
+    elif path == MERGED_ENRICHED_DATASET_PATH:
+        source = "merged-enriched-default"
+    elif path == MERGED_DATASET_PATH:
+        source = "merged-default"
+    elif path == GOODREADS_DATASET_PATH:
+        source = "goodreads-default"
+    elif path == BOOKS_MIN_DATASET_PATH:
+        source = "books-min-fallback"
+
+    exists = path.exists()
+    return {
+        "path": str(path),
+        "exists": exists,
+        "selection_source": source,
+        "file_name": path.name,
+    }
 
 
 def _tokenize(text: str) -> set[str]:

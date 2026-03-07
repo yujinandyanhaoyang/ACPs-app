@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Sequence
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_TEST_INTERACTIONS_PATH = _PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_test.jsonl"
+_DEFAULT_TEST_INTERACTIONS_PATH = _PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
 
 
-def load_test_interactions(n: int = 100, test_path: Path | None = None) -> List[Dict[str, Any]]:
+def load_test_interactions(n: int = 10, test_path: Path | None = None) -> List[Dict[str, Any]]:
 	"""Load up to *n* held-out interactions for empirical evaluation.
 
 	Each returned row contains at least: ``user_id``, ``book_id``, ``rating``.

@@ -29,7 +29,7 @@ from services.book_retrieval import load_books
 from services.evaluation_metrics import compute_recommendation_metrics, load_test_interactions
 
 PROJECT_ROOT = Path(_PROJECT_ROOT)
-DEFAULT_TRAIN_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_train.jsonl"
+DEFAULT_TRAIN_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
 DEFAULT_OUT_PATH = PROJECT_ROOT / "scripts" / "ablation_report.json"
 
 
@@ -198,7 +198,7 @@ def _aggregate(rows: Sequence[Dict[str, float]]) -> Dict[str, float]:
 
 
 async def run_ablation(
-    n_users: int = 100,
+    n_users: int = 10,
     top_k: int = 5,
     train_path: Path = DEFAULT_TRAIN_PATH,
     min_history: int = 3,
@@ -317,8 +317,8 @@ async def run_ablation(
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run empirical ablation against held-out Goodreads split")
-    parser.add_argument("--users", type=int, default=100, help="Number of users to evaluate")
+    parser = argparse.ArgumentParser(description="Run empirical ablation against merged-dataset interactions")
+    parser.add_argument("--users", type=int, default=10, help="Number of users to evaluate")
     parser.add_argument("--top-k", type=int, default=5, help="Top-k for metrics")
     parser.add_argument("--min-history", type=int, default=3, help="Minimum train interactions per user")
     parser.add_argument("--min-ground-truth", type=int, default=1, help="Minimum held-out positives per user")

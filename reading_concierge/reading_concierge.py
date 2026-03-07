@@ -25,7 +25,7 @@ _BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_su
 
 from base import get_agent_logger, call_openai_chat, register_acs_route
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
-from services.book_retrieval import load_books, retrieve_books_by_query
+from services.book_retrieval import load_books, retrieve_books_by_query, get_active_retrieval_corpus_info
 from services.model_backends import load_cf_item_vectors
 from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
@@ -74,6 +74,17 @@ register_acs_route(
     _ACS_JSON_PATH,
     endpoint_override_url=f"{READING_CONCIERGE_BASE_URL}/user_api",
 )
+
+
+@app.on_event("startup")
+async def _startup_runtime_diagnostics() -> None:
+    retrieval_info = get_active_retrieval_corpus_info()
+    logger.info(
+        "event=retrieval_corpus_active path=%s exists=%s selection_source=%s",
+        retrieval_info.get("path"),
+        retrieval_info.get("exists"),
+        retrieval_info.get("selection_source"),
+    )
 
 MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
 sessions: OrderedDict[str, Dict[str, Any]] = OrderedDict()
@@ -853,13 +864,20 @@ async def demo_benchmark_summary() -> JSONResponse:
 
 @app.get("/demo/status")
 async def demo_status() -> Dict[str, Any]:
+    retrieval_info = get_active_retrieval_corpus_info()
     return {
         "service": "reading_concierge",
         "leader_id": LEADER_ID,
         "partner_mode": PARTNER_MODE,
         "demo_page_available": _DEMO_HTML_PATH.exists(),
         "benchmark_summary_available": _BENCHMARK_SUMMARY_PATH.exists(),
+        "retrieval_corpus": retrieval_info,
     }
+
+
+@app.get("/demo/retrieval-corpus")
+async def demo_retrieval_corpus() -> Dict[str, Any]:
+    return get_active_retrieval_corpus_info()
 
 
 @app.post("/user_api")

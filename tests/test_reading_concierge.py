@@ -63,8 +63,8 @@ def _demo_payload_with_query(query: str) -> dict:
 def test_demo_page_route_available(client_reading_concierge):
     resp = client_reading_concierge.get("/demo")
     assert resp.status_code == 200
-    assert "ACPs Multi-Agent Reading Recsys Demo" in resp.text
-    assert "Final Recommendation Results (Natural Language)" in resp.text
+    assert "Reading Concierge" in resp.text
+    assert "Final Recommendation Results" in resp.text
 
 
 def test_demo_status_route_available(client_reading_concierge):
@@ -74,6 +74,16 @@ def test_demo_status_route_available(client_reading_concierge):
     assert payload["service"] == "reading_concierge"
     assert "demo_page_available" in payload
     assert "benchmark_summary_available" in payload
+    assert "retrieval_corpus" in payload
+    assert "path" in payload["retrieval_corpus"]
+
+
+def test_demo_retrieval_corpus_route_available(client_reading_concierge):
+    resp = client_reading_concierge.get("/demo/retrieval-corpus")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert "path" in payload
+    assert "selection_source" in payload
 
 
 def test_demo_benchmark_summary_route_available(client_reading_concierge):

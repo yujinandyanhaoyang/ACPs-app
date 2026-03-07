@@ -10,7 +10,7 @@ from scipy.sparse import csr_matrix
 from sklearn.decomposition import TruncatedSVD
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INTERACTIONS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_train.jsonl"
+DEFAULT_INTERACTIONS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
 DEFAULT_OUT_DIR = PROJECT_ROOT / "data" / "processed"
 
 
@@ -115,7 +115,7 @@ def build_cf_model(
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build pre-factored CF model from Goodreads interactions")
+    parser = argparse.ArgumentParser(description="Build pre-factored CF model from merged interactions")
     parser.add_argument(
         "--interactions",
         type=Path,

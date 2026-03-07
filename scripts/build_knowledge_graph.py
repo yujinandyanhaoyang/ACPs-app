@@ -1,4 +1,4 @@
-"""P1a — Build the book knowledge graph from the Goodreads processed dataset.
+"""P1a — Build the book knowledge graph from the merged processed dataset.
 
 Outputs (all under data/processed/):
   knowledge_graph.json      — full NetworkX node-link JSON (Graph, undirected)
@@ -35,7 +35,10 @@ except ImportError as exc:  # pragma: no cover
     raise SystemExit("networkx is required: pip install networkx") from exc
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
+MERGED_ENRICHED_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged_enriched.jsonl"
+MERGED_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged.jsonl"
+GOODREADS_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
+BOOKS_PATH = MERGED_ENRICHED_BOOKS_PATH if MERGED_ENRICHED_BOOKS_PATH.exists() else (MERGED_BOOKS_PATH if MERGED_BOOKS_PATH.exists() else GOODREADS_BOOKS_PATH)
 OUT_DIR = PROJECT_ROOT / "data" / "processed"
 
 OUT_GRAPH = OUT_DIR / "knowledge_graph.json"

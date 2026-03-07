@@ -5,8 +5,10 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+from services.data_paths import get_raw_data_path
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-RAW_PATH = PROJECT_ROOT / "data" / "raw" / "books_min_sample.jsonl"
+RAW_PATH = get_raw_data_path("books_min_sample.jsonl")
 OUT_PATH = PROJECT_ROOT / "data" / "processed" / "books_min.jsonl"
 
 
