@@ -6,11 +6,13 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
+from services.data_paths import get_processed_data_path
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MERGED_ENRICHED_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged_enriched.jsonl"
-MERGED_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged.jsonl"
-GOODREADS_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
-BOOKS_MIN_DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "books_min.jsonl"
+MERGED_ENRICHED_DATASET_PATH = get_processed_data_path("merged", "books_master_merged_enriched.jsonl")
+MERGED_DATASET_PATH = get_processed_data_path("merged", "books_master_merged.jsonl")
+GOODREADS_DATASET_PATH = get_processed_data_path("goodreads", "books_master.jsonl")
+BOOKS_MIN_DATASET_PATH = get_processed_data_path("books_min.jsonl")
 DATASET_ENV_KEY = "BOOK_RETRIEVAL_DATASET_PATH"
 
 

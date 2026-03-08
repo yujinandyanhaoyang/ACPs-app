@@ -5,11 +5,11 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
-from services.data_paths import get_raw_data_path
+from services.data_paths import get_processed_data_path, get_raw_data_path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_PATH = get_raw_data_path("books_min_sample.jsonl")
-OUT_PATH = PROJECT_ROOT / "data" / "processed" / "books_min.jsonl"
+OUT_PATH = get_processed_data_path("books_min.jsonl")
 
 
 def _clean_text(value: Any) -> str:

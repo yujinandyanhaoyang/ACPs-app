@@ -9,9 +9,11 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.decomposition import TruncatedSVD
 
+from services.data_paths import get_processed_data_path
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INTERACTIONS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
-DEFAULT_OUT_DIR = PROJECT_ROOT / "data" / "processed"
+DEFAULT_INTERACTIONS_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
+DEFAULT_OUT_DIR = get_processed_data_path()
 
 
 def _iter_jsonl(path: Path) -> Iterable[Dict[str, object]]:

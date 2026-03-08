@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import re
 import uuid
 import time
 from pathlib import Path
@@ -290,6 +291,32 @@ async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
         "{book_id, tags}.\n"
         + json.dumps(rows, ensure_ascii=False)
     )
+
+    def _safe_json_dict(raw_text: Any) -> Dict[str, Any]:
+        text = str(raw_text or "").strip()
+        if not text:
+            return {}
+
+        # Handle markdown fenced JSON responses.
+        fenced = re.search(r"```(?:json)?\\s*(\{.*?\})\\s*```", text, flags=re.DOTALL)
+        if fenced:
+            text = fenced.group(1)
+
+        try:
+            parsed = json.loads(text)
+            return parsed if isinstance(parsed, dict) else {}
+        except json.JSONDecodeError:
+            # Try extracting the first JSON object span from mixed-format replies.
+            start = text.find("{")
+            end = text.rfind("}")
+            if start == -1 or end == -1 or end <= start:
+                return {}
+            try:
+                parsed = json.loads(text[start : end + 1])
+                return parsed if isinstance(parsed, dict) else {}
+            except json.JSONDecodeError:
+                return {}
+
     try:
         raw = await call_openai_chat(
             [
@@ -300,7 +327,14 @@ async def _llm_tag_enrichment(books: List[Dict[str, Any]]) -> Dict[str, Any]:
             temperature=0.2,
             max_tokens=256,
         )
-        data = json.loads(raw)
+        data = _safe_json_dict(raw)
+        if not data:
+            logger.warning(
+                "event=llm_tag_enrichment_parse_failed model=%s raw_excerpt=%s",
+                LLM_MODEL,
+                str(raw or "")[:180],
+            )
+            return {"source": "heuristic", "llm_tags": []}
         llm_tags = data.get("llm_tags") if isinstance(data, dict) else []
         if not isinstance(llm_tags, list):
             llm_tags = []

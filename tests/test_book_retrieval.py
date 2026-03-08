@@ -1,13 +1,13 @@
 from pathlib import Path
 
 from scripts.build_books_min_dataset import build_dataset
-from services.data_paths import get_raw_data_path
+from services.data_paths import get_processed_data_path, get_raw_data_path
 from services.book_retrieval import load_books, retrieve_books_by_query, get_active_retrieval_corpus_info
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_PATH = get_raw_data_path("books_min_sample.jsonl")
-OUT_PATH = PROJECT_ROOT / "data" / "processed" / "books_min.jsonl"
+OUT_PATH = get_processed_data_path("books_min.jsonl")
 
 
 def test_build_books_min_dataset_generates_output():

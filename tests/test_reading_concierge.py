@@ -64,7 +64,7 @@ def test_demo_page_route_available(client_reading_concierge):
     resp = client_reading_concierge.get("/demo")
     assert resp.status_code == 200
     assert "Reading Concierge" in resp.text
-    assert "Final Recommendation Results" in resp.text
+    assert "Top K Results" in resp.text
 
 
 def test_demo_status_route_available(client_reading_concierge):

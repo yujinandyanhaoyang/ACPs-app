@@ -152,3 +152,36 @@ def test_book_content_agent_end_to_end_env_and_llm(monkeypatch, client_book_cont
     diagnostics = structured["diagnostics"]
     assert diagnostics["api_key_present"] is True
     assert diagnostics["embedding_backend"]["backend"] in {"sentence-transformers", "hash-fallback", "dashscope"}
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_book_content_agent_llm_invalid_json_falls_back_heuristic(monkeypatch, client_book_content, new_task_id):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-api-key")
+
+    async def fake_call(messages, model, temperature=None, max_tokens=None):
+        return "not a json response"
+
+    monkeypatch.setattr(
+        "agents.book_content_agent.book_content_agent.call_openai_chat",
+        fake_call,
+    )
+
+    payload = {
+        "books": [
+            {
+                "book_id": "b1",
+                "title": "Dune",
+                "description": "Epic science fiction with political strategy and ecology.",
+                "genres": ["science", "fiction"],
+            }
+        ],
+        "kg_mode": "local",
+    }
+
+    res = _post(client_book_content, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    structured = _products(res)[0]["dataItems"][0]["data"]
+    llm_enrichment = structured["outputs"]["llm_enrichment"]
+    assert llm_enrichment["source"] == "heuristic"
+    assert llm_enrichment["llm_tags"] == []

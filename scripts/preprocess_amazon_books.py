@@ -8,11 +8,11 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Tuple
 
-from services.data_paths import get_raw_data_path
+from services.data_paths import get_processed_data_path, get_raw_data_path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = get_raw_data_path("amazon_books")
-OUT_DIR = PROJECT_ROOT / "data" / "processed" / "amazon_kindle"
+OUT_DIR = get_processed_data_path("amazon_kindle")
 
 
 def _clean_text(value: Any) -> str:

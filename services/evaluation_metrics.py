@@ -3,9 +3,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
+from services.data_paths import get_processed_data_path
+
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_TEST_INTERACTIONS_PATH = _PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
+_DEFAULT_TEST_INTERACTIONS_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 
 
 def load_test_interactions(n: int = 10, test_path: Path | None = None) -> List[Dict[str, Any]]:

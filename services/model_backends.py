@@ -7,10 +7,12 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
+from services.data_paths import get_processed_data_path
+
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_CF_ITEM_FACTORS_PATH = _PROJECT_ROOT / "data" / "processed" / "cf_item_factors.npy"
-_DEFAULT_CF_BOOK_INDEX_PATH = _PROJECT_ROOT / "data" / "processed" / "cf_book_id_index.json"
+_DEFAULT_CF_ITEM_FACTORS_PATH = get_processed_data_path("cf_item_factors.npy")
+_DEFAULT_CF_BOOK_INDEX_PATH = get_processed_data_path("cf_book_id_index.json")
 _CF_ITEM_VECTORS_CACHE: Dict[str, List[float]] | None = None
 _SENTENCE_MODEL_CACHE: Dict[str, Any] = {}
 _DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"

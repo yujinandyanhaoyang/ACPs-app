@@ -17,12 +17,13 @@ if _PROJECT_ROOT not in sys.path:
 
 from services.book_retrieval import load_books, retrieve_books_by_query
 from services.model_backends import estimate_collaborative_scores_with_svd, load_cf_item_vectors
+from services.data_paths import get_processed_data_path
 import reading_concierge.reading_concierge as concierge
 
 PROJECT_ROOT = Path(_PROJECT_ROOT)
 DEFAULT_CASES_PATH = PROJECT_ROOT / "scripts" / "phase4_cases.json"
 DEFAULT_REPORT_PATH = PROJECT_ROOT / "scripts" / "pretrained_cf_coverage_report.json"
-DEFAULT_INTERACTIONS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_train.jsonl"
+DEFAULT_INTERACTIONS_PATH = get_processed_data_path("goodreads", "interactions_train.jsonl")
 
 
 def _load_cases(path: Path) -> List[Dict[str, Any]]:
@@ -299,8 +300,8 @@ def build_report(
             "cases_path": str(cases_path),
             "interactions_path": str(interactions_path),
             "book_dataset_path": os.getenv("BOOK_RETRIEVAL_DATASET_PATH") or "auto",
-            "cf_item_factors_path": os.getenv("CF_ITEM_FACTORS_PATH") or "data/processed/cf_item_factors.npy",
-            "cf_book_index_path": os.getenv("CF_BOOK_INDEX_PATH") or "data/processed/cf_book_id_index.json",
+            "cf_item_factors_path": os.getenv("CF_ITEM_FACTORS_PATH") or str(get_processed_data_path("cf_item_factors.npy")),
+            "cf_book_index_path": os.getenv("CF_BOOK_INDEX_PATH") or str(get_processed_data_path("cf_book_id_index.json")),
             "default_candidate_pool": default_pool,
             "sample_users": sample_users,
             "min_history": min_history,

@@ -24,6 +24,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from services.data_paths import get_processed_data_path
+
 try:
     import networkx as nx  # type: ignore
     _NX_AVAILABLE = True
@@ -34,7 +36,7 @@ except ImportError:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_GRAPH_PATH = PROJECT_ROOT / "data" / "processed" / "knowledge_graph.json"
+_DEFAULT_GRAPH_PATH = get_processed_data_path("knowledge_graph.json")
 
 # Max co-genre books returned per book (avoid huge lists for popular genres)
 _MAX_CO_GENRE_BOOKS = 15

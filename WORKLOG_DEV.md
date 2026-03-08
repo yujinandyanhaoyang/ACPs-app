@@ -128,6 +128,16 @@
 - Merge validation after streaming fix:
   - `pytest -q tests/test_merge_and_enrich_books.py tests/test_real_dataset_smoke.py` → `8 passed`
 
+### Repository publishing
+
+- To publish `feature/recommendation-optimization` without oversized payloads, rewrote local branch history to exclude `data/` artifacts from committed content.
+- Added `data/` to `.gitignore` to prevent future accidental commits of raw/processed datasets.
+- Re-committed code/docs/config-only changes as `92567ef` (`feat: keep recommendation optimization code without data artifacts`).
+- Successfully pushed branch to GitHub:
+  - `origin/feature/recommendation-optimization`
+- Safety step preserved before rewrite:
+  - `backup/feature-recommendation-optimization-before-rewrite`
+
 ## Current Status Summary
 
 - Core system status: stable on merged multi-source data.

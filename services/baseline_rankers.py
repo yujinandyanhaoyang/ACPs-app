@@ -13,10 +13,11 @@ from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
 from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
 from services.book_retrieval import load_books, retrieve_books_by_query
+from services.data_paths import get_processed_data_path
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_INTERACTIONS_TRAIN_PATH = _PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
+_INTERACTIONS_TRAIN_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 _POPULARITY_COUNTS_CACHE: Dict[str, int] | None = None
 
 

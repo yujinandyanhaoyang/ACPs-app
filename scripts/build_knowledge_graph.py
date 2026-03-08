@@ -29,17 +29,19 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Set
 
+from services.data_paths import get_processed_data_path
+
 try:
     import networkx as nx  # type: ignore
 except ImportError as exc:  # pragma: no cover
     raise SystemExit("networkx is required: pip install networkx") from exc
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MERGED_ENRICHED_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged_enriched.jsonl"
-MERGED_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged.jsonl"
-GOODREADS_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl"
+MERGED_ENRICHED_BOOKS_PATH = get_processed_data_path("merged", "books_master_merged_enriched.jsonl")
+MERGED_BOOKS_PATH = get_processed_data_path("merged", "books_master_merged.jsonl")
+GOODREADS_BOOKS_PATH = get_processed_data_path("goodreads", "books_master.jsonl")
 BOOKS_PATH = MERGED_ENRICHED_BOOKS_PATH if MERGED_ENRICHED_BOOKS_PATH.exists() else (MERGED_BOOKS_PATH if MERGED_BOOKS_PATH.exists() else GOODREADS_BOOKS_PATH)
-OUT_DIR = PROJECT_ROOT / "data" / "processed"
+OUT_DIR = get_processed_data_path()
 
 OUT_GRAPH = OUT_DIR / "knowledge_graph.json"
 OUT_AUTHOR_INDEX = OUT_DIR / "kg_author_index.json"

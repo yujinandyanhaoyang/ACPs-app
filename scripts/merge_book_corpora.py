@@ -6,24 +6,26 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
+from services.data_paths import get_processed_data_path
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BOOK_INPUTS = [
-    PROJECT_ROOT / "data" / "processed" / "goodreads" / "books_master.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_kindle" / "books_master.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_books" / "books_master.jsonl",
+    get_processed_data_path("goodreads", "books_master.jsonl"),
+    get_processed_data_path("amazon_kindle", "books_master.jsonl"),
+    get_processed_data_path("amazon_books", "books_master.jsonl"),
 ]
 DEFAULT_INTERACTION_INPUTS = [
-    PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_train.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_valid.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "goodreads" / "interactions_test.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_kindle" / "interactions_train.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_kindle" / "interactions_valid.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_kindle" / "interactions_test.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_books" / "interactions_train.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_books" / "interactions_valid.jsonl",
-    PROJECT_ROOT / "data" / "processed" / "amazon_books" / "interactions_test.jsonl",
+    get_processed_data_path("goodreads", "interactions_train.jsonl"),
+    get_processed_data_path("goodreads", "interactions_valid.jsonl"),
+    get_processed_data_path("goodreads", "interactions_test.jsonl"),
+    get_processed_data_path("amazon_kindle", "interactions_train.jsonl"),
+    get_processed_data_path("amazon_kindle", "interactions_valid.jsonl"),
+    get_processed_data_path("amazon_kindle", "interactions_test.jsonl"),
+    get_processed_data_path("amazon_books", "interactions_train.jsonl"),
+    get_processed_data_path("amazon_books", "interactions_valid.jsonl"),
+    get_processed_data_path("amazon_books", "interactions_test.jsonl"),
 ]
-OUT_DIR = PROJECT_ROOT / "data" / "processed" / "merged"
+OUT_DIR = get_processed_data_path("merged")
 
 
 def _clean_text(value: Any) -> str:

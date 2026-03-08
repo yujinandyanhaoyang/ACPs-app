@@ -6,13 +6,14 @@ from pathlib import Path
 import pytest
 
 from services.book_retrieval import load_books, retrieve_books_by_query
+from services.data_paths import get_processed_data_path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-KINDLE_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "amazon_kindle" / "books_master.jsonl"
-KINDLE_INTERACTIONS_PATH = PROJECT_ROOT / "data" / "processed" / "amazon_kindle" / "interactions_train.jsonl"
-MERGED_BOOKS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged.jsonl"
-MERGED_INTERACTIONS_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
+KINDLE_BOOKS_PATH = get_processed_data_path("amazon_kindle", "books_master.jsonl")
+KINDLE_INTERACTIONS_PATH = get_processed_data_path("amazon_kindle", "interactions_train.jsonl")
+MERGED_BOOKS_PATH = get_processed_data_path("merged", "books_master_merged.jsonl")
+MERGED_INTERACTIONS_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 
 
 def _require(path: Path) -> None:

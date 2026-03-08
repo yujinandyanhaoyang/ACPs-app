@@ -9,9 +9,11 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import requests
 
+from services.data_paths import get_processed_data_path
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged.jsonl"
-DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "processed" / "merged" / "books_master_merged_enriched.jsonl"
+DEFAULT_INPUT = get_processed_data_path("merged", "books_master_merged.jsonl")
+DEFAULT_OUTPUT = get_processed_data_path("merged", "books_master_merged_enriched.jsonl")
 SEARCH_URL = "https://openlibrary.org/search.json"
 
 

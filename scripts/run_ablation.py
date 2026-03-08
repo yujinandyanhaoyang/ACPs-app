@@ -27,9 +27,10 @@ import reading_concierge.reading_concierge as concierge_module
 from reading_concierge.reading_concierge import app as concierge_app
 from services.book_retrieval import load_books
 from services.evaluation_metrics import compute_recommendation_metrics, load_test_interactions
+from services.data_paths import get_processed_data_path
 
 PROJECT_ROOT = Path(_PROJECT_ROOT)
-DEFAULT_TRAIN_PATH = PROJECT_ROOT / "data" / "processed" / "merged" / "interactions_merged.jsonl"
+DEFAULT_TRAIN_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 DEFAULT_OUT_PATH = PROJECT_ROOT / "scripts" / "ablation_report.json"
 
 
