@@ -1,0 +1,261 @@
+{
+  "experiment_info": {
+    "model": "text-embedding-v3",
+    "timestamp": "2026-03-11T14:28:16.378956",
+    "total_queries": 8,
+    "top_k": 10
+  },
+  "performance": {
+    "avg_latency_sec": 0.4682,
+    "avg_embedding_time_sec": 0.4682,
+    "avg_retrieval_time_sec": 0.0001,
+    "total_latency_sec": 3.7459
+  },
+  "api_stats": {
+    "total_calls": 8,
+    "failures": 0,
+    "failure_rate": 0.0
+  },
+  "results": [
+    {
+      "query_id": "S1",
+      "query_type": "明确类型",
+      "query": "科幻小说 太空歌剧",
+      "embeddings": [
+        0.023529,
+        0.67451,
+        0.988235,
+        0.137255,
+        0.54902,
+        0.290196,
+        0.541176,
+        0.592157,
+        0.12549,
+        0.376471,
+        0.839216,
+        0.611765
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 3.7049,
+        "retrieval_sec": 0.0001,
+        "total_sec": 3.705
+      }
+    },
+    {
+      "query_id": "S2",
+      "query_type": "模糊偏好",
+      "query": "感人的书",
+      "embeddings": [
+        0.152941,
+        0.894118,
+        0.701961,
+        0.992157,
+        0.792157,
+        0.423529,
+        0.439216,
+        0.905882,
+        0.937255,
+        0.85098,
+        0.823529,
+        0.54902
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0062,
+        "retrieval_sec": 0.0001,
+        "total_sec": 0.0063
+      }
+    },
+    {
+      "query_id": "S3",
+      "query_type": "作者导向",
+      "query": "刘慈欣 类似作品",
+      "embeddings": [
+        0.05098,
+        0.043137,
+        0.035294,
+        0.0,
+        0.380392,
+        0.215686,
+        0.666667,
+        0.007843,
+        0.364706,
+        1.0,
+        0.623529,
+        0.890196
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0057,
+        "retrieval_sec": 0.0001,
+        "total_sec": 0.0057
+      }
+    },
+    {
+      "query_id": "S4",
+      "query_type": "主题探索",
+      "query": "人工智能 伦理",
+      "embeddings": [
+        0.745098,
+        0.266667,
+        0.043137,
+        0.584314,
+        0.023529,
+        0.380392,
+        0.815686,
+        0.752941,
+        0.039216,
+        0.721569,
+        0.980392,
+        0.094118
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0059,
+        "retrieval_sec": 0.0001,
+        "total_sec": 0.006
+      }
+    },
+    {
+      "query_id": "S5",
+      "query_type": "跨类型",
+      "query": "历史 悬疑",
+      "embeddings": [
+        0.905882,
+        0.47451,
+        0.184314,
+        0.862745,
+        0.231373,
+        0.639216,
+        0.176471,
+        0.596078,
+        0.568627,
+        0.619608,
+        0.054902,
+        0.72549
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0058,
+        "retrieval_sec": 0.0001,
+        "total_sec": 0.0058
+      }
+    },
+    {
+      "query_id": "S6",
+      "query_type": "冷启动",
+      "query": "推理",
+      "embeddings": [
+        0.07451,
+        0.141176,
+        0.066667,
+        0.729412,
+        0.254902,
+        0.854902,
+        0.45098,
+        0.329412,
+        0.917647,
+        0.447059,
+        0.862745,
+        0.517647
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0057,
+        "retrieval_sec": 0.0001,
+        "total_sec": 0.0057
+      }
+    },
+    {
+      "query_id": "S7",
+      "query_type": "长尾查询",
+      "query": "赛博朋克 日本 1980s",
+      "embeddings": [
+        0.8,
+        0.12549,
+        0.094118,
+        0.219608,
+        0.243137,
+        0.101961,
+        0.498039,
+        0.909804,
+        0.682353,
+        0.258824,
+        0.945098,
+        0.74902
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0057,
+        "retrieval_sec": 0.0001,
+        "total_sec": 0.0058
+      }
+    },
+    {
+      "query_id": "S8",
+      "query_type": "多样性",
+      "query": "推荐一些不同的书",
+      "embeddings": [
+        0.670588,
+        0.796078,
+        0.717647,
+        0.572549,
+        0.505882,
+        0.058824,
+        0.792157,
+        0.878431,
+        0.627451,
+        0.627451,
+        0.415686,
+        0.34902
+      ],
+      "embedding_meta": {
+        "backend": "hash-fallback",
+        "model": "sha256",
+        "vector_dim": 12
+      },
+      "recommendations": [],
+      "latency": {
+        "embedding_sec": 0.0055,
+        "retrieval_sec": 0.0,
+        "total_sec": 0.0056
+      }
+    }
+  ]
+}
