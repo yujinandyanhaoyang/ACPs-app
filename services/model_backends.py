@@ -15,7 +15,10 @@ _DEFAULT_CF_ITEM_FACTORS_PATH = get_processed_data_path("cf_item_factors.npy")
 _DEFAULT_CF_BOOK_INDEX_PATH = get_processed_data_path("cf_book_id_index.json")
 _CF_ITEM_VECTORS_CACHE: Dict[str, List[float]] | None = None
 _SENTENCE_MODEL_CACHE: Dict[str, Any] = {}
-_DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"
+# DashScope 默认嵌入模型（方案 A：qwen3-vl-embedding）
+# 参考：https://help.aliyun.com/zh/dashscope/developer-reference/text-embedding-api-details
+_DEFAULT_DASHSCOPE_EMBED_MODEL = "qwen3-vl-embedding"
+_DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"  # Fallback
 _LOGGER = logging.getLogger("services.model_backends")
 
 
