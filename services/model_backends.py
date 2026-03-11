@@ -138,44 +138,143 @@ def generate_text_embeddings(
 	model_name: str,
 	fallback_dim: int = 12,
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
+	"""生成文本嵌入（同步版本）
+	
+	优先级：
+	1. DashScope 原生 API（如果配置了 DASHSCOPE_API_KEY）
+	2. 本地 sentence-transformers（如果已安装）
+	3. Hash fallback（总是可用）
+	"""
 	text_list = [str(text or "") for text in texts]
 	if not text_list:
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
 
+	# 优先级 1: DashScope 原生 API（同步调用）
+	api_key = os.getenv("DASHSCOPE_API_KEY") or ""
+	model = (os.getenv("DASHSCOPE_EMBED_MODEL") or model_name or "text-embedding-v3").strip()
+	
+	if api_key:
+		vectors, meta = _resolve_dashscope_embeddings_sync(text_list, model, api_key)
+		if vectors:
+			return vectors, meta
+		_LOGGER.info("event=dashscope_failed fallback=offline")
+
+	# 优先级 2: 本地 sentence-transformers
 	effective_model = str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
-	model = _resolve_sentence_transformer(effective_model)
-	if model is not None:
-		vectors = model.encode(text_list, normalize_embeddings=True)
+	sentence_model = _resolve_sentence_transformer(effective_model)
+	
+	if sentence_model is not None:
+		vectors = sentence_model.encode(text_list, normalize_embeddings=True)
 		vectors_as_list: List[List[float]] = []
 		for row in vectors:
 			vectors_as_list.append([round(_to_float(item), 6) for item in row.tolist()])
 		dim = len(vectors_as_list[0]) if vectors_as_list else 0
 		return vectors_as_list, {"backend": "sentence-transformers", "model": effective_model, "vector_dim": dim}
 
+	# 优先级 3: Hash fallback
 	fallback_vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in text_list]
 	dim = len(fallback_vectors[0]) if fallback_vectors else 0
 	return fallback_vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
 
 
-async def _resolve_dashscope_embeddings(
+def _resolve_dashscope_embeddings_sync(
 	texts: List[str],
-	model_name: str,
-	base_url: str,
-	api_key: str,
+	model_name: str = "text-embedding-v3",
+	api_key: str | None = None,
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
+	"""使用 DashScope 原生 API 获取文本嵌入（同步版本）
+	
+	API 文档：https://help.aliyun.com/zh/dashscope/developer-reference/text-embedding-api-details
+	
+	Args:
+		texts: 待嵌入的文本列表
+		model_name: 模型名称，默认 text-embedding-v3
+		api_key: DashScope API Key
+	
+	Returns:
+		(embeddings, metadata) 元组
+	"""
+	import requests
+	
+	api_key = api_key or os.getenv("DASHSCOPE_API_KEY") or ""
+	if not api_key:
+		_LOGGER.warning("event=dashscope_no_api_key fallback=hash")
+		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": "no_api_key"}
+	
+	url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+	
+	headers = {
+		"Authorization": f"Bearer {api_key}",
+		"Content-Type": "application/json"
+	}
+	
+	payload = {
+		"model": model_name,
+		"input": {"texts": texts},
+		"parameters": {"text_type": "document"}
+	}
+	
 	try:
-		import openai  # type: ignore
-		client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
-		response = await client.embeddings.create(model=model_name, input=texts)
-		embeddings: List[List[float]] = []
-		for row in response.data or []:
-			vector = getattr(row, "embedding", None)
-			if isinstance(vector, list):
-				embeddings.append([round(_to_float(item), 6) for item in vector])
+		response = requests.post(url, headers=headers, json=payload, timeout=30)
+		response.raise_for_status()
+		
+		result = response.json()
+		if result.get("code") != 200:
+			_LOGGER.warning("event=dashscope_api_error code=%s message=%s", 
+			               result.get("code"), result.get("message"))
+			return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": result.get("message")}
+		
+		embeddings = [item["embedding"] for item in result["data"]["embeddings"]]
 		dim = len(embeddings[0]) if embeddings else 0
 		return embeddings, {"backend": "dashscope", "model": model_name, "vector_dim": dim}
-	except Exception:
-		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0}
+	
+	except requests.exceptions.RequestException as e:
+		_LOGGER.warning("event=dashscope_request_error error=%s", str(e))
+		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": str(e)}
+	except Exception as e:
+		_LOGGER.warning("event=dashscope_parse_error error=%s", str(e))
+		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": str(e)}
+
+
+async def _resolve_dashscope_embeddings_async(
+	texts: List[str],
+	model_name: str = "text-embedding-v3",
+	api_key: str | None = None,
+) -> Tuple[List[List[float]], Dict[str, Any]]:
+	"""使用 DashScope 原生 API 获取文本嵌入（异步版本）"""
+	import aiohttp
+	
+	api_key = api_key or os.getenv("DASHSCOPE_API_KEY") or ""
+	if not api_key:
+		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": "no_api_key"}
+	
+	url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
+	
+	headers = {
+		"Authorization": f"Bearer {api_key}",
+		"Content-Type": "application/json"
+	}
+	
+	payload = {
+		"model": model_name,
+		"input": {"texts": texts},
+		"parameters": {"text_type": "document"}
+	}
+	
+	try:
+		async with aiohttp.ClientSession() as session:
+			async with session.post(url, headers=headers, json=payload, timeout=30) as response:
+				result = await response.json()
+				if result.get("code") != 200:
+					return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": result.get("message")}
+				
+				embeddings = [item["embedding"] for item in result["data"]["embeddings"]]
+				dim = len(embeddings[0]) if embeddings else 0
+				return embeddings, {"backend": "dashscope", "model": model_name, "vector_dim": dim}
+	
+	except Exception as e:
+		_LOGGER.warning("event=dashscope_async_error error=%s", str(e))
+		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0, "error": str(e)}
 
 
 async def generate_text_embeddings_async(
@@ -183,19 +282,31 @@ async def generate_text_embeddings_async(
 	model_name: str,
 	fallback_dim: int = 12,
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
+	"""生成文本嵌入（异步版本）
+	
+	优先级：
+	1. DashScope 原生 API（如果配置了 DASHSCOPE_API_KEY）
+	2. 本地 sentence-transformers（如果已安装）
+	3. Hash fallback（总是可用）
+	"""
 	text_list = [str(text or "") for text in texts]
 	if not text_list:
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
 
-	api_key = os.getenv("OPENAI_API_KEY") or ""
-	base_url = os.getenv("OPENAI_BASE_URL") or ""
-	if api_key and base_url:
-		vectors, meta = await _resolve_dashscope_embeddings(text_list, model_name, base_url, api_key)
+	# 优先级 1: DashScope 原生 API
+	api_key = os.getenv("DASHSCOPE_API_KEY") or ""
+	model = (os.getenv("DASHSCOPE_EMBED_MODEL") or model_name or "text-embedding-v3").strip()
+	
+	if api_key:
+		vectors, meta = await _resolve_dashscope_embeddings_async(text_list, model, api_key)
 		if vectors:
 			return vectors, meta
+		_LOGGER.info("event=dashscope_failed fallback=offline")
 
-	effective_model = str(model_name or "").strip()
-	if not (api_key and base_url):
+	# 优先级 2: 本地 sentence-transformers
+	effective_model = str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
+	
+	if not api_key:
 		remote_like_model = (
 			effective_model.startswith("text-embedding")
 			or effective_model.startswith("qwen")
