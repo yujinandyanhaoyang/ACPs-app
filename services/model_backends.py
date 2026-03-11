@@ -144,7 +144,7 @@ def generate_text_embeddings(
 	"""生成文本嵌入（同步版本）
 	
 	优先级：
-	1. DashScope 原生 API（如果配置了 DASHSCOPE_API_KEY）
+	1. DashScope 多模态 API（qwen3-vl-embedding，使用 dashscope 库）
 	2. 本地 sentence-transformers（如果已安装）
 	3. Hash fallback（总是可用）
 	"""
@@ -152,15 +152,15 @@ def generate_text_embeddings(
 	if not text_list:
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
 
-	# 优先级 1: DashScope 原生 API（同步调用）
-	api_key = os.getenv("DASHSCOPE_API_KEY") or ""
-	model = (os.getenv("DASHSCOPE_EMBED_MODEL") or model_name or "text-embedding-v3").strip()
+	# 优先级 1: DashScope 多模态 API（qwen3-vl-embedding）
+	api_key = os.getenv("OPENAI_API_KEY") or ""
+	model = (model_name or os.getenv("DASHSCOPE_EMBED_MODEL") or "qwen3-vl-embedding").strip()
 	
-	if api_key:
-		vectors, meta = _resolve_dashscope_embeddings_sync(text_list, model, api_key)
+	if api_key and model == "qwen3-vl-embedding":
+		vectors, meta = _resolve_dashscope_multimodal_embeddings(text_list, model, api_key)
 		if vectors:
 			return vectors, meta
-		_LOGGER.info("event=dashscope_failed fallback=offline")
+		_LOGGER.info("event=multimodal_failed fallback=offline")
 
 	# 优先级 2: 本地 sentence-transformers
 	effective_model = str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
@@ -180,9 +180,103 @@ def generate_text_embeddings(
 	return fallback_vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
 
 
+def _resolve_dashscope_multimodal_embeddings(
+	texts: List[str],
+	model_name: str = "qwen3-vl-embedding",
+	api_key: str = "",
+) -> Tuple[List[List[float]], Dict[str, Any]]:
+	"""使用 dashscope 库调用多模态嵌入 API
+	
+	模型：qwen3-vl-embedding
+	接口：dashscope.MultiModalEmbedding
+	
+	Args:
+		texts: 待嵌入的文本列表
+		model_name: 模型名称（默认 qwen3-vl-embedding）
+		api_key: API Key
+	
+	Returns:
+		(embeddings, metadata) 元组
+	"""
+	try:
+		import dashscope  # type: ignore
+		# 设置 API Key
+		dashscope.api_key = api_key or os.getenv("OPENAI_API_KEY") or ""
+		
+		if not dashscope.api_key:
+			_LOGGER.warning("event=dashscope_no_api_key fallback=hash")
+			return [], {"backend": "dashscope-multimodal", "model": model_name, "vector_dim": 0, "error": "no_api_key"}
+		
+		all_embeddings: List[List[float]] = []
+		
+		# 逐个处理文本
+		for text in texts:
+			input_data = [{'text': text}]
+			resp = dashscope.MultiModalEmbedding.call(
+				model=model_name,
+				input=input_data
+			)
+			
+			# 检查响应
+			if resp and resp.status_code == 200:
+				# 提取嵌入向量（注意：qwen3-vl-embedding 返回的是 embedding 字段）
+				embedding_data = resp.output.get('embeddings', [{}])[0]
+				embedding = embedding_data.get('embedding', [])  # 不是 text_embedding
+				if embedding:
+					all_embeddings.append([round(_to_float(v), 6) for v in embedding])
+			else:
+				_LOGGER.warning("event=dashscope_multimodal_error code=%s message=%s", 
+				               getattr(resp, 'status_code', 'unknown'),
+				               getattr(resp, 'message', 'unknown'))
+				return [], {"backend": "dashscope-multimodal", "model": model_name, "vector_dim": 0, "error": str(resp)}
+		
+		dim = len(all_embeddings[0]) if all_embeddings else 0
+		return all_embeddings, {"backend": "dashscope-multimodal", "model": model_name, "vector_dim": dim}
+		
+	except Exception as e:
+		_LOGGER.warning("event=dashscope_multimodal_error error=%s", str(e))
+		return [], {"backend": "dashscope-multimodal", "model": model_name, "vector_dim": 0, "error": str(e)}
+
+
+def _resolve_dashscope_compatible_embeddings(
+	texts: List[str],
+	model_name: str = "qwen3-vl-embedding",
+	api_key: str = "",
+	base_url: str = "",
+) -> Tuple[List[List[float]], Dict[str, Any]]:
+	"""使用 OpenAI 兼容模式调用 DashScope 嵌入 API
+	
+	兼容模式端点：https://dashscope.aliyuncs.com/compatible-mode/v1
+	注意：此函数已禁用，仅使用 qwen3-vl-embedding
+	
+	Args:
+		texts: 待嵌入的文本列表
+		model_name: 模型名称
+		api_key: API Key
+		base_url: 兼容模式端点
+	
+	Returns:
+		(embeddings, metadata) 元组
+	"""
+	try:
+		import openai  # type: ignore
+		client = openai.OpenAI(api_key=api_key, base_url=base_url)
+		response = client.embeddings.create(model=model_name, input=texts)
+		embeddings: List[List[float]] = []
+		for row in response.data or []:
+			vector = getattr(row, "embedding", None)
+			if isinstance(vector, list):
+				embeddings.append([round(_to_float(item), 6) for item in vector])
+		dim = len(embeddings[0]) if embeddings else 0
+		return embeddings, {"backend": "dashscope-compatible", "model": model_name, "vector_dim": dim}
+	except Exception as e:
+		_LOGGER.warning("event=compatible_mode_error error=%s", str(e))
+		return [], {"backend": "dashscope-compatible", "model": model_name, "vector_dim": 0, "error": str(e)}
+
+
 def _resolve_dashscope_embeddings_sync(
 	texts: List[str],
-	model_name: str = "text-embedding-v3",
+	model_name: str = "qwen3-vl-embedding",
 	api_key: str | None = None,
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
 	"""使用 DashScope 原生 API 获取文本嵌入（同步版本）
@@ -191,7 +285,7 @@ def _resolve_dashscope_embeddings_sync(
 	
 	Args:
 		texts: 待嵌入的文本列表
-		model_name: 模型名称，默认 text-embedding-v3
+		model_name: 模型名称，默认 qwen3-vl-embedding
 		api_key: DashScope API Key
 	
 	Returns:
@@ -241,10 +335,13 @@ def _resolve_dashscope_embeddings_sync(
 
 async def _resolve_dashscope_embeddings_async(
 	texts: List[str],
-	model_name: str = "text-embedding-v3",
+	model_name: str = "qwen3-vl-embedding",
 	api_key: str | None = None,
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
-	"""使用 DashScope 原生 API 获取文本嵌入（异步版本）"""
+	"""使用 DashScope 原生 API 获取文本嵌入（异步版本）
+	
+	注意：默认使用 qwen3-vl-embedding，避免使用订阅制模型
+	"""
 	import aiohttp
 	
 	api_key = api_key or os.getenv("DASHSCOPE_API_KEY") or ""
@@ -298,7 +395,7 @@ async def generate_text_embeddings_async(
 
 	# 优先级 1: DashScope 原生 API
 	api_key = os.getenv("DASHSCOPE_API_KEY") or ""
-	model = (os.getenv("DASHSCOPE_EMBED_MODEL") or model_name or "text-embedding-v3").strip()
+	model = (os.getenv("DASHSCOPE_EMBED_MODEL") or model_name or "qwen3-vl-embedding").strip()
 	
 	if api_key:
 		vectors, meta = await _resolve_dashscope_embeddings_async(text_list, model, api_key)
@@ -311,8 +408,7 @@ async def generate_text_embeddings_async(
 	
 	if not api_key:
 		remote_like_model = (
-			effective_model.startswith("text-embedding")
-			or effective_model.startswith("qwen")
+			effective_model.startswith("qwen3-vl")
 		)
 		if remote_like_model:
 			_LOGGER.info(
