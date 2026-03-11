@@ -87,9 +87,9 @@ ACPs-app/
 编辑 `.env` 文件：
 
 ```bash
-OPENAI_API_KEY=sk-sp-8e9adfc76cf2415a821ec052417875bd
-OPENAI_BASE_URL=https://coding.dashscope.aliyuncs.com/v1
-OPENAI_MODEL=qwen3.5-plus
+OPENAI_API_KEY=YOURKEY
+OPENAI_BASE_URL=https:XXXXX
+OPENAI_MODEL=MODEL_NAME
 ```
 
 ### 服务端口
