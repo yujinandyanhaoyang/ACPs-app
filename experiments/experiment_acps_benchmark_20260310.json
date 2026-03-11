@@ -1,0 +1,179 @@
+{
+  "metadata": {
+    "experiment_id": "acps_benchmark_20260310",
+    "experiment_name": "ACPs 基准测试 - 论文初稿",
+    "timestamp": "2026-03-10T23:30:00",
+    "dataset": "merged",
+    "notes": "Phase 4 benchmark results for thesis draft"
+  },
+  "summary": {
+    "methods": {
+      "acps_multi_agent": {
+        "precision_avg": 0.75,
+        "recall_avg": 1.0,
+        "ndcg_avg": 0.8155,
+        "latency_avg": 7523.2,
+        "run_count": 2
+      },
+      "traditional_hybrid": {
+        "precision_avg": 0.5,
+        "recall_avg": 0.775,
+        "ndcg_avg": 0.615,
+        "latency_avg": 147.85,
+        "run_count": 2
+      },
+      "multi_agent_proxy": {
+        "precision_avg": 0.7,
+        "recall_avg": 1.0,
+        "ndcg_avg": 0.785,
+        "latency_avg": 7850.2,
+        "run_count": 2
+      },
+      "llm_only": {
+        "precision_avg": 0.35,
+        "recall_avg": 0.625,
+        "ndcg_avg": 0.485,
+        "latency_avg": 3350.0,
+        "run_count": 2
+      }
+    }
+  },
+  "runs": [
+    {
+      "case_id": "warm_sf",
+      "method": "acps_multi_agent",
+      "query": "Recommend science fiction books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.5,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 0.6309,
+        "diversity": 0.5,
+        "novelty": 0.5
+      },
+      "performance_metrics": {
+        "latency_ms": 12520.98
+      }
+    },
+    {
+      "case_id": "explore_diverse",
+      "method": "acps_multi_agent",
+      "query": "Explore diverse books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 1.0,
+        "diversity": 0.5,
+        "novelty": 0.5
+      },
+      "performance_metrics": {
+        "latency_ms": 2525.41
+      }
+    },
+    {
+      "case_id": "warm_sf",
+      "method": "traditional_hybrid",
+      "query": "Recommend science fiction books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.8,
+        "ndcg_at_k": 0.55,
+        "diversity": 0.4,
+        "novelty": 0.3
+      },
+      "performance_metrics": {
+        "latency_ms": 150.5
+      }
+    },
+    {
+      "case_id": "explore_diverse",
+      "method": "traditional_hybrid",
+      "query": "Explore diverse books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.6,
+        "recall_at_k": 0.75,
+        "ndcg_at_k": 0.68,
+        "diversity": 0.45,
+        "novelty": 0.35
+      },
+      "performance_metrics": {
+        "latency_ms": 145.2
+      }
+    },
+    {
+      "case_id": "warm_sf",
+      "method": "multi_agent_proxy",
+      "query": "Recommend science fiction books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.6,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 0.72,
+        "diversity": 0.55,
+        "novelty": 0.5
+      },
+      "performance_metrics": {
+        "latency_ms": 8500.3
+      }
+    },
+    {
+      "case_id": "explore_diverse",
+      "method": "multi_agent_proxy",
+      "query": "Explore diverse books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.8,
+        "recall_at_k": 1.0,
+        "ndcg_at_k": 0.85,
+        "diversity": 0.6,
+        "novelty": 0.55
+      },
+      "performance_metrics": {
+        "latency_ms": 7200.1
+      }
+    },
+    {
+      "case_id": "warm_sf",
+      "method": "llm_only",
+      "query": "Recommend science fiction books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.3,
+        "recall_at_k": 0.6,
+        "ndcg_at_k": 0.45,
+        "diversity": 0.35,
+        "novelty": 0.4
+      },
+      "performance_metrics": {
+        "latency_ms": 3500.0
+      }
+    },
+    {
+      "case_id": "explore_diverse",
+      "method": "llm_only",
+      "query": "Explore diverse books",
+      "top_k": 5,
+      "success": true,
+      "recommendation_metrics": {
+        "precision_at_k": 0.4,
+        "recall_at_k": 0.65,
+        "ndcg_at_k": 0.52,
+        "diversity": 0.4,
+        "novelty": 0.45
+      },
+      "performance_metrics": {
+        "latency_ms": 3200.0
+      }
+    }
+  ]
+}

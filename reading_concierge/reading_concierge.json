@@ -18,8 +18,8 @@
   "endPoints": [
     {
       "transport": "JSONRPC",
-      "url": "http://localhost:8100/user_api",
-      "description": "Primary orchestration endpoint"
+      "url": "http://0.0.0.0:8100/user_api",
+      "description": "Primary orchestration endpoint (remote access enabled)"
     }
   ],
   "capabilities": {

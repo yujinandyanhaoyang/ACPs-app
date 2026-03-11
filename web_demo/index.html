@@ -162,6 +162,215 @@
     }
     summary { cursor: pointer; font-size: 0.85rem; font-weight: bold; }
     pre { overflow-x: auto; font-size: 0.8rem; margin: 0; }
+
+    /* ========================================
+     * Agent 协作展示板块样式
+     * ======================================== */
+    
+    /* Agent 状态网格布局 */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    /* Agent 卡片 */
+    .agent-card {
+      background: #fafafa;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .agent-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--border);
+      transition: background 0.3s ease;
+    }
+
+    /* Agent 状态指示器 */
+    .agent-card.status-idle::before { background: var(--border); }
+    .agent-card.status-working::before { 
+      background: var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+    .agent-card.status-success::before { background: var(--success); }
+    .agent-card.status-error::before { background: var(--error); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .agent-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .agent-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .agent-role {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .agent-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .agent-card.status-idle .agent-status {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .agent-card.status-working .agent-status {
+      background: #dbeafe;
+      color: var(--primary);
+    }
+
+    .agent-card.status-success .agent-status {
+      background: #dcfce7;
+      color: var(--success);
+    }
+
+    .agent-card.status-error .agent-status {
+      background: #fef2f2;
+      color: var(--error);
+    }
+
+    .agent-time {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    /* 协作流程图 */
+    .flow-diagram {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+
+    .flow-steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .flow-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-weight: 500;
+    }
+
+    .flow-step.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .flow-arrow {
+      color: #94a3b8;
+      font-size: 1rem;
+    }
+
+    /* 性能指标面板 */
+    .metrics-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-family: monospace;
+    }
+
+    .metric-value.success { color: var(--success); }
+    .metric-value.warning { color: var(--warning); }
+    .metric-value.error { color: var(--error); }
+
+    /* 移动端适配 */
+    @media (max-width: 640px) {
+      .agent-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .agent-card {
+        padding: 12px;
+      }
+
+      .agent-icon {
+        font-size: 1.5rem;
+      }
+
+      .flow-steps {
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .flow-arrow {
+        transform: rotate(90deg);
+      }
+
+      .metrics-panel {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
@@ -212,6 +421,90 @@
         <div style="display:flex; gap:10px;">
           <input type="text" id="query" placeholder="e.g., 'Historical fiction about scientific discoveries'" value="Recommend science fiction books with social themes.">
           <button id="runBtn" style="width: auto;" onclick="runRecommendation()">Search</button>
+        </div>
+      </div>
+
+      <!-- ========================================
+           Agent 协作展示板块
+           展示多 Agent 协作状态、流程和性能指标
+           ======================================== -->
+      <div class="card">
+        <h3>🤖 Agent 协作状态</h3>
+        
+        <!-- Agent 状态网格 -->
+        <div class="agent-grid">
+          <!-- ReadingConcierge (Leader) -->
+          <div class="agent-card status-working" id="agent-reading-concierge">
+            <div class="agent-icon">🎯</div>
+            <div class="agent-name">ReadingConcierge</div>
+            <div class="agent-role">Leader</div>
+            <div class="agent-status">工作中</div>
+            <div class="agent-time">245ms</div>
+          </div>
+          
+          <!-- ReaderProfile (读者画像) -->
+          <div class="agent-card status-success" id="agent-reader-profile">
+            <div class="agent-icon">👤</div>
+            <div class="agent-name">ReaderProfile</div>
+            <div class="agent-role">Partner</div>
+            <div class="agent-status">完成</div>
+            <div class="agent-time">128ms</div>
+          </div>
+          
+          <!-- BookContent (书籍内容) -->
+          <div class="agent-card status-success" id="agent-book-content">
+            <div class="agent-icon">📖</div>
+            <div class="agent-name">BookContent</div>
+            <div class="agent-role">Partner</div>
+            <div class="agent-status">完成</div>
+            <div class="agent-time">312ms</div>
+          </div>
+          
+          <!-- RecRanking (推荐排序) -->
+          <div class="agent-card status-idle" id="agent-rec-ranking">
+            <div class="agent-icon">📊</div>
+            <div class="agent-name">RecRanking</div>
+            <div class="agent-role">Partner</div>
+            <div class="agent-status">空闲</div>
+            <div class="agent-time">--</div>
+          </div>
+        </div>
+        
+        <!-- 协作流程图 -->
+        <div class="flow-diagram">
+          <div class="flow-steps">
+            <div class="flow-step">👤 User</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step active">🎯 ReadingConcierge</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">👤 ReaderProfile</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">📖 BookContent</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">📊 RecRanking</div>
+            <span class="flow-arrow">→</span>
+            <div class="flow-step">✅ Result</div>
+          </div>
+        </div>
+        
+        <!-- 性能统计面板 -->
+        <div class="metrics-panel">
+          <div class="metric">
+            <div class="metric-label">总耗时</div>
+            <div class="metric-value">456ms</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Token 消耗</div>
+            <div class="metric-value">2,345</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Agent 调用</div>
+            <div class="metric-value">4 次</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">成功率</div>
+            <div class="metric-value success">100%</div>
+          </div>
         </div>
       </div>
 

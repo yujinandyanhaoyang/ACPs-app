@@ -53,7 +53,27 @@ async def run_experiment_with_collection(
 ) -> None:
     """运行实验并采集数据"""
     from services.baseline_rankers import traditional_hybrid_rank, multi_agent_sequential_rank, llm_only_rank
-    from reading_concierge.reading_concierge import handle_recommendation_request
+    from reading_concierge.reading_concierge import _orchestrate_reading_flow, UserRequest
+    
+    async def handle_recommendation_request(case: Dict[str, Any]) -> Dict[str, Any]:
+        """Wrapper for ACPS multi-agent recommendation"""
+        req = UserRequest(
+            query=case.get('query', ''),
+            user_profile=case.get('user_profile', {}),
+            history=case.get('history', []),
+            reviews=case.get('reviews', []),
+            books=case.get('books', []),
+            candidate_ids=case.get('candidate_ids', []),
+            constraints=case.get('constraints', {}),
+        )
+        partner_tasks, partner_results = await _orchestrate_reading_flow(req)
+        ranking_result = (partner_results.get('rec_ranking_agent_001') or {}).get('result') or {}
+        ranking_outputs = ranking_result.get('outputs') or {}
+        return {
+            'recommendations': ranking_outputs.get('ranking') or [],
+            'explanations': ranking_outputs.get('explanations') or [],
+            'metric_snapshot': ranking_outputs.get('metric_snapshot') or {},
+        }
     
     batch = collector.start_experiment(
         experiment_name=experiment_name,
