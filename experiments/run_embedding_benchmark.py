@@ -15,10 +15,13 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any
+from dotenv import load_dotenv
 
-# 添加项目路径
+# 加载 .env 配置
 _CURRENT_DIR = Path(__file__).resolve().parent
 _PROJECT_ROOT = _CURRENT_DIR.parent
+load_dotenv(_PROJECT_ROOT / ".env")
+
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 

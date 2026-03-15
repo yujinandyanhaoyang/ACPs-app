@@ -10,16 +10,20 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 import httpx
+from dotenv import load_dotenv
 
 _CURRENT_DIR = os.path.dirname(__file__)
 _PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, os.pardir))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+# 加载 .env 配置
+load_dotenv(Path(_PROJECT_ROOT) / ".env")
+
 # Force deterministic offline execution for empirical ablation.
 # This avoids flaky external API failures and ensures local embedding backends.
-os.environ["OPENAI_API_KEY"] = ""
-os.environ["OPENAI_BASE_URL"] = ""
+# os.environ["OPENAI_API_KEY"] = ""  # 注释掉，允许使用 DashScope API
+# os.environ["OPENAI_BASE_URL"] = ""
 os.environ.setdefault("BOOK_CONTENT_EMBED_MODEL", "all-MiniLM-L6-v2")
 os.environ.setdefault("REC_RANKING_EMBED_MODEL", "all-MiniLM-L6-v2")
 
