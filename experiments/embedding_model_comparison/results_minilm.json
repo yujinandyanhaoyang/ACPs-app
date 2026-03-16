@@ -1,0 +1,77 @@
+{
+  "experiment_info": {
+    "model": "all-MiniLM-L6-v2",
+    "timestamp": "2026-03-16T23:38:44",
+    "total_queries": 8
+  },
+  "performance": {
+    "avg_latency_sec": 6.1326029896736145,
+    "total_latency_sec": 49.060823917388916
+  },
+  "results": [
+    {
+      "query_id": "S1",
+      "query": "科幻小说 太空歌剧",
+      "vector_dim": 384,
+      "latency_sec": 49.00828170776367,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S2",
+      "query": "推理小说 侦探",
+      "vector_dim": 384,
+      "latency_sec": 0.007540464401245117,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S3",
+      "query": "历史传记 二战",
+      "vector_dim": 384,
+      "latency_sec": 0.007412433624267578,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S4",
+      "query": "言情小说 现代",
+      "vector_dim": 384,
+      "latency_sec": 0.0075070858001708984,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S5",
+      "query": "奇幻小说 魔法",
+      "vector_dim": 384,
+      "latency_sec": 0.007207632064819336,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S6",
+      "query": "商业管理 领导力",
+      "vector_dim": 384,
+      "latency_sec": 0.007380247116088867,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S7",
+      "query": "自助成长 心理学",
+      "vector_dim": 384,
+      "latency_sec": 0.0073239803314208984,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    },
+    {
+      "query_id": "S8",
+      "query": "科学技术 人工智能",
+      "vector_dim": 384,
+      "latency_sec": 0.008170366287231445,
+      "backend": "sentence-transformers",
+      "model": "all-MiniLM-L6-v2"
+    }
+  ]
+}

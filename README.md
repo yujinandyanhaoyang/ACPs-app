@@ -44,9 +44,9 @@ pkill -f reading_concierge
 
 ---
 
-## 🤖 VennCLAW Agent 团队
+## 🤖 ACPs Agent 团队
 
-VennCLAW 是一个智能 Agent 协作系统，包含以下成员：
+ACPs 是一个基于 ACPS 协议的多 Agent 协作推荐系统，包含以下成员：
 
 | Agent | 角色 | 职责 | 模型 |
 |-------|------|------|------|

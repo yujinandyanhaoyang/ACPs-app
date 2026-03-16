@@ -4,19 +4,18 @@
 
 ### 4.1.1 开发环境配置
 
-本系统基于 Python 3.8+ 开发，开发环境配置如下：
+本系统基于 Python 3.10+ 开发，开发环境配置如下：
 
-**操作系统**: Ubuntu 20.04 LTS / macOS 12+  
-**Python 版本**: 3.8.10  
-**开发工具**: VS Code / PyCharm  
-**版本控制**: Git 2.30+
+**操作系统**: Ubuntu 20.04 LTS  
+**Python 版本**: 3.10.12  
+**开发工具**: VS Code  
+**版本控制**: Git 2.34+
 
 **虚拟环境**:
 ```bash
+cd /root/ACPs-app
 python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# 或
-venv\Scripts\activate  # Windows
+source venv/bin/activate
 ```
 
 **依赖安装**:
@@ -26,712 +25,1048 @@ pip install -r requirements.txt
 
 **requirements.txt 核心依赖**:
 ```
-flask==2.3.0
-sqlalchemy==2.0.0
-dashscope>=1.0.0
-scikit-learn==1.3.0
-numpy==1.24.0
-pandas==2.0.0
-pytest==7.4.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+requests>=2.28.0
+aiohttp>=3.9.0
+scikit-learn>=1.5.0
+scipy>=1.11.0
+networkx>=3.0
+sentence-transformers>=3.0.0
+pytest>=7.0.0
+httpx>=0.24.0
+tiktoken>=0.5.0
 ```
 
 ### 4.1.2 项目目录结构
 
+实际项目目录结构如下：
+
 ```
 ACPs-app/
-├── agents/                     # Agent 实现
-│   ├── tech_lead.py           # 技术主管
-│   ├── advisor.py             # Advisor
-│   ├── coordinator.py         # Coordinator
-│   └── phd_writer.py          # 博士
-├── recommender/                # 推荐引擎
-│   ├── collaborative_filtering.py
-│   ├── content_based.py
-│   ├── hybrid.py
-│   └── ranking.py
-├── services/                   # 服务层
-│   ├── model_backends.py      # 嵌入模型后端
-│   ├── experiment_data_collector.py
-│   └── performance_chart_generator.py
-├── scripts/                    # 脚本工具
-│   ├── run_experiment_and_generate_charts.py
-│   └── test_experiment_modules.py
-├── experiments/                # 实验数据
-│   ├── charts/                # 图表输出
-│   └── embedding_benchmark_20260312.json
-├── docs/                       # 文档
-│   ├── thesis/                # 论文
-│   └── DASHSCOPE_MIGRATION.md
-├── tests/                      # 测试
-│   ├── test_recommender.py
-│   └── test_embeddings.py
-├── requirements.txt            # 依赖
-└── README.md                   # 项目说明
+├── reading_concierge/              # Leader Agent（编排器）
+│   ├── __init__.py
+│   ├── reading_concierge.py        # 主服务入口
+│   └── reading_concierge.json      # ACS 配置
+├── agents/                         # Partner Agents
+│   ├── __init__.py
+│   ├── reader_profile_agent/
+│   │   ├── __init__.py
+│   │   ├── profile_agent.py        # ReaderProfile Agent 实现
+│   │   └── config.example.json
+│   ├── book_content_agent/
+│   │   ├── __init__.py
+│   │   ├── book_content_agent.py   # BookContent Agent 实现
+│   │   └── config.example.json
+│   └── rec_ranking_agent/
+│       ├── __init__.py
+│       ├── rec_ranking_agent.py    # RecRanking Agent 实现
+│       └── config.example.json
+├── acps_aip/                       # ACPS 协议实现
+│   ├── aip_base_model.py           # 基础数据模型
+│   ├── aip_rpc_server.py           # RPC 服务器
+│   └── aip_rpc_client.py           # RPC 客户端
+├── services/                       # 服务层
+│   ├── __init__.py
+│   ├── model_backends.py           # 嵌入模型后端
+│   ├── kg_client.py                # 知识图谱客户端
+│   ├── book_retrieval.py           # 图书检索服务
+│   ├── evaluation_metrics.py       # 评估指标计算
+│   ├── performance_chart_generator.py  # 图表生成
+│   ├── baseline_rankers.py         # 基线排序器
+│   └── baseline_recommenders.py    # 基线推荐器
+├── scripts/                        # 脚本工具
+│   ├── phase4_benchmark.py         # 基准测试脚本
+│   ├── phase4_optimizer.py         # 优化脚本
+│   └── gen_dev_certs.sh            # 证书生成脚本
+├── experiments/                    # 实验数据
+│   ├── charts/                     # 图表输出
+│   ├── embedding_model_comparison/ # 嵌入模型对比数据
+│   └── ablation_run_20260315.log   # 消融实验日志
+├── web_demo/                       # Web 界面
+│   └── index.html                  # 单页应用
+├── tests/                          # 测试
+│   └── test_aliyun_config.py       # 配置测试
+├── certs/                          # mTLS 证书
+│   ├── ca.crt/ca.key               # CA 证书
+│   └── *.crt/*.key                 # 服务证书
+├── docs/                           # 文档
+│   ├── thesis/                     # 论文
+│   └── *.md                        # 技术文档
+├── .env                            # 环境变量配置
+├── .env.example                    # 环境变量示例
+├── requirements.txt                # 依赖列表
+├── README.md                       # 项目说明
+└── AGENT_SPEC.md                   # Agent 规范
 ```
 
-### 4.1.3 版本控制策略
+### 4.1.3 配置管理
 
-采用 Git Flow 分支管理策略：
-- `main`: 主分支，稳定版本
-- `develop`: 开发分支
-- `feat/*`: 功能分支
-- `fix/*`: 修复分支
+系统使用环境变量和 `.env` 文件进行配置管理：
 
-**提交规范**:
+**核心配置项**（`.env`）:
+```bash
+# 嵌入模型配置
+HF_ENDPOINT=https://hf-mirror.com
+DASHSCOPE_API_KEY=
+DASHSCOPE_EMBED_MODEL=all-MiniLM-L6-v2
+
+# LLM 配置（阿里云百炼）
+OPENAI_MODEL=qwen3.5-27b
+OPENAI_API_KEY=sk-xxx
+OPENAI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+
+# 应用配置
+PORT=8100
+LOG_LEVEL=INFO
+DATASET_ROOT=/root/DataSet
+
+# Agent 配置
+READING_CONCIERGE_ID=reading_concierge_001
+READER_PROFILE_AGENT_ID=reader_profile_agent_001
+BOOK_CONTENT_AGENT_ID=book_content_agent_001
+REC_RANKING_AGENT_ID=rec_ranking_agent_001
 ```
-<type>: <description>
 
-[optional body]
+**配置加载**（使用 python-dotenv）:
+```python
+from dotenv import load_dotenv
+import os
 
-[optional footer]
+load_dotenv()
+
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen3.5-27b")
+DATASET_ROOT = os.getenv("DATASET_ROOT", "/root/DataSet")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 ```
-
-类型包括：`feat`（新功能）、`fix`（修复）、`docs`（文档）、`test`（测试）、`refactor`（重构）等。
 
 ## 4.2 核心功能实现
 
-### 4.2.1 协同过滤推荐实现
+### 4.2.1 ReadingConcierge 实现
 
-协同过滤模块实现了基于物品的协同过滤算法：
+ReadingConcierge 是系统的 Leader Agent，负责任务编排和结果整合。
+
+**核心代码结构**（`reading_concierge/reading_concierge.py`）:
 
 ```python
-# agents/collaborative_filtering.py
-import numpy as np
-from typing import Dict, List, Tuple
+from fastapi import FastAPI
+from typing import Any, Dict, List, OrderedDict
+from collections import OrderedDict
 
-class CollaborativeFilteringRecommender:
-    def __init__(self, user_item_matrix: np.ndarray):
-        """
-        初始化协同过滤推荐器
-        
-        Args:
-            user_item_matrix: 用户 - 物品评分矩阵 (m×n)
-        """
-        self.matrix = user_item_matrix
-        self.item_similarity = self._compute_item_similarity()
+from base import call_openai_chat, register_acs_route
+from services.book_retrieval import load_books, retrieve_books_by_query
+from services.model_backends import load_cf_item_vectors
+from agents.reader_profile_agent import profile_agent as reader_profile
+from agents.book_content_agent import book_content_agent as book_content
+from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
+
+app = FastAPI(title="Reading Concierge")
+
+# 会话管理（LRU 缓存）
+MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
+sessions: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+
+def _lru_session_get(session_id: str) -> Dict[str, Any]:
+    """获取或创建会话，超出容量时淘汰最旧会话"""
+    if session_id in sessions:
+        sessions.move_to_end(session_id)
+        return sessions[session_id]
     
-    def _compute_item_similarity(self) -> np.ndarray:
-        """计算物品之间的余弦相似度"""
-        # 转置矩阵，按列计算相似度
-        items = self.matrix.T
-        norms = np.linalg.norm(items, axis=1, keepdims=True)
-        normalized = items / (norms + 1e-8)
-        similarity = np.dot(normalized, normalized.T)
-        return similarity
+    if len(sessions) >= MAX_SESSIONS:
+        sessions.popitem(last=False)
     
-    def recommend(self, user_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
-        """
-        为指定用户生成推荐
-        
-        Args:
-            user_id: 用户 ID
-            top_k: 推荐数量
-            
-        Returns:
-            推荐列表 [(item_id, score), ...]
-        """
-        user_ratings = self.matrix[user_id]
-        rated_items = np.where(user_ratings > 0)[0]
-        
-        if len(rated_items) == 0:
-            return []  # 冷启动问题
-        
-        # 计算候选物品分数
-        scores = np.zeros(self.matrix.shape[1])
-        for item_idx in range(self.matrix.shape[1]):
-            if user_ratings[item_idx] > 0:
-                continue  # 跳过已评分物品
-            
-            # 加权求和：相似度 × 评分
-            similar_items = self.item_similarity[item_idx, rated_items]
-            user_scores = user_ratings[rated_items]
-            scores[item_idx] = np.dot(similar_items, user_scores) / (np.sum(similar_items) + 1e-8)
-        
-        # 返回 Top-K
-        top_indices = np.argsort(scores)[::-1][:top_k]
-        return [(idx, scores[idx]) for idx in top_indices if scores[idx] > 0]
+    sessions[session_id] = {
+        'created_at': datetime.now().isoformat(),
+        'messages': [],
+        'context': {}
+    }
+    return sessions[session_id]
+
+@app.post("/user_api")
+async def handle_user_query(request: UserQueryRequest):
+    """处理用户查询"""
+    session = _lru_session_get(request.session_id)
+    
+    # 1. 场景识别
+    scenario = detect_scenario(session['context'])
+    
+    # 2. 图书检索（召回候选）
+    candidates = retrieve_books_by_query(
+        request.query, 
+        top_k=BOOK_RETRIEVAL_TOP_K,
+        candidate_pool=BOOK_RETRIEVAL_CANDIDATE_POOL
+    )
+    
+    # 3. 并行调用 Partner Agents
+    profile_task = asyncio.create_task(
+        reader_profile.analyze_user_profile(
+            user_history=session['context'].get('history', []),
+            scenario=scenario
+        )
+    )
+    content_task = asyncio.create_task(
+        book_content.analyze_book_content(candidates)
+    )
+    
+    # 4. 等待结果
+    profile_result = await profile_task
+    content_result = await content_task
+    
+    # 5. 调用 RecRanking 进行排序
+    ranking_result = await rec_ranking.rank(
+        profile_vector=profile_result['profile_vector'],
+        content_vectors=content_result['content_vectors'],
+        candidates=candidates,
+        scenario=scenario
+    )
+    
+    # 6. 生成解释并返回
+    response = generate_response(ranking_result, profile_result)
+    return response
 ```
 
-### 4.2.2 内容推荐实现
+**关键实现要点**:
 
-内容推荐模块基于图书的元数据和嵌入向量进行推荐：
+1. **会话管理**: 使用 `OrderedDict` 实现 LRU 缓存，默认最大 200 会话
+2. **并行调度**: 使用 `asyncio.create_task` 并行调用 ReaderProfile 和 BookContent
+3. **场景识别**: 根据用户历史数据丰富程度判断场景类型（Warm/Cold/Explore）
+4. **结果整合**: 融合各 Agent 输出，生成自然语言解释
 
-```python
-# recommender/content_based.py
-from services.model_backends import generate_text_embeddings
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+### 4.2.2 ReaderProfile Agent 实现
 
-class ContentBasedRecommender:
-    def __init__(self, books: List[Dict], embedding_dim: int = 2560):
-        """
-        初始化内容推荐器
-        
-        Args:
-            books: 图书列表，包含 title, authors, genres, embedding 等字段
-            embedding_dim: 嵌入向量维度
-        """
-        self.books = books
-        self.book_ids = [book['id'] for book in books]
-        self.book_id_to_idx = {bid: idx for idx, bid in enumerate(self.book_ids)}
-        
-        # 构建嵌入矩阵
-        self.embedding_matrix = np.zeros((len(books), embedding_dim))
-        for i, book in enumerate(books):
-            if 'embedding' in book and book['embedding']:
-                self.embedding_matrix[i] = book['embedding']
-    
-    def recommend_by_query(self, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
-        """
-        基于查询文本生成推荐
-        
-        Args:
-            query: 查询文本（如"科幻小说 太空歌剧"）
-            top_k: 推荐数量
-            
-        Returns:
-            推荐列表 [(book_id, score), ...]
-        """
-        # 生成查询嵌入
-        query_embedding, meta = generate_text_embeddings([query], model_name="qwen3-vl-embedding")
-        
-        if not query_embedding:
-            return []
-        
-        # 计算余弦相似度
-        query_vec = np.array(query_embedding[0]).reshape(1, -1)
-        similarities = cosine_similarity(query_vec, self.embedding_matrix)[0]
-        
-        # 返回 Top-K
-        top_indices = np.argsort(similarities)[::-1][:top_k]
-        return [(self.book_ids[idx], float(similarities[idx])) 
-                for idx in top_indices if similarities[idx] > 0]
-    
-    def recommend_by_book(self, book_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
-        """
-        基于指定图书生成相似推荐
-        
-        Args:
-            book_id: 图书 ID
-            top_k: 推荐数量
-            
-        Returns:
-            推荐列表 [(book_id, score), ...]
-        """
-        if book_id not in self.book_id_to_idx:
-            return []
-        
-        idx = self.book_id_to_idx[book_id]
-        book_vec = self.embedding_matrix[idx].reshape(1, -1)
-        similarities = cosine_similarity(book_vec, self.embedding_matrix)[0]
-        
-        # 排除自身
-        similarities[idx] = 0
-        
-        top_indices = np.argsort(similarities)[::-1][:top_k]
-        return [(self.book_ids[idx], float(similarities[idx])) 
-                for idx in top_indices if similarities[idx] > 0]
-```
+ReaderProfile Agent 负责用户偏好分析。
 
-### 4.2.3 多因子排序实现
-
-RecRanking 多因子排序综合考虑多个推荐因子：
+**核心代码结构**（`agents/reader_profile_agent/profile_agent.py`）:
 
 ```python
-# recommender/ranking.py
-from typing import Dict, List, Optional
+from fastapi import FastAPI
+from acps_aip.aip_base_model import Message, Task, TaskState
+from acps_aip.aip_rpc_server import add_aip_rpc_router, TaskManager
 
-class RecRanking:
-    """多因子排序实现"""
+from base import extract_text_from_message, call_openai_chat
+
+app = FastAPI(title="Reader Profile Agent")
+
+_PROFILE_CONTEXT: dict[str, Dict[str, Any]] = {}
+
+def _parse_payload(message: Message) -> Dict[str, Any]:
+    """解析消息负载"""
+    params = getattr(message, "commandParams", None) or {}
+    payload = params.get("payload") if isinstance(params, dict) else None
+    if isinstance(payload, dict):
+        return payload
+    # 尝试从文本解析 JSON
+    text = extract_text_from_message(message)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+
+def _build_preference_vector(history: List[Dict], reviews: List[str]) -> Dict:
+    """构建用户偏好向量"""
+    # 分析历史评分，提取类型偏好
+    genre_distribution = analyze_genre_distribution(history)
     
-    def __init__(self, weights: Optional[Dict[str, float]] = None):
-        """
-        初始化排序器
-        
-        Args:
-            weights: 各因子权重，默认值：
-                - cf_score: 0.35（协同过滤分数）
-                - content_score: 0.25（内容相似度）
-                - popularity: 0.15（流行度）
-                - diversity: 0.15（多样性）
-                - novelty: 0.10（新颖性）
-        """
-        self.weights = weights or {
-            'cf_score': 0.35,
-            'content_score': 0.25,
-            'popularity': 0.15,
-            'diversity': 0.15,
-            'novelty': 0.10
+    # 分析书评，提取情感倾向和主题偏好
+    sentiment_summary = analyze_sentiment(reviews)
+    theme_keywords = extract_theme_keywords(reviews)
+    
+    # 生成结构化偏好向量
+    return {
+        'genre_weights': genre_distribution,
+        'sentiment_profile': sentiment_summary,
+        'theme_preferences': theme_keywords,
+        'difficulty_preference': infer_difficulty(history),
+        'language_preference': 'zh'  # 默认中文
+    }
+
+async def analyze_user_profile(
+    user_history: List[Dict],
+    scenario: str = "warm"
+) -> Dict[str, Any]:
+    """分析用户画像"""
+    if not user_history and scenario == "cold":
+        # 冷启动：使用默认先验
+        return {
+            'profile_vector': get_default_prior_vector(),
+            'scenario': 'cold',
+            'confidence': 0.3
         }
     
-    def rank(self, candidates: List[Dict]) -> List[Dict]:
-        """
-        对候选物品进行多因子排序
-        
-        Args:
-            candidates: 候选物品列表，包含各因子分数
-            
-        Returns:
-            排序后的物品列表
-        """
-        for item in candidates:
-            # 计算加权总分
-            total_score = 0.0
-            for factor, weight in self.weights.items():
-                factor_value = item.get(factor, 0.0)
-                # 归一化到 [0, 1]
-                factor_value = min(max(factor_value, 0.0), 1.0)
-                total_score += weight * factor_value
-            
-            item['total_score'] = total_score
-        
-        # 按总分降序排序
-        return sorted(candidates, key=lambda x: x['total_score'], reverse=True)
-```
-
-## 4.3 多 Agent 协作实现
-
-### 4.3.1 Agent 角色定义
-
-ACPs-app 系统定义了推荐系统场景下的四种 Agent 角色：
-
-```python
-# agents/roles.py
-from enum import Enum
-from dataclasses import dataclass
-from typing import List
-
-class AgentRole(Enum):
-    """Agent 角色枚举（推荐系统场景）"""
-    USER_AGENT = "user_agent"         # 用户代理
-    BOOK_AGENT = "book_agent"         # 图书代理
-    RECOMMENDER_AGENT = "recommender" # 推荐代理
-    EVALUATOR_AGENT = "evaluator"     # 评估代理
-
-@dataclass
-class AgentConfig:
-    """Agent 配置"""
-    role: AgentRole
-    name: str
-    responsibilities: List[str]
-    priority: str  # critical, high, medium, low
-
-# 默认配置（推荐系统场景）
-DEFAULT_AGENT_CONFIGS = {
-    AgentRole.USER_AGENT: AgentConfig(
-        role=AgentRole.USER_AGENT,
-        name="用户代理",
-        responsibilities=["用户偏好建模", "历史行为分析", "查询理解"],
-        priority="critical"
-    ),
-    AgentRole.BOOK_AGENT: AgentConfig(
-        role=AgentRole.BOOK_AGENT,
-        name="图书代理",
-        responsibilities=["图书特征提取", "嵌入生成", "相似度计算"],
-        priority="critical"
-    ),
-    AgentRole.RECOMMENDER_AGENT: AgentConfig(
-        role=AgentRole.RECOMMENDER_AGENT,
-        name="推荐代理",
-        responsibilities=["推荐算法执行", "多因子排序", "结果生成"],
-        priority="high"
-    ),
-    AgentRole.EVALUATOR_AGENT: AgentConfig(
-        role=AgentRole.EVALUATOR_AGENT,
-        name="评估代理",
-        responsibilities=["推荐质量评估", "指标计算", "反馈收集"],
-        priority="high"
+    # 构建偏好向量
+    profile_vector = _build_preference_vector(
+        history=user_history.get('ratings', []),
+        reviews=user_history.get('reviews', [])
     )
-}
+    
+    return {
+        'profile_vector': profile_vector,
+        'scenario': scenario,
+        'confidence': 0.8 if len(user_history) > 5 else 0.5
+    }
 ```
 
-### 4.3.2 任务分配机制
+**关键实现要点**:
 
-任务分配通过 ACPS 协议实现：
+1. **偏好向量结构**: 包含类型权重、情感分析、主题偏好、难度偏好等维度
+2. **冷启动处理**: 为新用户提供默认先验分布
+3. **置信度评估**: 根据历史数据量评估偏好向量的置信度
+
+### 4.2.3 BookContent Agent 实现
+
+BookContent Agent 负责图书内容理解。
+
+**核心代码结构**（`agents/book_content_agent/book_content_agent.py`）:
 
 ```python
-# agents/task_manager.py
-import json
-import uuid
-from datetime import datetime
-from typing import Dict, List, Optional
+from fastapi import FastAPI
+from services.model_backends import generate_text_embeddings
+from services.kg_client import query_knowledge_graph
+
+app = FastAPI(title="Book Content Agent")
+
+async def analyze_book_content(
+    candidates: List[Dict]
+) -> Dict[str, Any]:
+    """分析图书内容"""
+    book_ids = [book['book_id'] for book in candidates]
+    
+    # 1. 生成图书内容文本（标题 + 作者 + 简介 + 类型）
+    content_texts = [
+        f"{book['title']} by {', '.join(book['authors'])}. "
+        f"{book.get('description', '')}. "
+        f"Genres: {', '.join(book.get('genres', []))}"
+        for book in candidates
+    ]
+    
+    # 2. 生成嵌入向量
+    embeddings, meta = generate_text_embeddings(content_texts)
+    
+    # 3. 查询知识图谱增强
+    kg_refs = []
+    for book in candidates:
+        kg_info = query_knowledge_graph(book['book_id'])
+        if kg_info:
+            kg_refs.append({
+                'book_id': book['book_id'],
+                'author_links': kg_info.get('authors', []),
+                'publisher_links': kg_info.get('publishers', []),
+                'series_links': kg_info.get('series', [])
+            })
+    
+    # 4. 提取标签
+    tags = extract_book_tags(candidates)
+    
+    return {
+        'content_vectors': embeddings,
+        'kg_refs': kg_refs,
+        'tags': tags,
+        'embedding_meta': meta
+    }
+
+def extract_book_tags(candidates: List[Dict]) -> Dict[str, List[str]]:
+    """提取图书标签"""
+    tags = {}
+    for book in candidates:
+        book_tags = []
+        # 从类型提取
+        book_tags.extend(book.get('genres', []))
+        # 从简介提取关键词
+        if book.get('description'):
+            keywords = extract_keywords(book['description'])
+            book_tags.extend(keywords[:5])
+        tags[book['book_id']] = list(set(book_tags))
+    return tags
+```
+
+**关键实现要点**:
+
+1. **内容文本构建**: 组合标题、作者、简介、类型等信息生成完整内容描述
+2. **嵌入生成**: 使用本地 sentence-transformers 模型生成 384 维向量
+3. **知识图谱增强**: 查询作者、出版社、系列等关联信息
+
+### 4.2.4 RecRanking Agent 实现
+
+RecRanking Agent 负责多因子融合排序。
+
+**核心代码结构**（`agents/rec_ranking_agent/rec_ranking_agent.py`）:
+
+```python
+from fastapi import FastAPI
+from services.evaluation_metrics import compute_recommendation_metrics
+import numpy as np
+
+app = FastAPI(title="Rec Ranking Agent")
+
+# 场景自适应权重
+SCENARIO_WEIGHTS = {
+    'warm': {'cf': 0.25, 'semantic': 0.35, 'kg': 0.20, 'diversity': 0.20},
+    'cold': {'cf': 0.10, 'semantic': 0.45, 'kg': 0.25, 'diversity': 0.20},
+    'explore': {'cf': 0.15, 'semantic': 0.25, 'kg': 0.20, 'diversity': 0.40}
+}
+
+async def rank(
+    profile_vector: Dict,
+    content_vectors: List[List[float]],
+    candidates: List[Dict],
+    scenario: str = "warm"
+) -> Dict[str, Any]:
+    """多因子融合排序"""
+    weights = SCENARIO_WEIGHTS.get(scenario, SCENARIO_WEIGHTS['warm'])
+    
+    # 1. 计算协同过滤分数
+    cf_scores = compute_cf_scores(profile_vector, candidates)
+    
+    # 2. 计算语义相似度分数
+    semantic_scores = compute_semantic_scores(profile_vector, content_vectors)
+    
+    # 3. 计算知识图谱增强分数
+    kg_scores = compute_kg_scores(profile_vector, candidates)
+    
+    # 4. 计算多样性分数
+    diversity_scores = compute_diversity_scores(candidates)
+    
+    # 5. 多因子融合
+    final_scores = []
+    for i, book in enumerate(candidates):
+        score = (
+            weights['cf'] * cf_scores[i] +
+            weights['semantic'] * semantic_scores[i] +
+            weights['kg'] * kg_scores[i] +
+            weights['diversity'] * diversity_scores[i]
+        )
+        final_scores.append(score)
+    
+    # 6. 排序
+    sorted_indices = np.argsort(final_scores)[::-1]
+    ranked_books = [candidates[i] for i in sorted_indices]
+    ranked_scores = [final_scores[i] for i in sorted_indices]
+    
+    # 7. 生成解释
+    explanations = generate_explanations(ranked_books, profile_vector)
+    
+    return {
+        'ranking': list(zip(ranked_books, ranked_scores)),
+        'explanations': explanations,
+        'scores': {
+            'cf': cf_scores,
+            'semantic': semantic_scores,
+            'kg': kg_scores,
+            'diversity': diversity_scores
+        }
+    }
+
+def compute_semantic_scores(
+    profile_vector: Dict,
+    content_vectors: List[List[float]]
+) -> List[float]:
+    """计算语义相似度分数"""
+    from sklearn.metrics.pairwise import cosine_similarity
+    
+    # 将偏好向量转换为嵌入（简化实现）
+    profile_embedding = profile_vector_to_embedding(profile_vector)
+    
+    # 计算余弦相似度
+    similarities = cosine_similarity(
+        [profile_embedding],
+        content_vectors
+    )[0]
+    
+    # 归一化到 [0, 1]
+    return (similarities - similarities.min()) / (similarities.max() - similarities.min() + 1e-8)
+```
+
+**关键实现要点**:
+
+1. **场景自适应权重**: 根据 Warm/Cold/Explore 场景动态调整各因子权重
+2. **多因子融合**: 线性加权融合协同过滤、语义相似度、知识图谱、多样性四个因子
+3. **解释生成**: 为每个推荐生成自然语言解释，说明推荐理由
+
+## 4.3 ACPS 协议实现
+
+### 4.3.1 基础数据模型
+
+ACPS 协议基于 JSON-RPC 2.0，定义以下基础数据模型（`acps_aip/aip_base_model.py`）:
+
+```python
+from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
+from enum import Enum
+
+class TaskState(str, Enum):
+    """任务状态枚举"""
+    PENDING = "Pending"
+    ACCEPTED = "Accepted"
+    WORKING = "Working"
+    AWAITING_INPUT = "AwaitingInput"
+    AWAITING_COMPLETION = "AwaitingCompletion"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+    CANCELLED = "Cancelled"
+
+class Message(BaseModel):
+    """ACPS 消息"""
+    taskId: str = Field(..., description="任务 ID")
+    sessionId: str = Field(..., description="会话 ID")
+    state: TaskState = Field(..., description="任务状态")
+    outputs: Dict[str, Any] = Field(default_factory=dict, description="输出数据")
+    diagnostics: Dict[str, Any] = Field(default_factory=dict, description="诊断信息")
+
+class Task(BaseModel):
+    """ACPS 任务"""
+    taskId: str
+    taskName: str
+    sessionId: str
+    subQuery: Dict[str, Any]
+    context: Dict[str, Any]
+    acceptanceCriteria: Dict[str, Any]
+    state: TaskState = TaskState.PENDING
+```
+
+### 4.3.2 RPC 服务器实现
+
+RPC 服务器实现（`acps_aip/aip_rpc_server.py`）:
+
+```python
+from fastapi import FastAPI, APIRouter
+from pydantic import BaseModel
 
 class TaskManager:
     """任务管理器"""
     
     def __init__(self):
-        self.tasks: Dict[str, Dict] = {}
+        self.tasks: Dict[str, Task] = {}
+        self.task_handlers: Dict[str, callable] = {}
     
-    def create_task(self, description: str, role: str, 
-                    priority: str = "high", 
-                    deadline: Optional[str] = None) -> str:
-        """
-        创建新任务
-        
-        Args:
-            description: 任务描述
-            role: 执行角色
-            priority: 优先级
-            deadline: 截止时间
-            
-        Returns:
-            任务 ID
-        """
-        task_id = f"task-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8]}"
-        
-        task = {
-            'task_id': task_id,
-            'description': description,
-            'role': role,
-            'priority': priority,
-            'deadline': deadline,
-            'status': 'pending',
-            'created_at': datetime.now().isoformat(),
-            'assigned_at': None,
-            'completed_at': None
-        }
-        
-        self.tasks[task_id] = task
-        return task_id
+    def register_handler(self, task_name: str, handler: callable):
+        """注册任务处理器"""
+        self.task_handlers[task_name] = handler
     
-    def assign_task(self, task_id: str, agent_id: str) -> bool:
-        """分配任务给指定 Agent"""
-        if task_id not in self.tasks:
-            return False
+    async def start_task(self, task: Task) -> Task:
+        """启动任务"""
+        task.state = TaskState.ACCEPTED
+        self.tasks[task.taskId] = task
         
-        task = self.tasks[task_id]
-        task['status'] = 'assigned'
-        task['assigned_to'] = agent_id
-        task['assigned_at'] = datetime.now().isoformat()
+        # 异步执行任务
+        handler = self.task_handlers.get(task.taskName)
+        if handler:
+            asyncio.create_task(self._execute_task(task, handler))
         
-        return True
+        return task
     
-    def update_task_status(self, task_id: str, status: str, 
-                          result: Optional[str] = None) -> bool:
-        """更新任务状态"""
-        if task_id not in self.tasks:
-            return False
-        
-        task = self.tasks[task_id]
-        task['status'] = status
-        
-        if status == 'completed' and result:
-            task['result'] = result
-            task['completed_at'] = datetime.now().isoformat()
-        
-        return True
+    async def _execute_task(self, task: Task, handler: callable):
+        """执行任务"""
+        try:
+            task.state = TaskState.WORKING
+            result = await handler(task)
+            task.outputs = result
+            task.state = TaskState.AWAITING_COMPLETION
+        except Exception as e:
+            task.state = TaskState.FAILED
+            task.diagnostics['error'] = str(e)
+
+def add_aip_rpc_router(app: FastAPI, task_manager: TaskManager):
+    """添加 RPC 路由到 FastAPI 应用"""
+    router = APIRouter()
     
-    def get_all_tasks(self, status: Optional[str] = None) -> List[Dict]:
-        """获取所有任务，可按状态过滤"""
-        tasks = list(self.tasks.values())
-        if status:
-            tasks = [t for t in tasks if t['status'] == status]
-        return tasks
+    @router.post("/rpc/start")
+    async def start_task(task: Task):
+        return await task_manager.start_task(task)
+    
+    @router.get("/rpc/status/{task_id}")
+    async def get_task_status(task_id: str):
+        task = task_manager.tasks.get(task_id)
+        return task if task else {"error": "Task not found"}
+    
+    app.include_router(router)
 ```
 
-### 4.3.3 通信实现
+### 4.3.3 ACS（Agent Capability Specification）
 
-Agent 间通信基于 ACPS 协议：
+每个 Agent 都有 ACS 配置文件，描述其能力和技能：
 
-```python
-# agents/acps_protocol.py
-import json
-import uuid
-from datetime import datetime
-from typing import Any, Dict
-
-class ACPSMessage:
-    """ACPS 协议消息类"""
-    
-    def __init__(self, message_type: str, sender: str, receiver: str, 
-                 content: Dict[str, Any]):
-        self.message_id = f"msg_{uuid.uuid4().hex}"
-        self.message_type = message_type
-        self.sender = sender
-        self.receiver = receiver
-        self.timestamp = datetime.now().isoformat()
-        self.content = content
-    
-    def to_json(self) -> str:
-        """转换为 JSON 字符串"""
-        return json.dumps({
-            'message_id': self.message_id,
-            'message_type': self.message_type,
-            'sender': self.sender,
-            'receiver': self.receiver,
-            'timestamp': self.timestamp,
-            'content': self.content
-        }, ensure_ascii=False, indent=2)
-    
-    @classmethod
-    def from_json(cls, json_str: str) -> 'ACPSMessage':
-        """从 JSON 字符串解析"""
-        data = json.loads(json_str)
-        msg = cls(
-            message_type=data['message_type'],
-            sender=data['sender'],
-            receiver=data['receiver'],
-            content=data['content']
-        )
-        msg.message_id = data['message_id']
-        msg.timestamp = data['timestamp']
-        return msg
-
-# 消息类型
-MESSAGE_TYPES = {
-    'task_assign': '任务分配',
-    'task_confirm': '任务确认',
-    'task_progress': '进度更新',
-    'task_complete': '任务完成',
-    'review_request': '审查请求',
-    'review_result': '审查结果'
+**ReadingConcierge ACS** (`reading_concierge/reading_concierge.json`):
+```json
+{
+  "agentId": "reading_concierge_001",
+  "agentName": "Reading Concierge",
+  "description": "Coordinator for book recommendation workflow",
+  "skills": [
+    "workflow.orchestrate",
+    "result.integrate",
+    "session.manage"
+  ],
+  "transport": {
+    "type": "http",
+    "baseUrl": "http://localhost:8100"
+  },
+  "capabilities": {
+    "maxConcurrentTasks": 10,
+    "supportedScenarios": ["warm", "cold", "explore"]
+  }
 }
+```
+
+**ReaderProfile ACS** (`agents/reader_profile_agent/config.example.json`):
+```json
+{
+  "agentId": "reader_profile_agent_001",
+  "agentName": "Reader Profile Agent",
+  "description": "Analyzes user preferences for book recommendations",
+  "skills": [
+    "profile.extract",
+    "preference.embedding",
+    "sentiment.analysis"
+  ],
+  "transport": {
+    "type": "http",
+    "baseUrl": "http://localhost:8211"
+  }
+}
+```
+
+### 4.3.4 mTLS 双向认证
+
+系统支持 mTLS 双向认证用于 Agent 间通信安全：
+
+**证书生成** (`scripts/gen_dev_certs.sh`):
+```bash
+#!/bin/bash
+# 生成 CA 证书
+openssl genrsa -out ca.key 2048
+openssl req -new -x509 -days 365 -key ca.key -out ca.crt \
+  -subj "/CN=ACPs-Dev-CA"
+
+# 生成服务证书
+for service in reading_concierge reader_profile book_content rec_ranking; do
+  openssl genrsa -out ${service}.key 2048
+  openssl req -new -key ${service}.key -out ${service}.csr \
+    -subj "/CN=${service}"
+  openssl x509 -req -days 365 -in ${service}.csr -CA ca.crt -CAkey ca.key \
+    -CAcreateserial -out ${service}.crt
+done
+```
+
+**mTLS 配置**（环境变量）:
+```bash
+AGENT_MTLS_ENABLED=true
+AGENT_MTLS_CERT_DIR=/root/ACPs-app/certs
+READING_CONCIERGE_MTLS_CONFIG_PATH=/root/ACPs-app/certs/reading_concierge.json
 ```
 
 ## 4.4 嵌入模型集成
 
-### 4.4.1 DashScope API 集成
+### 4.4.1 本地 sentence-transformers 集成
 
-DashScope 多模态嵌入 API 的集成实现：
+系统使用本地 sentence-transformers 模型生成嵌入向量：
 
+**模型配置**（`services/model_backends.py`）:
 ```python
-# services/model_backends.py
+from sentence_transformers import SentenceTransformer
 import os
-import logging
-from typing import Any, Dict, List, Tuple
 
-_LOGGER = logging.getLogger(__name__)
+# 本地模型配置
+EMBED_MODEL_NAME = os.getenv("DASHSCOPE_EMBED_MODEL", "all-MiniLM-L6-v2")
+_model_cache = {}
+
+def get_embedding_model():
+    """获取嵌入模型（单例缓存）"""
+    if EMBED_MODEL_NAME not in _model_cache:
+        _model_cache[EMBED_MODEL_NAME] = SentenceTransformer(EMBED_MODEL_NAME)
+    return _model_cache[EMBED_MODEL_NAME]
 
 def generate_text_embeddings(
     texts: List[str],
-    model_name: str = "qwen3-vl-embedding",
-    fallback_dim: int = 12
+    model_name: str = None
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
-    """
-    生成文本嵌入（同步版本）
+    """生成文本嵌入"""
+    model = get_embedding_model()
+    embeddings = model.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
     
-    优先级：
-    1. DashScope 多模态 API (qwen3-vl-embedding)
-    2. 本地 sentence-transformers
-    3. Hash fallback
-    
-    Args:
-        texts: 待嵌入的文本列表
-        model_name: 模型名称
-        fallback_dim: fallback 向量维度
-        
-    Returns:
-        (embeddings, metadata) 元组
-    """
-    text_list = [str(text or "") for text in texts]
-    if not text_list:
-        return [], {"backend": "none", "model": None, "vector_dim": 0}
-    
-    # 优先级 1: DashScope 多模态 API
-    api_key = os.getenv("OPENAI_API_KEY") or ""
-    model = (model_name or "qwen3-vl-embedding").strip()
-    
-    if api_key and model == "qwen3-vl-embedding":
-        vectors, meta = _resolve_dashscope_multimodal_embeddings(text_list, model, api_key)
-        if vectors:
-            return vectors, meta
-        _LOGGER.info("event=multimodal_failed fallback=offline")
-    
-    # 优先级 2: 本地 sentence-transformers
-    # ...（省略本地模型实现）
-    
-    # 优先级 3: Hash fallback
-    fallback_vectors = [hash_embedding(text, dim=fallback_dim) for text in text_list]
-    dim = len(fallback_vectors[0]) if fallback_vectors else 0
-    return fallback_vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
+    return (
+        embeddings.tolist(),
+        {
+            'backend': 'sentence-transformers',
+            'model': EMBED_MODEL_NAME,
+            'vector_dim': embeddings.shape[1],  # 384
+            'normalized': True
+        }
+    )
+```
 
+**模型特点**:
+- **模型名称**: all-MiniLM-L6-v2
+- **向量维度**: 384
+- **优势**: 轻量高效，离线运行，零成本
+- **延迟**: ~50ms/请求
 
-def _resolve_dashscope_multimodal_embeddings(
-    texts: List[str],
-    model_name: str = "qwen3-vl-embedding",
-    api_key: str = ""
-) -> Tuple[List[List[float]], Dict[str, Any]]:
-    """
-    使用 dashscope 库调用多模态嵌入 API
+### 4.4.2 协同过滤向量加载
+
+协同过滤功能使用预计算的用户 - 物品矩阵：
+
+```python
+# services/model_backends.py
+import numpy as np
+import os
+
+def load_cf_item_vectors() -> np.ndarray:
+    """加载协同过滤物品向量"""
+    cf_path = os.path.join(
+        os.getenv("DATASET_ROOT", "/root/DataSet"),
+        "cf_item_vectors.npy"
+    )
+    if os.path.exists(cf_path):
+        return np.load(cf_path)
+    return None
+```
+
+## 4.5 服务层实现
+
+### 4.5.1 知识图谱客户端
+
+知识图谱客户端实现（`services/kg_client.py`）:
+
+```python
+import networkx as nx
+import json
+import os
+
+class KnowledgeGraphClient:
+    """知识图谱客户端"""
     
-    Args:
-        texts: 待嵌入的文本列表
-        model_name: 模型名称
-        api_key: API Key
+    def __init__(self, kg_path: str = None):
+        kg_path = kg_path or os.path.join(
+            os.getenv("DATASET_ROOT"),
+            "knowledge_graph.json"
+        )
+        self.graph = self._load_graph(kg_path)
+    
+    def _load_graph(self, path: str) -> nx.Graph:
+        """加载知识图谱"""
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return nx.node_link_graph(data)
+        return nx.Graph()
+    
+    def query_authors(self, book_id: str) -> List[str]:
+        """查询图书作者"""
+        return list(self.graph.neighbors(book_id))
+    
+    def query_related_books(self, book_id: str, relation_type: str = None) -> List[str]:
+        """查询关联图书"""
+        neighbors = list(self.graph.neighbors(book_id))
+        if relation_type:
+            # 按关系类型过滤
+            return [n for n in neighbors 
+                    if self.graph[book_id][n].get('type') == relation_type]
+        return neighbors
+```
+
+### 4.5.2 图书检索服务
+
+图书检索服务实现（`services/book_retrieval.py`）:
+
+```python
+import os
+import json
+from typing import List, Dict
+
+_books_cache = None
+
+def load_books() -> List[Dict]:
+    """加载图书数据集"""
+    global _books_cache
+    if _books_cache is not None:
+        return _books_cache
+    
+    dataset_path = os.path.join(
+        os.getenv("DATASET_ROOT", "/root/DataSet"),
+        "books_cleaned.json"
+    )
+    
+    with open(dataset_path, 'r', encoding='utf-8') as f:
+        _books_cache = json.load(f)
+    
+    return _books_cache
+
+def retrieve_books_by_query(
+    query: str,
+    top_k: int = 8,
+    candidate_pool: int = 30
+) -> List[Dict]:
+    """基于查询检索图书"""
+    books = load_books()
+    
+    # 简单关键词匹配（实际实现使用嵌入相似度）
+    query_terms = query.lower().split()
+    scored_books = []
+    
+    for book in books[:candidate_pool * 2]:  # 限制扫描范围
+        score = 0
+        title_lower = book.get('title', '').lower()
+        for term in query_terms:
+            if term in title_lower:
+                score += 1
         
-    Returns:
-        (embeddings, metadata) 元组
-    """
-    try:
-        import dashscope
-        dashscope.api_key = api_key
+        if score > 0:
+            scored_books.append((score, book))
+    
+    # 按分数排序
+    scored_books.sort(key=lambda x: x[0], reverse=True)
+    
+    return [book for _, book in scored_books[:top_k]]
+```
+
+### 4.5.3 评估指标计算
+
+评估指标计算实现（`services/evaluation_metrics.py`）:
+
+```python
+import numpy as np
+from typing import List, Dict
+
+def compute_recommendation_metrics(
+    recommended: List[str],
+    relevant: List[str],
+    k: int = 5
+) -> Dict[str, float]:
+    """计算推荐评估指标"""
+    rec_set = set(recommended[:k])
+    rel_set = set(relevant)
+    
+    # Precision@K
+    precision = len(rec_set & rel_set) / k if k > 0 else 0.0
+    
+    # Recall@K
+    recall = len(rec_set & rel_set) / len(rel_set) if rel_set else 0.0
+    
+    # NDCG@K
+    dcg = 0.0
+    for i, book_id in enumerate(recommended[:k]):
+        if book_id in rel_set:
+            dcg += 1.0 / np.log2(i + 2)
+    
+    idcg = sum(1.0 / np.log2(i + 2) for i in range(min(len(rel_set), k)))
+    ndcg = dcg / idcg if idcg > 0 else 0.0
+    
+    return {
+        'precision': precision,
+        'recall': recall,
+        'ndcg': ndcg
+    }
+```
+
+### 4.5.4 图表生成
+
+性能图表生成实现（`services/performance_chart_generator.py`）:
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+from typing import Dict, List
+
+class ChartGenerator:
+    """图表生成器"""
+    
+    def __init__(self, output_dir: str = "experiments/charts"):
+        self.output_dir = output_dir
+        os.makedirs(output_dir, exist_ok=True)
+    
+    def generate_metrics_comparison(
+        self,
+        methods: List[str],
+        metrics: Dict[str, List[float]]
+    ) -> str:
+        """生成指标对比柱状图"""
+        x = np.arange(len(methods))
+        width = 0.2
         
-        if not dashscope.api_key:
-            _LOGGER.warning("event=dashscope_no_api_key fallback=hash")
-            return [], {"backend": "dashscope-multimodal", "model": model_name, 
-                       "vector_dim": 0, "error": "no_api_key"}
+        fig, ax = plt.subplots(figsize=(10, 6))
         
-        all_embeddings: List[List[float]] = []
+        for i, (metric_name, values) in enumerate(metrics.items()):
+            ax.bar(x + i * width, values, width, label=metric_name)
         
-        for text in texts:
-            input_data = [{'text': text}]
-            resp = dashscope.MultiModalEmbedding.call(
-                model=model_name,
-                input=input_data
-            )
+        ax.set_xlabel('Method')
+        ax.set_ylabel('Score')
+        ax.set_title('Recommendation Metrics Comparison')
+        ax.set_xticks(x + width * 1.5)
+        ax.set_xticklabels(methods)
+        ax.legend()
+        
+        output_path = os.path.join(self.output_dir, "01_metrics_comparison.png")
+        plt.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        return output_path
+```
+
+## 4.6 Web Demo 实现
+
+### 4.6.1 单页应用
+
+Web Demo 使用纯 HTML + JavaScript 实现（`web_demo/index.html`）:
+
+**核心功能**:
+- 用户查询输入
+- 推荐结果展示
+- Agent 协作状态可视化
+- 性能指标展示
+
+**API 调用**:
+```javascript
+async function submitQuery(query) {
+    const response = await fetch('/user_api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            query: query,
+            session_id: getSessionId()
+        })
+    });
+    return await response.json();
+}
+```
+
+### 4.6.2 服务状态端点
+
+系统提供服务状态检查端点：
+
+```python
+@app.get("/demo/status")
+async def get_status():
+    """获取服务状态"""
+    return {
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'sessions_active': len(sessions),
+        'agents': {
+            'reading_concierge': 'running',
+            'reader_profile': 'running',
+            'book_content': 'running',
+            'rec_ranking': 'running'
+        }
+    }
+```
+
+## 4.7 实验系统实现
+
+### 4.7.1 基准测试脚本
+
+基准测试脚本实现（`scripts/phase4_benchmark.py`）:
+
+```python
+#!/usr/bin/env python3
+"""Phase 4: Benchmark comparison of 4 recommendation methods"""
+
+import json
+import os
+from services.baseline_recommenders import (
+    ACPSMultiAgentRecommender,
+    TraditionalHybridRecommender,
+    MultiAgentProxyRecommender,
+    LLMOnlyRecommender
+)
+from services.evaluation_metrics import compute_recommendation_metrics
+
+def run_benchmark(test_cases: List[Dict]) -> Dict:
+    """运行基准测试"""
+    methods = {
+        'acps_multi_agent': ACPSMultiAgentRecommender(),
+        'traditional_hybrid': TraditionalHybridRecommender(),
+        'multi_agent_proxy': MultiAgentProxyRecommender(),
+        'llm_only': LLMOnlyRecommender()
+    }
+    
+    results = {method: [] for method in methods}
+    
+    for test_case in test_cases:
+        user_history = test_case['user_history']
+        candidates = test_case['candidates']
+        relevant = test_case['relevant']
+        
+        for method_name, recommender in methods.items():
+            recommended = recommender.recommend(user_history, candidates)
+            metrics = compute_recommendation_metrics(recommended, relevant)
+            results[method_name].append(metrics)
+    
+    # 计算平均值
+    summary = {}
+    for method_name, method_results in results.items():
+        summary[method_name] = {
+            'precision': np.mean([r['precision'] for r in method_results]),
+            'recall': np.mean([r['recall'] for r in method_results]),
+            'ndcg': np.mean([r['ndcg'] for r in method_results])
+        }
+    
+    return summary
+```
+
+### 4.7.2 消融实验实现
+
+消融实验实现（`scripts/phase4_optimizer.py`）:
+
+```python
+#!/usr/bin/env python3
+"""Phase 4: Ablation study"""
+
+from services.model_backends import SCENARIO_WEIGHTS
+
+def run_ablation(users: List[Dict], ablation_configs: List[Dict]) -> Dict:
+    """运行消融实验"""
+    results = {config['name']: [] for config in ablation_configs}
+    
+    for user in users:
+        for config in ablation_configs:
+            # 临时修改权重
+            original_weights = SCENARIO_WEIGHTS[config['scenario']].copy()
+            SCENARIO_WEIGHTS[config['scenario']] = config['weights']
             
-            if resp and resp.status_code == 200:
-                embedding_data = resp.output.get('embeddings', [{}])[0]
-                embedding = embedding_data.get('embedding', [])
-                if embedding:
-                    all_embeddings.append([round(_to_float(v), 6) for v in embedding])
-            else:
-                _LOGGER.warning("event=dashscope_multimodal_error code=%s message=%s",
-                               getattr(resp, 'status_code', 'unknown'),
-                               getattr(resp, 'message', 'unknown'))
-                return [], {"backend": "dashscope-multimodal", "model": model_name,
-                           "vector_dim": 0, "error": str(resp)}
-        
-        dim = len(all_embeddings[0]) if all_embeddings else 0
-        return all_embeddings, {"backend": "dashscope-multimodal", "model": model_name,
-                               "vector_dim": dim}
-        
-    except Exception as e:
-        _LOGGER.warning("event=dashscope_multimodal_error error=%s", str(e))
-        return [], {"backend": "dashscope-multimodal", "model": model_name,
-                   "vector_dim": 0, "error": str(e)}
-
-
-def hash_embedding(text: str, dim: int = 12) -> List[float]:
-    """
-    Hash fallback 嵌入生成
+            # 运行推荐
+            recommender = ACPSMultiAgentRecommender()
+            recommended = recommender.recommend(user['history'], user['candidates'])
+            metrics = compute_recommendation_metrics(recommended, user['relevant'])
+            
+            results[config['name']].append(metrics['ndcg'])
+            
+            # 恢复权重
+            SCENARIO_WEIGHTS[config['scenario']] = original_weights
     
-    Args:
-        text: 输入文本
-        dim: 向量维度
-        
-    Returns:
-        固定维度的浮点数向量
-    """
-    import hashlib
+    # 计算平均 NDCG
+    summary = {
+        name: np.mean(scores)
+        for name, scores in results.items()
+    }
     
-    normalized = (text or "").strip().lower()
-    if not normalized:
-        return [0.0] * max(dim, 4)
-    
-    digest = hashlib.sha256(normalized.encode("utf-8")).digest()
-    values: List[float] = []
-    while len(values) < dim:
-        for byte_value in digest:
-            values.append(round(byte_value / 255.0, 6))
-            if len(values) >= dim:
-                break
-        digest = hashlib.sha256(digest).digest()
-    return values
-
-
-def _to_float(value: Any, default: float = 0.0) -> float:
-    """安全转换为浮点数"""
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
+    return summary
 ```
 
-### 4.4.2 3 层 Fallback 机制实现
+## 4.8 本章小结
 
-3 层 fallback 机制确保系统在任何环境下都能稳定运行：
+本章详细描述了 ACPs-app 系统的实现过程和关键技术，主要内容包括：
 
-```
-┌─────────────────────────────────────┐
-│  Layer 1: DashScope API            │
-│  - qwen3-vl-embedding              │
-│  - 2560 维向量                      │
-│  - 订阅制，已付费                   │
-│  - 延迟：~200ms                    │
-└──────────────┬──────────────────────┘
-               │ 失败（API 不可用/无 Key）
-               ↓
-┌─────────────────────────────────────┐
-│  Layer 2: Local Model              │
-│  - sentence-transformers           │
-│  - 384 维向量                       │
-│  - 离线运行，零成本                 │
-│  - 延迟：~50ms                     │
-└──────────────┬──────────────────────┘
-               │ 失败（模型未安装）
-               ↓
-┌─────────────────────────────────────┐
-│  Layer 3: Hash Fallback           │
-│  - SHA256 哈希                     │
-│  - 12-128 维向量（可配置）          │
-│  - 确定性算法，零成本              │
-│  - 延迟：<1ms                      │
-└─────────────────────────────────────┘
-```
+1. **开发环境配置**: Python 3.10+、FastAPI、sentence-transformers 等核心依赖
 
-**Fallback 逻辑**:
-```python
-def get_embedding_with_fallback(text: str) -> List[float]:
-    """带 fallback 的嵌入获取"""
-    
-    # 尝试 Layer 1
-    embeddings, meta = generate_text_embeddings([text])
-    if meta['backend'] == 'dashscope-multimodal':
-        _LOGGER.info(f"Using Layer 1: {meta['model']} ({meta['vector_dim']}D)")
-        return embeddings[0]
-    
-    # 尝试 Layer 2
-    if meta['backend'] == 'sentence-transformers':
-        _LOGGER.info(f"Using Layer 2: {meta['model']} ({meta['vector_dim']}D)")
-        return embeddings[0]
-    
-    # Layer 3
-    _LOGGER.info(f"Using Layer 3: Hash ({meta['vector_dim']}D)")
-    return embeddings[0]
-```
+2. **项目目录结构**: reading_concierge（Leader）、agents（Partners）、services（服务层）、acps_aip（协议实现）
 
-### 4.4.3 费用控制策略
+3. **核心 Agent 实现**:
+   - ReadingConcierge：任务编排和结果整合
+   - ReaderProfile：用户偏好分析
+   - BookContent：图书内容理解
+   - RecRanking：多因子融合排序
 
-嵌入模型调用的费用控制策略：
+4. **ACPS 协议实现**: 基于 JSON-RPC 2.0 的通信协议，支持 mTLS 双向认证
 
-**订阅制优先**:
-- 使用已付费的订阅制模型（qwen3-vl-embedding）
-- 避免按量计费模型（text-embedding-v3）
+5. **嵌入模型集成**: 本地 sentence-transformers（all-MiniLM-L6-v2, 384 维）
 
-**缓存优化**:
-```python
-from functools import lru_cache
+6. **服务层实现**: 知识图谱客户端、图书检索、评估指标计算、图表生成
 
-@lru_cache(maxsize=1000)
-def get_cached_embedding(text: str) -> List[float]:
-    """带缓存的嵌入获取"""
-    return get_embedding_with_fallback(text)
-```
+7. **实验系统实现**: 基准测试脚本、消融实验脚本
 
-**批量调用**:
-```python
-def batch_embed_texts(texts: List[str]) -> List[List[float]]:
-    """批量嵌入，减少 API 调用次数"""
-    # 一次 API 调用处理多个文本
-    embeddings, _ = generate_text_embeddings(texts)
-    return embeddings
-```
-
-## 4.5 本章小结
-
-本章详细描述了系统的实现过程和关键技术，主要内容包括：
-1. 开发环境配置和项目目录结构
-2. 核心功能实现（协同过滤、内容推荐、多因子排序）
-3. 多 Agent 协作实现（角色定义、任务分配、通信机制）
-4. 嵌入模型集成（DashScope API、3 层 fallback、费用控制）
-
-下一章将进行系统测试与性能分析，验证系统的功能和性能。
 
 ---
 
-**第 4 章 完成** ✅
 
-**字数统计**: 约 5,200 字
 
-**下一步**: 第 5 章 系统测试与性能分析

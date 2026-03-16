@@ -50,7 +50,7 @@
 
 ### 6.2.3 学术贡献
 
-1. **多 Agent 协作推荐的新思路**: 为推荐系统研究提供了新的视角，即通过 UserAgent、BookAgent、RecommenderAgent、EvaluatorAgent 的协作提升推荐质量和用户满意度。
+1. **多 Agent 协作推荐的新思路**: 为推荐系统研究提供了新的视角，即通过 ReadingConcierge、ReaderProfile、BookContent、RecRanking 的协作提升推荐质量和用户满意度。
 
 2. **嵌入模型性能评估数据**: 提供了 qwen3-vl-embedding、sentence-transformers、Hash fallback 的详细性能对比数据，可供后续研究参考。
 
@@ -64,7 +64,7 @@
 
 **查询数量**: 基准测试仅使用了 8 个标准查询，虽然覆盖了主要场景，但样本量较小，可能影响结论的普适性。
 
-**用户数量**: 测试数据集包含 1,000 名用户，相比工业级推荐系统（百万级用户）规模较小。
+**用户数量**: 消融实验使用了 191 名用户（筛选条件：至少 3 条历史记录 + 至少 1 个测试集交互），基准测试使用 8 个测试用例。相比工业级推荐系统（百万级用户）规模较小。
 
 **物品数量**: 图书数据集包含 15,000 册图书，对于评估推荐系统的可扩展性有一定局限。
 
@@ -78,7 +78,7 @@
 
 ### 6.3.3 Agent 角色固定
 
-**静态角色**: 当前系统定义了四种固定角色（UserAgent、BookAgent、RecommenderAgent、EvaluatorAgent），缺乏动态角色创建和调整机制。
+**静态角色**: 当前系统定义了四个固定 Agent（ReadingConcierge、ReaderProfile、BookContent、RecRanking），缺乏动态角色创建和调整机制。
 
 **角色冲突**: 未处理多个 Agent 同时推荐时的冲突协调问题。
 
@@ -180,7 +180,7 @@
 
 [16] 王五，赵六。嵌入模型在推荐系统中的应用 [J]. 人工智能，2022, 36(3): 456-478.
 
-[17] Datawhale. OpenClaw + Claude Code：一个人就能搭建完整的开发团队 [R]. 2026.
+[17] Reimers N, Gurevych I. Sentence-BERT: Sentence embeddings using Siamese BERT-networks[C]//Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing. 2019: 3982-3992.
 
 [18] DashScope. 多模态嵌入 API 文档 [EB/OL]. https://help.aliyun.com/zh/dashscope, 2026.
 
@@ -192,15 +192,8 @@
 
 ---
 
-**第 6 章 完成** ✅  
-**参考文献 完成** ✅
 
-**字数统计**: 第 6 章约 2,200 字 + 参考文献
 
 ---
 
-## 🎉 论文初稿完成！
 
-**总字数**: 约 20,500 字  
-**章节**: 完整 6 章 + 摘要 + 参考文献  
-**状态**: 初稿完成，待审查

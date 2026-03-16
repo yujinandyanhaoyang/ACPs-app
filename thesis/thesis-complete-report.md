@@ -1,7 +1,6 @@
 # 毕业论文完成报告
 
 **报告时间**: 2026-03-15 21:11  
-**报告人**: VennCLAW Team  
 **状态**: ✅ **论文完成，可提交**
 
 ---
@@ -140,7 +139,7 @@
 
 ## 🏆 团队贡献
 
-**VennCLAW Team**:
+
 - 技术主管：任务规划、进度监控、最终决策
 - PhD Writer：论文撰写
 - Advisor：学术审查
@@ -159,7 +158,7 @@
 **论文**: `/root/ACPs-app/thesis/`  
 **实验数据**: `/root/ACPs-app/experiments/`  
 **源代码**: `/root/ACPs-app/`  
-**审查报告**: `/root/VennCLAW/.openclaw-agents/tasks/`
+
 
 ---
 

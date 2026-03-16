@@ -28,8 +28,6 @@
 
 同时，本研究针对嵌入模型（Embedding Model）的集成与优化进行了深入研究，提出了 3 层 fallback 机制，确保系统在不同环境下都能稳定运行。这一设计对于资源受限场景下的推荐系统部署具有重要参考价值。
 
-**注意**: 本论文聚焦于 ACPs-app 推荐系统本身，不涉及 VennCLAW 等外部 AI 编排系统。
-
 ## 1.2 国内外研究现状
 
 ### 1.2.1 推荐系统研究现状
@@ -66,7 +64,6 @@
 - AutoGPT：自主任务执行的开源项目
 - LangChain：LLM 应用开发框架，支持 Agent 编排
 - MetaGPT：基于角色扮演的多 Agent 协作框架
-- OpenClaw：AI Agent 编排层，支持任务自动拆解和执行
 
 国内研究方面，清华大学提出的 ChatDev 项目展示了多 Agent 在软件开发中的协作能力；北京大学在 LLM Agent 的理论基础方面进行了深入研究。
 
@@ -110,7 +107,7 @@
 围绕上述目标，本研究的主要内容包括：
 
 1. **Agent 通信协议设计与实现**: 定义推荐系统 Agent 通信的消息格式、交互流程、安全认证机制
-2. **多 Agent 协作机制**: 实现 UserAgent、BookAgent、RecommenderAgent、EvaluatorAgent 四种角色的协作流程
+2. **多 Agent 协作机制**: 实现 ReadingConcierge、ReaderProfile、BookContent、RecRanking 四个 Agent的协作流程
 3. **推荐算法实现**: 实现协同过滤、内容推荐、多因子排序等核心推荐算法
 4. **嵌入模型集成**: 集成 DashScope 多模态嵌入 API，实现 3 层 fallback 机制
 5. **系统测试与评估**: 设计基准测试方案，评估系统性能和推荐质量
@@ -133,8 +130,5 @@
 
 ---
 
-**第 1 章 完成** ✅
 
-**字数统计**: 约 2,800 字
 
-**下一步**: 第 2 章 相关技术与理论基础
