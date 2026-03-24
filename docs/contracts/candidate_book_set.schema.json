@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "candidate_book_set.schema.json",
+  "x_contract_version": "v1.0.0",
+  "title": "CandidateBookSetJSON",
+  "type": "object",
+  "required": ["user_id", "query", "candidates", "provenance"],
+  "properties": {
+    "user_id": { "type": "string", "minLength": 1 },
+    "query": { "type": "string", "minLength": 1 },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["book_id"],
+        "properties": {
+          "book_id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string" },
+          "author": { "type": "string" },
+          "genres": { "type": "array", "items": { "type": "string" } },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["retrieval_rule", "dataset_version", "generated_at"],
+      "properties": {
+        "retrieval_rule": { "type": "string" },
+        "dataset_version": { "type": "string" },
+        "filter_parameters": { "type": "object", "additionalProperties": true },
+        "generated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

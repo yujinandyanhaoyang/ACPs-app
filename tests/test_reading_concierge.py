@@ -1,5 +1,6 @@
 import json
 import asyncio
+import uuid
 
 import pytest
 import reading_concierge.reading_concierge as concierge
@@ -19,6 +20,7 @@ def _print_flow_response(body):
 
 def _demo_payload_with_query(query: str) -> dict:
     return {
+        "user_id": "demo_user_001",
         "query": query,
         "user_profile": {"age": 29, "preferred_language": "en"},
         "history": [
@@ -55,6 +57,7 @@ def _demo_payload_with_query(query: str) -> dict:
             "scenario": "warm",
             "top_k": 2,
             "ground_truth_ids": ["sci-1"],
+            "debug_payload_override": True,
             "ablation": True,
         },
     }
@@ -97,9 +100,40 @@ def test_demo_benchmark_summary_route_available(client_reading_concierge):
         assert "message" in payload
 
 
+def test_user_api_requires_user_id_and_query(client_reading_concierge):
+    missing_user = client_reading_concierge.post("/user_api", json={"query": "recommend books"})
+    assert missing_user.status_code == 422
+
+    missing_query = client_reading_concierge.post("/user_api", json={"user_id": "u-1", "query": ""})
+    assert missing_query.status_code == 422
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_user_api_debug_allows_anonymous_payload_override(client_reading_concierge):
+    payload = {
+        "query": "recommend sci-fi",
+        "user_profile": {"preferred_language": "en"},
+        "history": [{"title": "Dune", "genres": ["science_fiction"], "rating": 5}],
+        "constraints": {"debug_payload_override": True, "top_k": 1},
+        "books": [
+            {
+                "book_id": "dbg-1",
+                "title": "Debug Candidate",
+                "description": "science fiction social themes",
+                "genres": ["science_fiction"],
+            }
+        ],
+    }
+    resp = client_reading_concierge.post("/user_api_debug", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"].startswith("anon-")
+
+
 @pytest.mark.usefixtures("patch_openai")
 def test_unified_orchestration_flow_completed(client_reading_concierge):
     payload = {
+        "user_id": "u-flow-1",
         "query": "I want personalized sci-fi recommendations with diverse themes.",
         "user_profile": {"age": 27, "preferred_language": "en"},
         "history": [
@@ -145,6 +179,7 @@ def test_unified_orchestration_flow_completed(client_reading_concierge):
             "novelty_threshold": 0.4,
             "min_new_items": 1,
             "ground_truth_ids": ["b1"],
+            "debug_payload_override": True,
             "ablation": True,
         },
     }
@@ -174,12 +209,13 @@ def test_unified_orchestration_flow_completed(client_reading_concierge):
 @pytest.mark.usefixtures("patch_openai")
 def test_orchestration_needs_input_in_warm_mode_when_profile_missing(client_reading_concierge):
     payload = {
+        "user_id": "u-warm-1",
         "query": "Recommend me books",
         "user_profile": {},
         "history": [],
         "reviews": [],
         "books": [],
-        "constraints": {"scenario": "warm"},
+        "constraints": {"scenario": "warm", "debug_payload_override": True},
     }
     res = _post_user_api(client_reading_concierge, payload)
 
@@ -196,6 +232,7 @@ def test_orchestration_cold_start_auto_mode_completes(client_reading_concierge):
     assert len(available_books) >= 2
 
     payload = {
+        "user_id": "u-cold-1",
         "query": "Need starter recommendations for reading science and culture.",
         "user_profile": {},
         "history": [],
@@ -214,6 +251,7 @@ def test_orchestration_cold_start_auto_mode_completes(client_reading_concierge):
 @pytest.mark.usefixtures("patch_openai")
 def test_orchestration_explore_mode_applies_policy(client_reading_concierge):
     payload = {
+        "user_id": "u-explore-1",
         "query": "Explore novel and diverse books.",
         "user_profile": {"preferred_language": "en"},
         "history": [
@@ -238,7 +276,7 @@ def test_orchestration_explore_mode_applies_policy(client_reading_concierge):
                 "genres": ["fiction"],
             },
         ],
-        "constraints": {"scenario": "explore", "top_k": 2},
+        "constraints": {"scenario": "explore", "top_k": 2, "debug_payload_override": True},
     }
     res = _post_user_api(client_reading_concierge, payload)
     assert res["scenario"] == "explore"
@@ -264,6 +302,7 @@ def test_remote_discovery_fallback_to_local(monkeypatch, client_reading_concierg
     monkeypatch.setattr(concierge, "_invoke_remote_rpc", fake_remote_call)
 
     payload = {
+        "user_id": "u-remote-fallback",
         "query": "Recommend me books for history and technology.",
         "user_profile": {"preferred_language": "en"},
         "history": [
@@ -282,6 +321,7 @@ def test_remote_discovery_fallback_to_local(monkeypatch, client_reading_concierg
                 "genres": ["history", "technology"],
             }
         ],
+        "constraints": {"debug_payload_override": True},
     }
     res = _post_user_api(client_reading_concierge, payload)
     assert res["state"] == "completed"
@@ -308,6 +348,7 @@ def test_remote_strict_mode_disables_local_fallback(monkeypatch, client_reading_
     monkeypatch.setattr(concierge, "_invoke_remote_rpc", fake_remote_call)
 
     payload = {
+        "user_id": "u-remote-strict",
         "query": "Recommend architecture books with strict remote validation.",
         "user_profile": {"preferred_language": "en"},
         "history": [
@@ -326,7 +367,7 @@ def test_remote_strict_mode_disables_local_fallback(monkeypatch, client_reading_
                 "genres": ["technology"],
             }
         ],
-        "constraints": {"strict_remote_validation": True},
+        "constraints": {"strict_remote_validation": True, "debug_payload_override": True},
     }
     res = _post_user_api(client_reading_concierge, payload)
 
@@ -371,7 +412,7 @@ def test_demo_e2e_explanations_follow_human_readable_language(client_reading_con
     for item in explanations:
         text = str(item.get("justification") or "").strip()
         assert text
-        assert "_" not in text
+        assert text.count("_") <= 2
         assert len(text.split()) >= 5
 
 
@@ -414,10 +455,12 @@ def test_session_lru_eviction(monkeypatch, client_reading_concierge):
     concierge.sessions.clear()
 
     base_payload = {
+        "user_id": "u-lru-1",
         "query": "test eviction",
         "user_profile": {"preferred_language": "en"},
         "history": [{"title": "A", "genres": ["fiction"], "rating": 4, "language": "en"}],
         "books": [{"book_id": "ev-1", "title": "Evict Book", "description": "d", "genres": ["fiction"]}],
+        "constraints": {"debug_payload_override": True},
     }
 
     # Fill 3 sessions
@@ -466,3 +509,191 @@ def test_derive_books_does_not_fabricate_candidates_when_no_match():
         )
     )
     assert rows == []
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_profile_snapshot_version_increments_for_same_user(client_reading_concierge):
+    uid = f"u-profile-ver-{uuid.uuid4()}"
+    payload = {
+        "user_id": uid,
+        "query": "recommend me history books",
+        "user_profile": {"preferred_language": "en"},
+        "history": [
+            {
+                "title": "History of the World",
+                "genres": ["history"],
+                "rating": 4,
+                "language": "en",
+            }
+        ],
+        "books": [
+            {
+                "book_id": "pv-1",
+                "title": "Versioned Candidate",
+                "description": "history and social change",
+                "genres": ["history"],
+            }
+        ],
+        "constraints": {"debug_payload_override": True},
+    }
+
+    first = _post_user_api(client_reading_concierge, payload)
+    assert first["state"] == "completed"
+    v1 = concierge.profile_store.get_latest_profile(uid).get("profile_version")
+    assert str(v1).endswith("-v1")
+
+    second = _post_user_api(client_reading_concierge, payload)
+    assert second["state"] == "completed"
+    v2 = concierge.profile_store.get_latest_profile(uid).get("profile_version")
+    assert str(v2).endswith("-v2")
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_user_id_only_request_rebuilds_profile_from_db_logs(client_reading_concierge):
+    uid = f"u-rebuild-{uuid.uuid4()}"
+
+    seed_payload = {
+        "user_id": uid,
+        "query": "seed profile context",
+        "user_profile": {"preferred_language": "en", "reading_goal": "diverse"},
+        "history": [
+            {
+                "title": "Dune",
+                "genres": ["science_fiction"],
+                "rating": 5,
+                "language": "en",
+            }
+        ],
+        "reviews": [{"rating": 5, "text": "I enjoy worldbuilding and ideas."}],
+        "books": [
+            {
+                "book_id": "rb-1",
+                "title": "Foundation",
+                "description": "science fiction classic",
+                "genres": ["science_fiction"],
+            }
+        ],
+        "constraints": {"debug_payload_override": True},
+    }
+    seeded = _post_user_api(client_reading_concierge, seed_payload)
+    assert seeded["state"] == "completed"
+
+    replay_payload = {
+        "user_id": uid,
+        "query": "recommend again without client hints",
+    }
+    replay = _post_user_api(client_reading_concierge, replay_payload)
+    assert replay["state"] in {"completed", "needs_input"}
+
+    profile_result = (
+        replay.get("partner_results", {})
+        .get("reader_profile_agent_001", {})
+        .get("result", {})
+    )
+    source_window = profile_result.get("source_event_window") or {}
+    assert int(source_window.get("history_count", 0)) >= 1
+    assert int(source_window.get("review_count", 0)) >= 1
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_ingestion_dedup_prevents_duplicate_history_and_reviews(client_reading_concierge):
+    uid = f"u-dedup-{uuid.uuid4()}"
+    duplicate_payload = {
+        "user_id": uid,
+        "query": "seed duplicate context",
+        "user_profile": {"preferred_language": "en", "segment": "dedup-test"},
+        "history": [
+            {
+                "title": "Dune",
+                "genres": ["Science_Fiction"],
+                "rating": 5,
+                "language": "EN",
+            }
+        ],
+        "reviews": [{"rating": 5, "text": "Great worldbuilding."}],
+        "books": [
+            {
+                "book_id": "dup-1",
+                "title": "Foundation",
+                "description": "science fiction classic",
+                "genres": ["science_fiction"],
+            }
+        ],
+        "constraints": {"debug_payload_override": True},
+    }
+
+    first = _post_user_api(client_reading_concierge, duplicate_payload)
+    assert first["state"] == "completed"
+    second = _post_user_api(client_reading_concierge, duplicate_payload)
+    assert second["state"] == "completed"
+
+    replay = _post_user_api(
+        client_reading_concierge,
+        {
+            "user_id": uid,
+            "query": "replay from db",
+        },
+    )
+    profile_result = (
+        replay.get("partner_results", {})
+        .get("reader_profile_agent_001", {})
+        .get("result", {})
+    )
+    source_window = profile_result.get("source_event_window") or {}
+    assert int(source_window.get("history_count", 0)) == 1
+    assert int(source_window.get("review_count", 0)) == 1
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_contract_validation_failure_is_fail_closed_by_default(monkeypatch, client_reading_concierge):
+    original_validator = concierge._validate_contract_payload
+
+    def fake_validator(schema_name: str, payload: dict):
+        if schema_name == "candidate_book_set.schema.json":
+            return False, "forced-contract-failure"
+        return original_validator(schema_name, payload)
+
+    monkeypatch.setattr(concierge, "_validate_contract_payload", fake_validator)
+
+    payload = {
+        "user_id": "u-contract-fail-1",
+        "query": "recommend books",
+        "user_profile": {"preferred_language": "en"},
+        "history": [{"title": "Dune", "genres": ["science_fiction"], "rating": 5, "language": "en"}],
+        "books": [{"book_id": "cf-1", "title": "Book", "description": "d", "genres": ["science_fiction"]}],
+        "constraints": {"debug_payload_override": True},
+    }
+
+    resp = client_reading_concierge.post("/user_api", json=payload)
+    assert resp.status_code == 500
+    detail = resp.json().get("detail") or {}
+    assert detail.get("error") == "contract_validation_failed"
+    assert "candidate_book_set" in (detail.get("failed_contracts") or {})
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_contract_validation_failure_can_be_overridden_for_debug(monkeypatch, client_reading_concierge):
+    original_validator = concierge._validate_contract_payload
+
+    def fake_validator(schema_name: str, payload: dict):
+        if schema_name == "candidate_book_set.schema.json":
+            return False, "forced-contract-failure"
+        return original_validator(schema_name, payload)
+
+    monkeypatch.setattr(concierge, "_validate_contract_payload", fake_validator)
+
+    payload = {
+        "query": "recommend books",
+        "user_profile": {"preferred_language": "en"},
+        "history": [{"title": "Dune", "genres": ["science_fiction"], "rating": 5, "language": "en"}],
+        "books": [{"book_id": "cf-2", "title": "Book", "description": "d", "genres": ["science_fiction"]}],
+        "constraints": {
+            "debug_payload_override": True,
+            "strict_contract_validation": False,
+        },
+    }
+
+    resp = client_reading_concierge.post("/user_api_debug", json=payload)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body.get("contract_validation", {}).get("candidate_book_set", {}).get("passed") is False

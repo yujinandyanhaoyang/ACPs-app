@@ -68,8 +68,11 @@ def _merge_case_with_config(case: Dict[str, Any], config: Dict[str, Any]) -> Dic
     constraints["scoring_weights"] = config.get("scoring_weights") or constraints.get("scoring_weights")
     constraints["novelty_threshold"] = config.get("novelty_threshold", constraints.get("novelty_threshold", 0.45))
     constraints["min_new_items"] = config.get("min_new_items", constraints.get("min_new_items", 0))
+    if "debug_payload_override" not in constraints:
+        constraints["debug_payload_override"] = True
 
     return {
+        "user_id": str(case.get("user_id") or f"opt-{case.get('case_id') or 'case'}"),
         "query": case.get("query") or "",
         "user_profile": case.get("user_profile") or {},
         "history": case.get("history") or [],

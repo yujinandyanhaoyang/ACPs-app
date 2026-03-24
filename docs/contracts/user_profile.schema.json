@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "user_profile.schema.json",
+  "x_contract_version": "v1.0.0",
+  "title": "UserProfileJSON",
+  "type": "object",
+  "required": [
+    "user_id",
+    "profile_version",
+    "generated_at",
+    "source_event_window",
+    "explicit_preferences",
+    "implicit_preferences",
+    "sentiment_summary",
+    "feature_vector",
+    "cold_start_flag"
+  ],
+  "properties": {
+    "user_id": { "type": "string", "minLength": 1 },
+    "profile_version": { "type": "string", "minLength": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "source_event_window": {
+      "type": "object",
+      "required": ["history_count", "review_count"],
+      "properties": {
+        "history_count": { "type": "integer", "minimum": 0 },
+        "review_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "explicit_preferences": {
+      "type": "object",
+      "properties": {
+        "genres": { "type": "object", "additionalProperties": { "type": "number" } },
+        "themes": { "type": "object", "additionalProperties": { "type": "number" } },
+        "formats": { "type": "object", "additionalProperties": { "type": "number" } },
+        "languages": { "type": "object", "additionalProperties": { "type": "number" } }
+      },
+      "additionalProperties": true
+    },
+    "implicit_preferences": {
+      "type": "object",
+      "properties": {
+        "intent_keywords": {
+          "type": "object",
+          "properties": {
+            "keywords": { "type": "array", "items": { "type": "string" } },
+            "intent_summary": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
+        "tones": { "type": "object", "additionalProperties": { "type": "number" } },
+        "pacing": { "type": "object", "additionalProperties": { "type": "number" } },
+        "difficulty": { "type": "object", "additionalProperties": { "type": "number" } }
+      },
+      "additionalProperties": true
+    },
+    "sentiment_summary": {
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "score": { "type": "number" },
+        "highlights": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["label", "score"]
+    },
+    "feature_vector": { "type": "object", "additionalProperties": true },
+    "cold_start_flag": { "type": "boolean" }
+  },
+  "additionalProperties": true
+}

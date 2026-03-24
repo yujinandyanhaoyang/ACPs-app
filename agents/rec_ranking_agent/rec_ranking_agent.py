@@ -139,6 +139,45 @@ def _tokenize_text(value: Any) -> List[str]:
     return [tok for tok in re.findall(r"[\w]+", text, re.UNICODE) if len(tok) >= 2]
 
 
+def _derive_scenario_policy(payload: Dict[str, Any]) -> str:
+    """Derive scenario_policy from payload or profile characteristics."""
+    profile_vector = payload.get("profile_vector", {})
+    query = payload.get("query", "")
+    
+    # Check for explicit scenario indicators in query
+    query_lower = query.lower()
+    if "quick" in query_lower or "short" in query_lower:
+        return "quick_read"
+    if "deep" in query_lower or "comprehensive" in query_lower:
+        return "deep_exploration"
+    if "new" in query_lower or "discover" in query_lower:
+        return "discovery"
+    if "similar" in query_lower or "like" in query_lower:
+        return "similarity_based"
+    
+    # Derive from profile characteristics
+    pacing = profile_vector.get("pacing", {})
+    if isinstance(pacing, dict):
+        fast_pace = _safe_float(pacing.get("fast", 0))
+        slow_pace = _safe_float(pacing.get("slow", 0))
+        if fast_pace > slow_pace:
+            return "quick_read"
+        elif slow_pace > fast_pace:
+            return "deep_exploration"
+    
+    difficulty = profile_vector.get("difficulty", {})
+    if isinstance(difficulty, dict):
+        high_diff = _safe_float(difficulty.get("advanced", 0))
+        low_diff = _safe_float(difficulty.get("beginner", 0))
+        if high_diff > low_diff:
+            return "deep_exploration"
+        elif low_diff > high_diff:
+            return "casual_reading"
+    
+    # Default scenario
+    return "balanced_recommendation"
+
+
 def _query_candidate_alignment(query: str, candidate: Dict[str, Any]) -> float:
     query_tokens = set(_tokenize_text(query))
     if not query_tokens:
@@ -497,30 +536,53 @@ async def _build_explanations(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]
 
 
 async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Rank candidates and produce contract-compliant output.
+    
+    Contract alignment (ranked_recommendation_list.schema.json v1.0.0):
+    - scenario_policy: propagated from payload or derived from profile
+    - ranking: array with required fields per item including explanation_evidence_refs
+    """
     start_ts = time.perf_counter()
 
     ranked_rows, meta = await _rank_candidates(payload)
+    scenario_policy = payload.get("scenario_policy") or _derive_scenario_policy(payload)
+    
     for row in ranked_rows:
         row["_explain_meta"] = {
             "query": meta.get("query") or "",
             "profile_summary": meta.get("profile_summary") or "",
+            "scenario_policy": scenario_policy,
         }
     explanations = await _build_explanations(ranked_rows)
 
+    # Build contract-compliant ranking list
     ranked_items = []
     for rank_idx, item in enumerate(ranked_rows, start=1):
+        score_parts = item.get("score_parts", {})
+        expl = explanations[rank_idx - 1] if rank_idx <= len(explanations) else {}
+        evidence_refs = []
+        for bullet in expl.get("bullet_summary") or []:
+            if isinstance(bullet, str) and bullet.strip():
+                evidence_refs.append(bullet.strip())
         ranked_items.append(
             {
-                "rank": rank_idx,
                 "book_id": item.get("book_id"),
                 "title": item.get("title"),
-                "composite_score": item.get("composite_score"),
-                "score_parts": item.get("score_parts"),
-                "novelty_score": item.get("novelty_score"),
+                "score_total": item.get("composite_score", 0.0),
+                "score_cf": score_parts.get("collaborative", 0.0),
+                "score_content": score_parts.get("semantic", 0.0),
+                "score_kg": score_parts.get("knowledge", 0.0),
+                "score_diversity": score_parts.get("diversity", 0.0),
+                "rank_position": rank_idx,
+                "scenario_policy": scenario_policy,
+                "explanation": expl.get("justification", ""),
+                "explanation_evidence_refs": evidence_refs,
             }
         )
 
     outputs = {
+        "scenario_policy": scenario_policy,
         "ranking": ranked_items,
         "explanations": explanations,
         "metric_snapshot": meta["metric_snapshot"],

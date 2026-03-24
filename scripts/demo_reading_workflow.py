@@ -7,6 +7,7 @@ import requests
 
 def build_demo_payload() -> Dict[str, Any]:
     return {
+        "user_id": "demo_user_001",
         "query": "Recommend personalized science fiction and history books with diversity.",
         "user_profile": {"age": 25, "preferred_language": "en"},
         "history": [
@@ -59,6 +60,7 @@ def build_demo_payload() -> Dict[str, Any]:
             "top_k": 3,
             "novelty_threshold": 0.5,
             "min_new_items": 1,
+            "debug_payload_override": True,
             "ablation": True,
             "ground_truth_ids": ["demo-001", "demo-003"],
         },

@@ -183,3 +183,157 @@ def test_rec_ranking_agent_end_to_end_env_and_llm(monkeypatch, client_rec_rankin
     assert "avg_diversity" in metrics
     assert "collaborative_backend" in outputs
     assert structured["diagnostics"]["api_key_present"] is True
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_ranking_output_contract_compliance(client_rec_ranking, new_task_id):
+    """Verify ranking agent output conforms to ranked_recommendation_list.schema.json v1.0.0."""
+    payload = {
+        "profile_vector": {
+            "genres": {"science_fiction": 0.8, "classic": 0.2},
+            "themes": {"exploration": 0.6, "ethics": 0.4},
+            "difficulty": {"advanced": 0.5, "intermediate": 0.5},
+        },
+        "candidates": [
+            {
+                "book_id": "b1",
+                "title": "Dune",
+                "vector": [0.9, 0.8, 0.7, 0.6, 0.5],
+                "kg_signal": 0.9,
+                "novelty_score": 0.65,
+                "diversity_score": 0.45,
+            },
+            {
+                "book_id": "b2",
+                "title": "Foundation",
+                "vector": [0.85, 0.7, 0.62, 0.55, 0.4],
+                "kg_signal": 0.6,
+                "novelty_score": 0.52,
+                "diversity_score": 0.5,
+            },
+        ],
+        "svd_factors": [{"book_id": "b1", "score": 0.81}, {"book_id": "b2", "score": 0.74}],
+        "scoring_weights": {
+            "collaborative": 0.3,
+            "semantic": 0.35,
+            "knowledge": 0.2,
+            "diversity": 0.15,
+        },
+        "constraints": {"top_k": 2, "novelty_threshold": 0.5, "min_new_items": 1},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    structured = _products(res)[0]["dataItems"][0]["data"]
+    outputs = structured["outputs"]
+
+    # Contract requirement: scenario_policy must be present
+    assert "scenario_policy" in outputs
+    assert outputs["scenario_policy"] in {
+        "quick_read",
+        "deep_exploration",
+        "discovery",
+        "similarity_based",
+        "casual_reading",
+        "balanced_recommendation",
+    }
+
+    # Contract requirement: ranking items must have all required fields
+    ranking = outputs["ranking"]
+    assert len(ranking) == 2
+    
+    for idx, item in enumerate(ranking):
+        # Required scalar fields
+        assert "book_id" in item
+        assert "title" in item
+        assert "score_total" in item
+        assert "score_cf" in item
+        assert "score_content" in item
+        assert "score_kg" in item
+        assert "score_diversity" in item
+        assert "rank_position" in item
+        assert "scenario_policy" in item
+        assert "explanation" in item
+        assert "explanation_evidence_refs" in item
+        
+        # Verify rank positions are sequential
+        assert item["rank_position"] == idx + 1
+        
+        # Verify explanation_evidence_refs is a list
+        assert isinstance(item["explanation_evidence_refs"], list)
+        
+        # Verify scores are numeric
+        assert isinstance(item["score_total"], (int, float))
+        assert isinstance(item["score_cf"], (int, float))
+        assert isinstance(item["score_content"], (int, float))
+        assert isinstance(item["score_kg"], (int, float))
+        assert isinstance(item["score_diversity"], (int, float))
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_scenario_policy_is_propagated_to_all_ranked_items(client_rec_ranking, new_task_id):
+    payload = {
+        "query": "discover new sci-fi",
+        "scenario_policy": "discovery",
+        "profile_vector": {
+            "genres": {"science_fiction": 0.9},
+            "themes": {"exploration": 0.8},
+        },
+        "candidates": [
+            {
+                "book_id": "b1",
+                "title": "Dune",
+                "vector": [0.9, 0.8, 0.7],
+                "kg_signal": 0.7,
+                "novelty_score": 0.6,
+                "diversity_score": 0.4,
+            },
+            {
+                "book_id": "b2",
+                "title": "Foundation",
+                "vector": [0.85, 0.7, 0.62],
+                "kg_signal": 0.6,
+                "novelty_score": 0.52,
+                "diversity_score": 0.5,
+            },
+        ],
+        "constraints": {"top_k": 2},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    assert outputs["scenario_policy"] == "discovery"
+    for item in outputs["ranking"]:
+        assert item["scenario_policy"] == "discovery"
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_explanation_evidence_refs_are_flat_string_list(client_rec_ranking, new_task_id):
+    payload = {
+        "query": "history books",
+        "profile_vector": {
+            "genres": {"history": 1.0},
+        },
+        "content_vectors": [
+            {
+                "book_id": "h1",
+                "title": "The Silk Roads",
+                "vector": [0.7, 0.6, 0.5],
+                "kg_signal": 0.5,
+                "novelty_score": 0.4,
+                "diversity_score": 0.3,
+            }
+        ],
+        "constraints": {"top_k": 1},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    item = _products(res)[0]["dataItems"][0]["data"]["outputs"]["ranking"][0]
+    refs = item.get("explanation_evidence_refs") or []
+    assert isinstance(refs, list)
+    assert all(isinstance(ref, str) for ref in refs)

@@ -40,6 +40,7 @@ def _post_user_api(payload: dict, timeout=60):
 def test_http_live_orchestration_flow():
     payload = {
         "session_id": f"session-{uuid.uuid4()}",
+        "user_id": "live_user_001",
         "query": "Need personalized books for science and culture interests.",
         "user_profile": {"preferred_language": "en"},
         "history": [
@@ -48,7 +49,7 @@ def test_http_live_orchestration_flow():
         ],
         "reviews": [{"rating": 5, "text": "love big ideas"}],
         "candidate_ids": ["live-book-1", "live-book-2"],
-        "constraints": {"top_k": 2},
+        "constraints": {"top_k": 2, "debug_payload_override": True},
     }
     res = _post_user_api(payload)
     assert res.get("state") in {"completed", "needs_input"}

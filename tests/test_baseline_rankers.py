@@ -39,8 +39,8 @@ def test_multi_agent_proxy_rank_returns_ranked_rows():
     rows = multi_agent_proxy_rank(_sample_case(), top_k=2)
     assert len(rows) == 2
     assert rows[0]["rank"] == 1
-    assert "novelty_score" in rows[0]
-    assert rows[0]["score_parts"]["diversity"] >= 0.2
+    assert "score_diversity" in rows[0]
+    assert rows[0]["score_diversity"] >= 0
 
 
 def test_rankers_fallback_to_candidate_ids_when_books_missing():

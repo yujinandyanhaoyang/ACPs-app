@@ -76,6 +76,8 @@ def test_start_completes_with_valid_books(client_book_content, new_task_id):
     assert "kg_refs" in outputs
     assert "book_tags" in outputs
     assert "embedding_backend" in outputs
+    assert outputs["features_metadata"]["metadata_version"]
+    assert outputs["features_metadata"]["candidate_count"] == 2
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -185,3 +187,44 @@ def test_book_content_agent_llm_invalid_json_falls_back_heuristic(monkeypatch, c
     llm_enrichment = structured["outputs"]["llm_enrichment"]
     assert llm_enrichment["source"] == "heuristic"
     assert llm_enrichment["llm_tags"] == []
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_book_content_intake_dedup_and_normalization(client_book_content, new_task_id):
+    payload = {
+        "books": [
+            {
+                "book_id": " b1 ",
+                "title": "Book One",
+                "description": "desc",
+                "genres": ["Science", "science", "  ", "Fiction"],
+            },
+            {
+                "book_id": "b1",
+                "title": "Book One Updated",
+                "description": "desc updated",
+                "genres": ["FICTION", "Adventure"],
+            },
+        ],
+        "candidate_ids": ["b1", "b2", "", " b2 "],
+    }
+
+    res = _post(client_book_content, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    vectors = outputs["content_vectors"]
+    tags = outputs["book_tags"]
+
+    assert len(vectors) == 2
+    assert {v["book_id"] for v in vectors} == {"b1", "b2"}
+    assert outputs["features_metadata"]["candidate_count"] == 2
+    assert sorted(outputs["features_metadata"]["candidate_sources"]) == ["books_payload", "candidate_ids"]
+
+    b1_vector = next(v for v in vectors if v["book_id"] == "b1")
+    b2_vector = next(v for v in vectors if v["book_id"] == "b2")
+    assert b1_vector["candidate_source"] == "books_payload"
+    assert b2_vector["candidate_source"] == "candidate_ids"
+
+    b1_tags = next(t for t in tags if t["book_id"] == "b1")
+    assert "science" in b1_tags["topics"] or "fiction" in b1_tags["topics"]

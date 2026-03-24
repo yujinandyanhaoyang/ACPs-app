@@ -3,8 +3,10 @@ import sys
 import json
 import uuid
 import time
+import math
 from pathlib import Path
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import FastAPI
@@ -110,12 +112,13 @@ def _parse_priors() -> Dict[str, float]:
 
 def _validate_payload(payload: Dict[str, Any]) -> List[str]:
     missing: List[str] = []
-    user_profile = payload.get("user_profile")
     history = payload.get("history")
     reviews = payload.get("reviews")
-    if not isinstance(user_profile, dict) or not user_profile:
-        missing.append("user_profile")
-    if not (isinstance(history, list) and history) and not (isinstance(reviews, list) and reviews):
+    scenario = str(payload.get("scenario") or DEFAULT_SCENARIO).lower()
+    if scenario not in {"cold", "explore"} and not (
+        (isinstance(history, list) and history)
+        or (isinstance(reviews, list) and reviews)
+    ):
         missing.append("history|reviews")
     return missing
 
@@ -150,28 +153,31 @@ def _summarize_sentiment(reviews: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def _derive_format_preferences(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         fmt = (entry.get("format") or "").lower().strip()
         if not fmt:
             continue
-        weight = float(entry.get("rating", 3)) / 5.0
+        weight = _history_signal_weight(entry, idx, total)
         counts[fmt] += weight
     return _normalize(counts, fallback={})
 
 
 def _derive_language_distribution(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         lang = (entry.get("language") or "").lower().strip() or "unknown"
-        counts[lang] += 1.0
+        counts[lang] += _history_signal_weight(entry, idx, total)
     return _normalize(counts, fallback={})
 
 
 def _derive_genre_weights(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         genres = entry.get("genres") or []
-        rating = float(entry.get("rating", 3)) / 5.0
+        rating = _history_signal_weight(entry, idx, total)
         for genre in genres:
             g = str(genre).lower().strip()
             if not g:
@@ -182,19 +188,21 @@ def _derive_genre_weights(history: List[Dict[str, Any]]) -> Dict[str, float]:
 
 def _derive_tone_preferences(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         tone = entry.get("tone") or entry.get("mood")
         if not tone:
             continue
-        counts[str(tone).lower().strip()] += 1.0
+        counts[str(tone).lower().strip()] += _history_signal_weight(entry, idx, total)
     return _normalize(counts, fallback={})
 
 
 def _derive_theme_preferences(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         themes = entry.get("themes") or []
-        rating = float(entry.get("rating", 3)) / 5.0
+        rating = _history_signal_weight(entry, idx, total)
         for theme in themes:
             label = str(theme).lower().strip()
             if not label:
@@ -205,17 +213,19 @@ def _derive_theme_preferences(history: List[Dict[str, Any]]) -> Dict[str, float]
 
 def _derive_pacing_preferences(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         pacing = entry.get("pacing") or entry.get("tempo")
         if not pacing:
             continue
-        counts[str(pacing).lower().strip()] += 1.0
+        counts[str(pacing).lower().strip()] += _history_signal_weight(entry, idx, total)
     return _normalize(counts, fallback={})
 
 
 def _derive_difficulty_preferences(history: List[Dict[str, Any]]) -> Dict[str, float]:
     counts: Dict[str, float] = defaultdict(float)
-    for entry in history:
+    total = len(history)
+    for idx, entry in enumerate(history):
         difficulty = entry.get("difficulty") or entry.get("complexity")
         page_count = entry.get("page_count") or entry.get("pages")
         if difficulty:
@@ -233,8 +243,122 @@ def _derive_difficulty_preferences(history: List[Dict[str, Any]]) -> Dict[str, f
                 label = "intermediate"
         else:
             continue
-        counts[label] += float(entry.get("rating", 3)) / 5.0
+        counts[label] += _history_signal_weight(entry, idx, total)
     return _normalize(counts, fallback={})
+
+
+def _parse_timestamp(raw_value: Any) -> Optional[datetime]:
+    if raw_value in (None, ""):
+        return None
+    value = str(raw_value).strip()
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _history_signal_weight(entry: Dict[str, Any], idx: int, total: int) -> float:
+    rating_part = max(0.0, min(1.0, float(entry.get("rating", 3)) / 5.0))
+    if total <= 1:
+        recency_rank_part = 1.0
+    else:
+        recency_rank_part = 0.7 + 0.6 * (idx / (total - 1))
+
+    now = datetime.now(timezone.utc)
+    event_time = _parse_timestamp(entry.get("timestamp") or entry.get("created_at"))
+    if event_time is None:
+        time_decay = 1.0
+    else:
+        age_days = max(0.0, (now - event_time).total_seconds() / 86400.0)
+        time_decay = math.exp(-age_days / 180.0)
+        time_decay = max(0.25, min(1.0, time_decay))
+
+    return round(rating_part * recency_rank_part * time_decay, 4)
+
+
+def _normalize_user_id(payload: Dict[str, Any]) -> str:
+    user_id = str(payload.get("user_id") or "").strip()
+    if user_id:
+        return user_id
+    user_profile = payload.get("user_profile") or {}
+    fallback = str(user_profile.get("user_id") or "").strip()
+    return fallback or "anonymous"
+
+
+def _next_profile_version(payload: Dict[str, Any], user_id: str) -> str:
+    user_profile = payload.get("user_profile") or {}
+    previous_version = str(
+        payload.get("profile_version")
+        or user_profile.get("profile_version")
+        or ""
+    ).strip()
+
+    version_index = 1
+    if previous_version:
+        parts = previous_version.rsplit("-v", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            version_index = int(parts[1]) + 1
+    safe_user_id = user_id.replace(" ", "_")
+    return f"{safe_user_id}-v{version_index}"
+
+
+def _build_profile_snapshot(
+    *,
+    payload: Dict[str, Any],
+    preference_vector: Dict[str, Any],
+    intent_keywords: Dict[str, Any],
+    sentiment_summary: Dict[str, Any],
+    generated_at: str,
+    profile_version: str,
+) -> Dict[str, Any]:
+    history = payload.get("history") or []
+    reviews = payload.get("reviews") or []
+    user_id = _normalize_user_id(payload)
+    scenario = str(payload.get("scenario") or DEFAULT_SCENARIO).lower()
+
+    lifecycle_mode = "bootstrap"
+    if str((payload.get("user_profile") or {}).get("profile_version") or "").strip():
+        lifecycle_mode = "incremental"
+    elif history or reviews:
+        lifecycle_mode = "incremental"
+
+    return {
+        "user_id": user_id,
+        "profile_version": profile_version,
+        "generated_at": generated_at,
+        "source_event_window": {
+            "history_count": len(history),
+            "review_count": len(reviews),
+        },
+        "explicit_preferences": {
+            "genres": preference_vector.get("genres") or {},
+            "themes": preference_vector.get("themes") or {},
+            "formats": preference_vector.get("formats") or {},
+            "languages": preference_vector.get("languages") or {},
+        },
+        "implicit_preferences": {
+            "intent_keywords": intent_keywords,
+            "tones": preference_vector.get("tones") or {},
+            "pacing": preference_vector.get("pacing") or {},
+            "difficulty": preference_vector.get("difficulty") or {},
+        },
+        "sentiment_summary": sentiment_summary,
+        "feature_vector": preference_vector,
+        "cold_start_flag": scenario == "cold" or (not history and not reviews),
+        "lifecycle": {
+            "mode": lifecycle_mode,
+            "decay_strategy": "recency_weighted_v1",
+            "history_events": len(history),
+            "review_events": len(reviews),
+        },
+    }
 
 
 def _collect_review_corpus(reviews: List[Dict[str, Any]]) -> str:
@@ -395,7 +519,9 @@ def _render_summary(result: Dict[str, Any]) -> str:
     sentiment = result.get("sentiment_summary", {})
     hints = result.get("cold_start_hints", [])
     first_hint = hints[0]["suggestion"] if hints else ""
+    profile_version = str(result.get("profile_version") or "n/a")
     return (
+        f"Profile: {profile_version} | "
         f"Top genres: {', '.join(top_genres) or 'N/A'} | "
         f"Sentiment: {sentiment.get('label', 'neutral')} ({sentiment.get('score', 0)}) | "
         f"Next step: {first_hint}"
@@ -404,8 +530,11 @@ def _render_summary(result: Dict[str, Any]) -> str:
 
 async def _analyze_profile(payload: Dict[str, Any]) -> Dict[str, Any]:
     start_ts = time.perf_counter()
+    user_id = _normalize_user_id(payload)
     history = payload.get("history") or []
     reviews = payload.get("reviews") or []
+    generated_at = datetime.now(timezone.utc).isoformat()
+    profile_version = _next_profile_version(payload, user_id)
     preference_vector = {
         "genres": _derive_genre_weights(history),
         "formats": _derive_format_preferences(history),
@@ -438,17 +567,35 @@ async def _analyze_profile(payload: Dict[str, Any]) -> Dict[str, Any]:
             "model": LLM_MODEL,
         },
         "embedding_version": EMBEDDING_VERSION,
-        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "generated_at": generated_at,
     }
     elapsed = (time.perf_counter() - start_ts) * 1000
     diagnostics["latency_ms"] = round(elapsed, 2)
+
+    profile_snapshot = _build_profile_snapshot(
+        payload=payload,
+        preference_vector=preference_vector,
+        intent_keywords=intent_keywords,
+        sentiment_summary=sentiment_summary,
+        generated_at=generated_at,
+        profile_version=profile_version,
+    )
     return {
         "agent_id": AGENT_ID,
+        "user_id": user_id,
+        "profile_version": profile_version,
+        "generated_at": generated_at,
+        "source_event_window": profile_snapshot.get("source_event_window") or {},
+        "explicit_preferences": profile_snapshot.get("explicit_preferences") or {},
+        "implicit_preferences": profile_snapshot.get("implicit_preferences") or {},
+        "feature_vector": profile_snapshot.get("feature_vector") or {},
+        "cold_start_flag": bool(profile_snapshot.get("cold_start_flag")),
         "embedding_version": EMBEDDING_VERSION,
         "preference_vector": preference_vector,
         "sentiment_summary": sentiment_summary,
         "intent_keywords": intent_keywords,
         "cold_start_hints": _derive_cold_start_hints(payload),
+        "profile_snapshot": profile_snapshot,
         "diagnostics": diagnostics,
     }
 

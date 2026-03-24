@@ -4,6 +4,7 @@ import json
 import uuid
 import asyncio
 import re
+import hashlib
 from collections import OrderedDict
 from pathlib import Path
 from datetime import datetime, timezone
@@ -11,9 +12,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from jsonschema import Draft202012Validator
 
 _CURRENT_DIR = os.path.dirname(__file__)
 _PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, os.pardir))
@@ -22,11 +25,13 @@ if _PROJECT_ROOT not in sys.path:
 
 _DEMO_HTML_PATH = Path(_PROJECT_ROOT) / "web_demo" / "index.html"
 _BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_summary.json"
+_CONTRACT_SCHEMA_DIR = Path(_PROJECT_ROOT) / "docs" / "contracts"
 
 from base import get_agent_logger, call_openai_chat, register_acs_route
 from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
 from services.book_retrieval import load_books, retrieve_books_by_query, get_active_retrieval_corpus_info
 from services.model_backends import load_cf_item_vectors
+from services.user_profile_store import profile_store
 from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
 from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
@@ -88,6 +93,35 @@ async def _startup_runtime_diagnostics() -> None:
 
 MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
 sessions: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+_CONTRACT_VALIDATORS: Dict[str, Draft202012Validator] = {}
+
+
+def _get_contract_validator(schema_name: str) -> Optional[Draft202012Validator]:
+    existing = _CONTRACT_VALIDATORS.get(schema_name)
+    if existing is not None:
+        return existing
+    schema_path = _CONTRACT_SCHEMA_DIR / schema_name
+    if not schema_path.exists():
+        logger.warning("event=contract_schema_missing schema=%s", schema_name)
+        return None
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+    except Exception as exc:
+        logger.warning("event=contract_schema_load_failed schema=%s error=%s", schema_name, exc)
+        return None
+    _CONTRACT_VALIDATORS[schema_name] = validator
+    return validator
+
+
+def _validate_contract_payload(schema_name: str, payload: Dict[str, Any]) -> Tuple[bool, str]:
+    validator = _get_contract_validator(schema_name)
+    if validator is None:
+        return False, f"schema_unavailable:{schema_name}"
+    errors = sorted(validator.iter_errors(payload), key=lambda err: list(err.path))
+    if errors:
+        return False, "; ".join(error.message for error in errors[:3])
+    return True, "ok"
 
 
 def _lru_session_get(session_id: str) -> Dict[str, Any]:
@@ -112,6 +146,7 @@ def _lru_session_get(session_id: str) -> Dict[str, Any]:
 
 class UserRequest(BaseModel):
     session_id: Optional[str] = None
+    user_id: str = ""
     query: str = ""
     user_profile: Dict[str, Any] = Field(default_factory=dict)
     history: List[Dict[str, Any]] = Field(default_factory=list)
@@ -598,6 +633,240 @@ def _detect_scenario(req: UserRequest) -> str:
     return "warm"
 
 
+def _debug_payload_override_enabled(req: UserRequest) -> bool:
+    return bool((req.constraints or {}).get("debug_payload_override", False))
+
+
+def _normalize_user_id(req: UserRequest, session_id: str, *, allow_anonymous: bool) -> str:
+    uid = str(req.user_id or "").strip()
+    if uid:
+        return uid
+    if allow_anonymous:
+        return f"anon-{session_id}"
+    return ""
+
+
+def _hydrate_request_context(req: UserRequest, session_id: str, *, allow_anonymous: bool) -> None:
+    req.user_id = _normalize_user_id(req, session_id, allow_anonymous=allow_anonymous)
+    if not req.user_id:
+        raise ValueError("user_id is required for production /user_api requests")
+    persisted = profile_store.get_user_context(req.user_id)
+
+    hydrated_profile = persisted.get("user_profile") or {}
+    hydrated_profile.setdefault("user_id", req.user_id)
+    hydrated_history = persisted.get("history") or []
+    hydrated_reviews = persisted.get("reviews") or []
+
+    if _debug_payload_override_enabled(req):
+        if req.user_profile:
+            hydrated_profile = {**hydrated_profile, **req.user_profile}
+        if req.history:
+            hydrated_history = req.history
+        if req.reviews:
+            hydrated_reviews = req.reviews
+
+    req.user_profile = hydrated_profile
+    req.history = hydrated_history
+    req.reviews = hydrated_reviews
+
+
+def _build_profile_snapshot(user_id: str, profile_result: Dict[str, Any], req: UserRequest) -> Dict[str, Any]:
+    snapshot_from_agent = profile_result.get("profile_snapshot") or {}
+    if isinstance(snapshot_from_agent, dict) and snapshot_from_agent:
+        snapshot = dict(snapshot_from_agent)
+        snapshot["user_id"] = user_id
+    else:
+        snapshot = {}
+
+    latest_snapshot = profile_store.get_latest_profile(user_id) if user_id else {}
+    latest_version = str((latest_snapshot or {}).get("profile_version") or "").strip()
+
+    def _parse_version(raw: str) -> Tuple[str, int]:
+        parts = raw.rsplit("-v", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            return parts[0], int(parts[1])
+        return raw, 0
+
+    requested_version = str(
+        snapshot.get("profile_version")
+        or profile_result.get("profile_version")
+        or profile_result.get("embedding_version")
+        or "reader_profile_v1"
+    )
+    req_base, req_idx = _parse_version(requested_version)
+    latest_base, latest_idx = _parse_version(latest_version)
+
+    if latest_idx > 0 and (latest_base == req_base or requested_version == "reader_profile_v1"):
+        profile_version = f"{latest_base}-v{latest_idx + 1}"
+    elif req_idx > 0:
+        profile_version = requested_version
+    else:
+        base = user_id.replace(" ", "_") if user_id else "profile"
+        profile_version = f"{base}-v1"
+
+    preference_vector = profile_result.get("preference_vector") or {}
+    sentiment_summary = profile_result.get("sentiment_summary") or {"label": "neutral", "score": 0.0}
+    intent_keywords = profile_result.get("intent_keywords") or {"keywords": [], "intent_summary": ""}
+    diagnostics = profile_result.get("diagnostics") or {}
+    generated_at = str(diagnostics.get("generated_at") or datetime.now(timezone.utc).isoformat())
+
+    fallback_snapshot = {
+        "user_id": user_id,
+        "profile_version": profile_version,
+        "generated_at": generated_at,
+        "source_event_window": {
+            "history_count": len(req.history or []),
+            "review_count": len(req.reviews or []),
+        },
+        "explicit_preferences": {
+            "genres": preference_vector.get("genres") or {},
+            "themes": preference_vector.get("themes") or {},
+            "formats": preference_vector.get("formats") or {},
+            "languages": preference_vector.get("languages") or {},
+        },
+        "implicit_preferences": {
+            "intent_keywords": intent_keywords,
+            "tones": preference_vector.get("tones") or {},
+            "pacing": preference_vector.get("pacing") or {},
+            "difficulty": preference_vector.get("difficulty") or {},
+        },
+        "sentiment_summary": sentiment_summary,
+        "feature_vector": preference_vector,
+        "cold_start_flag": _detect_scenario(req) == "cold",
+        "user_profile": {**(req.user_profile or {}), "user_id": user_id},
+    }
+
+    if snapshot:
+        merged = {**fallback_snapshot, **snapshot}
+        merged["profile_version"] = profile_version
+        merged["user_profile"] = {**(req.user_profile or {}), "user_id": user_id}
+        return merged
+    return fallback_snapshot
+
+
+def _build_candidate_provenance(req: UserRequest, books: List[Dict[str, Any]]) -> Dict[str, Any]:
+    retrieval_info = get_active_retrieval_corpus_info() or {}
+    candidate_ids = [str(row.get("book_id") or row.get("id") or "").strip() for row in books]
+    candidate_ids = [cid for cid in candidate_ids if cid]
+    ids_hash = hashlib.sha256("|".join(candidate_ids).encode("utf-8")).hexdigest() if candidate_ids else ""
+
+    if req.candidate_ids:
+        retrieval_rule = "explicit_candidate_ids"
+    elif req.books:
+        retrieval_rule = "explicit_books_payload"
+    else:
+        retrieval_rule = "leader_local_retrieval_pipeline"
+
+    dataset_version = str(
+        retrieval_info.get("dataset_version")
+        or retrieval_info.get("path")
+        or retrieval_info.get("selection_source")
+        or "unknown"
+    )
+
+    return {
+        "retrieval_rule": retrieval_rule,
+        "dataset_version": dataset_version,
+        "filter_parameters": {
+            "top_k": req.constraints.get("top_k", BOOK_RETRIEVAL_TOP_K),
+            "candidate_pool": BOOK_RETRIEVAL_CANDIDATE_POOL,
+            "scenario": req.constraints.get("scenario"),
+            "strict_remote_validation": bool(req.constraints.get("strict_remote_validation", False)),
+        },
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "candidate_ids": candidate_ids,
+        "candidate_ids_hash": ids_hash,
+    }
+
+
+def _build_candidate_book_set(req: UserRequest, books: List[Dict[str, Any]], provenance: Dict[str, Any]) -> Dict[str, Any]:
+    candidates: List[Dict[str, Any]] = []
+    for row in books:
+        if not isinstance(row, dict):
+            continue
+        bid = str(row.get("book_id") or row.get("id") or "").strip()
+        if not bid:
+            continue
+        candidates.append(
+            {
+                "book_id": bid,
+                "title": str(row.get("title") or ""),
+                "author": str(row.get("author") or ""),
+                "genres": row.get("genres") if isinstance(row.get("genres"), list) else [],
+                "description": str(row.get("description") or ""),
+            }
+        )
+
+    return {
+        "user_id": req.user_id,
+        "query": req.query,
+        "candidates": candidates,
+        "provenance": {
+            "retrieval_rule": provenance.get("retrieval_rule") or "leader_local_retrieval_pipeline",
+            "dataset_version": provenance.get("dataset_version") or "unknown",
+            "filter_parameters": provenance.get("filter_parameters") or {},
+            "generated_at": provenance.get("generated_at") or datetime.now(timezone.utc).isoformat(),
+        },
+    }
+
+
+def _build_ranked_recommendation_contract(
+    ranking_outputs: Dict[str, Any],
+    *,
+    scenario_policy: str,
+) -> Dict[str, Any]:
+    ranking_rows = ranking_outputs.get("ranking") or []
+    explanations = ranking_outputs.get("explanations") or []
+    explanation_by_id = {
+        str(item.get("book_id") or ""): str(item.get("justification") or "").strip()
+        for item in explanations
+        if isinstance(item, dict)
+    }
+
+    def _f(value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    normalized: List[Dict[str, Any]] = []
+    for idx, row in enumerate(ranking_rows, start=1):
+        if not isinstance(row, dict):
+            continue
+        book_id = str(row.get("book_id") or "").strip()
+        if not book_id:
+            continue
+        score_parts = row.get("score_parts") if isinstance(row.get("score_parts"), dict) else {}
+        explanation = explanation_by_id.get(book_id) or str(row.get("reason") or row.get("explanation") or "").strip()
+        if not explanation:
+            explanation = "Score-based recommendation from collaborative, semantic, knowledge, and diversity factors."
+        normalized.append(
+            {
+                "book_id": book_id,
+                "title": str(row.get("title") or ""),
+                "score_total": _f(row.get("composite_score") or row.get("score_total")),
+                "score_cf": _f(score_parts.get("collaborative") or row.get("score_cf")),
+                "score_content": _f(score_parts.get("semantic") or row.get("score_content")),
+                "score_kg": _f(score_parts.get("knowledge") or row.get("score_kg")),
+                "score_diversity": _f(score_parts.get("diversity") or row.get("score_diversity")),
+                "rank_position": int(row.get("rank") or row.get("rank_position") or idx),
+                "scenario_policy": scenario_policy,
+                "explanation": explanation,
+                "explanation_evidence_refs": [
+                    "score_parts.collaborative",
+                    "score_parts.semantic",
+                    "score_parts.knowledge",
+                    "score_parts.diversity",
+                ],
+            }
+        )
+
+    return {
+        "scenario_policy": scenario_policy,
+        "ranking": normalized,
+    }
+
+
 async def _seed_cold_start_history(req: UserRequest, books: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     local_books = books if books is not None else (req.books or await _derive_books_from_query(req.query, req.candidate_ids))
     if not local_books:
@@ -627,7 +896,8 @@ def _scenario_policy(req: UserRequest) -> Dict[str, Any]:
 
     if scenario == "cold":
         if not profile_user:
-            profile_user = {"segment": "cold_start", "preferred_language": "unknown"}
+            profile_user = {"segment": "cold_start", "preferred_language": "unknown", "user_id": req.user_id}
+    profile_user["user_id"] = req.user_id
     needs_cold_seed = scenario == "cold" and not profile_history and not profile_reviews
 
     ranking_constraints = {
@@ -722,11 +992,17 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     scenario = policy["scenario"]
     strict_remote_validation = bool(req.constraints.get("strict_remote_validation", False))
     books = req.books or await _derive_books_from_query(req.query, req.candidate_ids)
+    candidate_provenance = _build_candidate_provenance(req, books)
+    candidate_book_set = _build_candidate_book_set(req, books, candidate_provenance)
+    candidate_valid, candidate_reason = _validate_contract_payload(
+        "candidate_book_set.schema.json", candidate_book_set
+    )
 
     if policy.get("needs_cold_seed") and not policy["profile"]["history"]:
         policy["profile"]["history"] = await _seed_cold_start_history(req, books)
 
     profile_payload = {
+        "user_id": req.user_id,
         "user_profile": policy["profile"]["user_profile"],
         "history": policy["profile"]["history"],
         "reviews": policy["profile"]["reviews"],
@@ -780,6 +1056,12 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     partner_results[book_content.AGENT_ID] = {
         "state": content_state,
         "result": content_data,
+    }
+
+    partner_results["_candidate_set"] = candidate_book_set
+    partner_results["_candidate_provenance"] = candidate_provenance
+    partner_results["_contract_validation"] = {
+        "candidate_book_set": {"passed": candidate_valid, "reason": candidate_reason}
     }
 
     if not profile_ok or not content_ok:
@@ -880,11 +1162,37 @@ async def demo_retrieval_corpus() -> Dict[str, Any]:
     return get_active_retrieval_corpus_info()
 
 
-@app.post("/user_api")
-async def user_api(req: UserRequest):
+async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[str, Any]:
     session_id = req.session_id or f"session-{uuid.uuid4()}"
+    if not str(req.query or "").strip():
+        raise HTTPException(status_code=422, detail="query is required")
+
+    raw_user_profile = dict(req.user_profile or {})
+    raw_history = list(req.history or [])
+    raw_reviews = list(req.reviews or [])
+
+    _hydrate_request_context(req, session_id, allow_anonymous=allow_anonymous)
+
+    # WS-A ingestion adapters: persist raw event sources so future user_id-only calls can rebuild context.
+    if raw_user_profile:
+        profile_store.ingest_user_basic_info(req.user_id, raw_user_profile)
+    if raw_history:
+        profile_store.ingest_history_events(req.user_id, raw_history)
+    if raw_reviews:
+        profile_store.ingest_review_events(req.user_id, raw_reviews)
+
     session = _lru_session_get(session_id)
     session["messages"].append({"role": "user", "content": req.query})
+
+    profile_store.append_event(
+        req.user_id,
+        "query",
+        {
+            "query": req.query,
+            "constraints": req.constraints,
+            "debug_payload_override": _debug_payload_override_enabled(req),
+        },
+    )
 
     partner_tasks, partner_results = await _orchestrate_reading_flow(req)
 
@@ -894,21 +1202,89 @@ async def user_api(req: UserRequest):
     ranking_outputs = ranking_result.get("outputs") or {}
     recommendations = ranking_outputs.get("ranking") or []
     policy_data = partner_results.get("_policy") or {}
+    scenario_policy = str(policy_data.get("scenario") or _detect_scenario(req))
+    ranked_contract = _build_ranked_recommendation_contract(
+        ranking_outputs,
+        scenario_policy=scenario_policy,
+    )
+    ranked_valid, ranked_reason = _validate_contract_payload(
+        "ranked_recommendation_list.schema.json", ranked_contract
+    )
+
+    contract_validation = dict(partner_results.get("_contract_validation") or {})
+    contract_validation["ranked_recommendation_list"] = {
+        "passed": ranked_valid,
+        "reason": ranked_reason,
+    }
+    partner_results["_contract_validation"] = contract_validation
+
+    strict_contract_validation = bool(
+        (req.constraints or {}).get("strict_contract_validation", True)
+    )
+    failed_contracts = {
+        name: details
+        for name, details in contract_validation.items()
+        if isinstance(details, dict) and details.get("passed") is False
+    }
+    if strict_contract_validation and failed_contracts:
+        logger.error(
+            "event=contract_validation_failed user_id=%s failed=%s",
+            req.user_id,
+            failed_contracts,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "contract_validation_failed",
+                "failed_contracts": failed_contracts,
+            },
+        )
+
     evaluation = _evaluation_from_response(req, ranking_outputs)
 
     final_state = "completed" if recommendations else "needs_input"
     response = {
         "session_id": session_id,
+        "user_id": req.user_id,
         "leader_id": LEADER_ID,
         "state": final_state,
-        "scenario": policy_data.get("scenario", _detect_scenario(req)),
+        "scenario": scenario_policy,
         "partner_tasks": partner_tasks,
         "partner_results": partner_results,
         "recommendations": recommendations,
         "explanations": ranking_outputs.get("explanations") or [],
         "metric_snapshot": ranking_outputs.get("metric_snapshot") or {},
         "evaluation": evaluation,
+        "contract_artifacts": {
+            "candidate_book_set": partner_results.get("_candidate_set") or {},
+            "ranked_recommendation_list": ranked_contract,
+        },
+        "contract_validation": contract_validation,
     }
+
+    profile_result = (partner_results.get(reader_profile.AGENT_ID) or {}).get("result") or {}
+    persisted_snapshot: Optional[Dict[str, Any]] = None
+    if profile_result:
+        persisted_snapshot = _build_profile_snapshot(req.user_id, profile_result, req)
+        profile_store.save_profile_snapshot(req.user_id, persisted_snapshot)
+
+    recommendations = response.get("recommendations") or []
+    candidate_provenance = partner_results.get("_candidate_provenance") or {}
+    if recommendations:
+        profile_store.record_recommendation_run(
+            user_id=req.user_id,
+            query=req.query,
+            profile_version=str((persisted_snapshot or {}).get("profile_version") or "reader_profile_v1"),
+            candidate_set_version_or_hash=str(
+                req.constraints.get("candidate_set_version")
+                or candidate_provenance.get("candidate_ids_hash")
+                or "local-retrieval"
+            ),
+            book_feature_version_or_hash=str(req.constraints.get("book_feature_version") or "book_content_v1"),
+            ranking_policy_version=str(req.constraints.get("ranking_policy_version") or "rec_ranking_v1"),
+            weights_or_policy_snapshot=policy_data.get("ranking_weights") or req.constraints.get("scoring_weights") or {},
+            candidate_provenance=candidate_provenance,
+        )
 
     session["messages"].append({"role": "assistant", "content": "orchestration_completed"})
     logger.info(
@@ -918,6 +1294,18 @@ async def user_api(req: UserRequest):
         len(recommendations),
     )
     return response
+
+
+@app.post("/user_api")
+async def user_api(req: UserRequest):
+    if not str(req.user_id or "").strip():
+        raise HTTPException(status_code=422, detail="user_id is required for /user_api")
+    return await _handle_user_api(req, allow_anonymous=False)
+
+
+@app.post("/user_api_debug")
+async def user_api_debug(req: UserRequest):
+    return await _handle_user_api(req, allow_anonymous=True)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "book_feature_map.schema.json",
+  "x_contract_version": "v1.0.0",
+  "title": "BookFeatureMapJSON",
+  "type": "object",
+  "required": ["embedding_version", "content_vectors", "book_tags"],
+  "properties": {
+    "embedding_version": { "type": "string" },
+    "content_vectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["book_id", "vector"],
+        "properties": {
+          "book_id": { "type": "string" },
+          "vector": { "type": "array", "items": { "type": "number" } },
+          "vector_dim": { "type": "integer", "minimum": 1 },
+          "embedding_model": { "type": "string" },
+          "embedding_backend": { "type": "string" },
+          "kg_refs": { "type": "array", "items": { "type": "string" } },
+          "kg_signal": { "type": "number" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "book_tags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["book_id"],
+        "properties": {
+          "book_id": { "type": "string" },
+          "topics": { "type": "array", "items": { "type": "string" } },
+          "style": { "type": "string" },
+          "difficulty": { "type": "string" },
+          "mood": { "type": "string" },
+          "diversity_indicators": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -56,6 +56,24 @@ Use PowerShell JSON (recommended on Windows):
 
 ```powershell
 $payload = @{
+  user_id = "demo_user_001"
+  query = "Recommend thoughtful science fiction and history books"
+  constraints = @{ scenario = "warm"; top_k = 5 }
+} | ConvertTo-Json -Depth 8
+
+Invoke-RestMethod -Uri "http://127.0.0.1:8100/user_api" -Method Post -ContentType "application/json" -Body $payload | ConvertTo-Json -Depth 8
+```
+
+Expected behavior:
+- `/user_api` requires non-empty `user_id` and `query`.
+- Profile/history/reviews are loaded from local persistent store.
+
+### Optional debug payload injection (nonproduction)
+
+Manual profile/history injection is only supported via `/user_api_debug`.
+
+```powershell
+$debugPayload = @{
   query = "Recommend thoughtful science fiction and history books"
   user_profile = @{ preferred_language = "en" }
   history = @(
@@ -65,10 +83,10 @@ $payload = @{
   reviews = @(
     @{ rating = 5; text = "I like idea-driven books with social depth" }
   )
-  constraints = @{ scenario = "warm"; top_k = 5 }
+  constraints = @{ scenario = "warm"; top_k = 5; debug_payload_override = $true }
 } | ConvertTo-Json -Depth 8
 
-Invoke-RestMethod -Uri "http://127.0.0.1:8100/user_api" -Method Post -ContentType "application/json" -Body $payload | ConvertTo-Json -Depth 8
+Invoke-RestMethod -Uri "http://127.0.0.1:8100/user_api_debug" -Method Post -ContentType "application/json" -Body $debugPayload | ConvertTo-Json -Depth 8
 ```
 
 Check key fields in response:
@@ -125,6 +143,9 @@ In the service terminal, press:
 - Port in use (`[WinError 10048]`):
   - Stop the old process using port `8100`, then restart.
 - Empty recommendations:
-  - Try broader query text and include `history` with genres/ratings.
+  - Try broader query text and verify the user has persisted events/profile context.
+- HTTP 422 on `/user_api`:
+  - Ensure both `user_id` and `query` are non-empty.
+  - Use `/user_api_debug` only for explicit nonproduction payload injection.
 - Slow first run:
   - Initial embedding/model load can take longer than subsequent calls.

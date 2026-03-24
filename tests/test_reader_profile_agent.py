@@ -47,6 +47,7 @@ def test_start_missing_history_prompts_for_input(client_reader_profile, new_task
 @pytest.mark.usefixtures("patch_openai")
 def test_start_completes_with_valid_history(client_reader_profile, new_task_id):
     payload = {
+        "user_id": "reader-100",
         "user_profile": {"age": 28, "preferred_language": "en"},
         "history": [
             {
@@ -78,6 +79,9 @@ def test_start_completes_with_valid_history(client_reader_profile, new_task_id):
     assert structured["type"] == "data"
     assert "preference_vector" in structured["data"]
     assert "intent_keywords" in structured["data"]
+    assert structured["data"]["profile_version"].startswith("reader-100-v")
+    assert structured["data"]["source_event_window"]["history_count"] == 2
+    assert structured["data"]["cold_start_flag"] is False
 
 
 @pytest.mark.usefixtures("patch_openai")
@@ -91,6 +95,7 @@ def test_continue_unblocks_after_missing_data(client_reader_profile, new_task_id
     assert _state(start_res) == TaskState.AwaitingInput.value
 
     continue_payload = {
+        "user_id": "reader-200",
         "user_profile": {"age": 30},
         "history": [
             {
@@ -110,6 +115,7 @@ def test_continue_unblocks_after_missing_data(client_reader_profile, new_task_id
     products = _products(cont)
     assert products and products[0]["dataItems"]
     summary = products[0]["dataItems"][1]["text"]
+    assert "Profile:" in summary
     assert "Top genres" in summary
 
 
@@ -133,6 +139,7 @@ def test_reader_profile_agent_end_to_end_env_and_llm(
     )
 
     payload = {
+        "user_id": "reader-300",
         "user_profile": {"age": 25, "preferred_language": "en"},
         "history": [
             {
@@ -169,5 +176,23 @@ def test_reader_profile_agent_end_to_end_env_and_llm(
     intents = structured["intent_keywords"]
     assert intents["source"] == "llm"
     assert len(intents["keywords"]) >= 2
+    assert structured["profile_snapshot"]["lifecycle"]["mode"] == "incremental"
     diagnostics = structured["diagnostics"]["environment"]
     assert diagnostics["api_key_present"] is True
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_cold_start_profile_bootstrap_without_history(client_reader_profile, new_task_id):
+    payload = {
+        "user_id": "reader-cold-1",
+        "user_profile": {"preferred_language": "en"},
+        "history": [],
+        "reviews": [],
+        "scenario": "cold",
+    }
+    res = _post(client_reader_profile, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+    structured = _products(res)[0]["dataItems"][0]["data"]
+    assert structured["profile_snapshot"]["cold_start_flag"] is True
+    assert structured["profile_snapshot"]["lifecycle"]["mode"] == "bootstrap"
+    assert structured["profile_snapshot"]["source_event_window"]["history_count"] == 0

@@ -105,14 +105,28 @@ def _acps_constraints(base_constraints: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def _run_acps_case(client: httpx.AsyncClient, case: Dict[str, Any]) -> Dict[str, Any]:
+    constraints = _acps_constraints(case.get("constraints") or {})
+    has_manual_context = any(
+        [
+            bool(case.get("user_profile")),
+            bool(case.get("history")),
+            bool(case.get("reviews")),
+            bool(case.get("books")),
+            bool(case.get("candidate_ids")),
+        ]
+    )
+    if has_manual_context and "debug_payload_override" not in constraints:
+        constraints["debug_payload_override"] = True
+
     payload = {
+        "user_id": str(case.get("user_id") or f"bench-{case.get('case_id') or 'case'}"),
         "query": case.get("query") or "",
         "user_profile": case.get("user_profile") or {},
         "history": case.get("history") or [],
         "reviews": case.get("reviews") or [],
         "books": case.get("books") or [],
         "candidate_ids": case.get("candidate_ids") or [],
-        "constraints": _acps_constraints(case.get("constraints") or {}),
+        "constraints": constraints,
     }
 
     start = time.perf_counter()

@@ -145,6 +145,7 @@ def _build_history(user_rows: List[Dict[str, Any]], books_idx: Dict[str, Dict[st
 
 async def _run_case(
     client: httpx.AsyncClient,
+    user_id: str,
     history: List[Dict[str, Any]],
     ground_truth_ids: List[str],
     scoring_weights: Dict[str, float],
@@ -152,6 +153,7 @@ async def _run_case(
 ) -> Dict[str, float]:
     query = _history_to_query(history)
     payload = {
+        "user_id": user_id,
         "query": query,
         "history": history,
         "user_profile": {"preferred_language": "en"},
@@ -160,6 +162,7 @@ async def _run_case(
             "top_k": top_k,
             "scoring_weights": scoring_weights,
             "ground_truth_ids": ground_truth_ids,
+            "debug_payload_override": True,
         },
     }
     response = await client.post("/user_api", json=payload)
@@ -269,6 +272,7 @@ async def run_ablation(
                     continue
                 metrics = await _run_case(
                     client=client,
+                    user_id=user_id,
                     history=history,
                     ground_truth_ids=ground_truth_ids,
                     scoring_weights=weights,

@@ -177,6 +177,9 @@
     <aside>
       <div class="card">
         <h3>🔬 Configuration</h3>
+
+        <label>User ID</label>
+        <input type="text" id="userId" value="demo_user_001" placeholder="e.g., U001">
         
         <label>Scenario Strategy</label>
         <select id="scenario">
@@ -196,7 +199,10 @@
       </div>
 
       <div class="card">
-        <h3>👤 User Context</h3>
+        <h3>🧪 Debug Overrides (Optional)</h3>
+        <label>
+          <input type="checkbox" id="debugPayloadOverride" /> Enable debug payload override
+        </label>
         <label>Profile JSON</label>
         <textarea id="userProfile" class="code-editor">{"preferred_language": "en"}</textarea>
         
@@ -244,15 +250,25 @@
 
     try {
       // 2. Parse Inputs
-      let profileObj, historyObj;
-      try {
-        profileObj = JSON.parse(document.getElementById('userProfile').value);
-        historyObj = JSON.parse(document.getElementById('history').value);
-      } catch (e) {
-        throw new Error("Invalid JSON in Profile or History fields.");
+      const userId = document.getElementById('userId').value.trim();
+      if (!userId) {
+        throw new Error("User ID is required.");
+      }
+
+      const debugPayloadOverride = document.getElementById('debugPayloadOverride').checked;
+      let profileObj = {};
+      let historyObj = [];
+      if (debugPayloadOverride) {
+        try {
+          profileObj = JSON.parse(document.getElementById('userProfile').value);
+          historyObj = JSON.parse(document.getElementById('history').value);
+        } catch (e) {
+          throw new Error("Invalid JSON in debug Profile or History fields.");
+        }
       }
 
       const payload = {
+        user_id: userId,
         query: document.getElementById('query').value,
         user_profile: profileObj,
         history: historyObj,
@@ -261,6 +277,7 @@
           scenario: document.getElementById('scenario').value,
           top_k: Number(document.getElementById('topK').value),
           strict_remote_validation: document.getElementById('strictRemoteValidation').value === 'true',
+          debug_payload_override: debugPayloadOverride,
           ablation: true
         }
       };
