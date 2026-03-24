@@ -1,0 +1,122 @@
+{
+  "aic": "reader_profile_agent_001",
+  "active": true,
+  "lastModifiedTime": "2026-03-24T17:58:59+08:00",
+  "protocolVersion": "02.00",
+  "name": "Reader Profile Agent",
+  "description": "Partner A for profile lifecycle, preference extraction, and sentiment-aware reader modeling.",
+  "version": "1.0.0",
+  "iconUrl": "https://example.com/icons/reader-profile-agent.png",
+  "documentationUrl": "https://example.com/docs/reader-profile-agent",
+  "webAppUrl": "https://example.com/demo/reader-profile-agent",
+  "provider": {
+    "countryCode": "CN",
+    "organization": "Beijing University of Posts and Telecommunications",
+    "department": "School of Artificial Intelligence",
+    "url": "https://ai.bupt.edu.cn",
+    "license": "TO_BE_FILLED",
+    "name": "TO_BE_FILLED",
+    "email": "TO_BE_FILLED"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for ACPs inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.147.68.125:8004/acps-atr-v2/"
+    }
+  },
+  "endPoints": [
+    {
+      "url": "https://localhost:8211/reader-profile/rpc",
+      "transport": "JSONRPC",
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "notification": false,
+    "messageQueue": []
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "profile.extract",
+      "name": "profile.extract",
+      "description": "Extract explicit and implicit profile features from user context",
+      "version": "1.0.0",
+      "tags": [
+        "profile",
+        "features",
+        "reader-model"
+      ],
+      "examples": [
+        "Build profile from user_id and historical interactions."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "preference.embedding",
+      "name": "preference.embedding",
+      "description": "Build profile vectors for downstream ranking",
+      "version": "1.0.0",
+      "tags": [
+        "embedding",
+        "profile-vector"
+      ],
+      "examples": [
+        "Generate a profile vector for ranking partner input."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "sentiment.analysis",
+      "name": "sentiment.analysis",
+      "description": "Summarize review sentiment and intent signals",
+      "version": "1.0.0",
+      "tags": [
+        "sentiment",
+        "review-analysis"
+      ],
+      "examples": [
+        "Summarize reader sentiment from review text."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    }
+  ],
+  "entityMeta": {
+    "environment": "production",
+    "role": "partner-a"
+  }
+}

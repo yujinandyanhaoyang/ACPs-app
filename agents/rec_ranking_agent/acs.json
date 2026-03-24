@@ -1,0 +1,124 @@
+{
+  "aic": "rec_ranking_agent_001",
+  "active": true,
+  "lastModifiedTime": "2026-03-24T17:58:59+08:00",
+  "protocolVersion": "02.00",
+  "name": "Recommendation Ranking Agent",
+  "description": "Partner C for multifactor ranking, scenario policy control, and evidence-backed explanations.",
+  "version": "1.0.0",
+  "iconUrl": "https://example.com/icons/rec-ranking-agent.png",
+  "documentationUrl": "https://example.com/docs/rec-ranking-agent",
+  "webAppUrl": "https://example.com/demo/rec-ranking-agent",
+  "provider": {
+    "countryCode": "CN",
+    "organization": "Beijing University of Posts and Telecommunications",
+    "department": "School of Artificial Intelligence",
+    "url": "https://ai.bupt.edu.cn",
+    "license": "TO_BE_FILLED",
+    "name": "TO_BE_FILLED",
+    "email": "TO_BE_FILLED"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for ACPs inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.147.68.125:8004/acps-atr-v2/"
+    }
+  },
+  "endPoints": [
+    {
+      "url": "https://localhost:8213/rec-ranking/rpc",
+      "transport": "JSONRPC",
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "notification": false,
+    "messageQueue": []
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "ranking.svd",
+      "name": "ranking.svd",
+      "description": "Collaborative filtering score contribution",
+      "version": "1.0.0",
+      "tags": [
+        "ranking",
+        "cf",
+        "svd"
+      ],
+      "examples": [
+        "Produce collaborative score components for candidate books."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "ranking.multifactor",
+      "name": "ranking.multifactor",
+      "description": "Compose scenario-aware multi-factor recommendation scores",
+      "version": "1.0.0",
+      "tags": [
+        "ranking",
+        "multifactor",
+        "policy"
+      ],
+      "examples": [
+        "Rank candidates under cold/warm/explore policy constraints."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "explanation.llm",
+      "name": "explanation.llm",
+      "description": "Generate recommendation explanations with evidence references",
+      "version": "1.0.0",
+      "tags": [
+        "explanation",
+        "evidence",
+        "llm"
+      ],
+      "examples": [
+        "Generate deterministic explanation fields for ranked output."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    }
+  ],
+  "entityMeta": {
+    "environment": "production",
+    "role": "partner-c"
+  }
+}

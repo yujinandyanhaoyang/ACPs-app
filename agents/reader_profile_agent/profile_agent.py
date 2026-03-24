@@ -48,7 +48,9 @@ app = FastAPI(
     description="ACPs-compliant agent that synthesizes user preference vectors for reading journeys.",
 )
 
-_ACS_JSON_PATH = str(Path(_CURRENT_DIR) / "config.example.json")
+_FORMAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
+_LEGACY_ACS_JSON_PATH = Path(_CURRENT_DIR) / "config.example.json"
+_ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH if _FORMAL_ACS_JSON_PATH.exists() else _LEGACY_ACS_JSON_PATH)
 register_acs_route(app, _ACS_JSON_PATH)
 
 _PROFILE_CONTEXT: dict[str, Dict[str, Any]] = {}
@@ -699,12 +701,23 @@ add_aip_rpc_router(app, AIP_ENDPOINT, agent_handlers)
 
 if __name__ == "__main__":
     import uvicorn
-    from acps_aip.mtls_config import load_mtls_context, build_uvicorn_ssl_kwargs
+    from acps_aip.mtls_config import (
+        load_mtls_context,
+        build_uvicorn_ssl_kwargs,
+        validate_startup_identity,
+    )
 
     host = os.getenv("READER_PROFILE_HOST", "0.0.0.0")
     port = int(os.getenv("READER_PROFILE_PORT", "8211"))
     config_path = os.getenv("READER_PROFILE_MTLS_CONFIG_PATH", _ACS_JSON_PATH)
     cert_dir = os.getenv("AGENT_MTLS_CERT_DIR")
+
+    validate_startup_identity(
+        config_path,
+        expected_aic=AGENT_ID,
+        expected_endpoint_path=AIP_ENDPOINT,
+        cert_dir=cert_dir,
+    )
 
     ssl_context = load_mtls_context(config_path, purpose="server", cert_dir=cert_dir)
     ssl_kwargs = build_uvicorn_ssl_kwargs(config_path, cert_dir=cert_dir) if ssl_context else {}

@@ -118,3 +118,45 @@ venv/Scripts/python.exe scripts/build_cf_model.py --components 50
 	- `CF_ITEM_FACTORS_PATH`
 	- `CF_BOOK_INDEX_PATH`
 - `estimate_collaborative_scores_with_svd()` now uses this pre-factored store first (`backend=pretrained-svd`) and falls back to overlap/SVD only for uncovered candidates (`backend=pretrained-svd+overlap-fallback`).
+
+---
+
+## Runtime Persistence Schema (Phase P4)
+
+### Migration Command
+
+```bash
+python scripts/migrate_db.py
+```
+
+### Default Runtime DB
+
+- URL: `sqlite:///data/recommendation_runtime.db`
+- Override env: `RECSYS_DB_URL`
+
+### Core Tables
+
+- `users`
+- `user_events`
+- `user_profiles`
+- `books`
+- `book_features`
+- `recommendation_runs`
+- `recommendations`
+- `agent_task_logs`
+- `schema_migrations`
+
+### Backfill Commands
+
+```bash
+python scripts/backfill_user_events.py --legacy-db data/user_profile_store.db
+python scripts/backfill_book_features.py --books-jsonl data/processed/merged/books_master_merged.jsonl --limit 2000
+```
+
+### Runtime Write Contract
+
+- Lifecycle events and profile snapshots are mirrored from `services/user_profile_store.py` into repository-backed persistence.
+- Recommendation orchestration writes:
+  - run-level metadata (`recommendation_runs`)
+  - per-item score/explanation rows (`recommendations`)
+  - partner task-state lineage (`agent_task_logs`)

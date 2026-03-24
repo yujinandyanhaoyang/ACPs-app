@@ -16,13 +16,41 @@ BOOKS_MIN_DATASET_PATH = get_processed_data_path("books_min.jsonl")
 DATASET_ENV_KEY = "BOOK_RETRIEVAL_DATASET_PATH"
 
 
+def _normalize_dataset_path(path: Path) -> Path:
+    if not path.is_dir():
+        return path
+
+    preferred = [
+        path / "books_master_merged_enriched.jsonl",
+        path / "books_master_merged.jsonl",
+        path / "books_master.jsonl",
+        path / "books_min.jsonl",
+    ]
+    for candidate in preferred:
+        if candidate.exists():
+            return candidate
+
+    for candidate in sorted(path.rglob("*.jsonl")):
+        if candidate.is_file():
+            return candidate
+
+    # Fallback to the standard dataset resolution chain when env path points to a directory.
+    if MERGED_ENRICHED_DATASET_PATH.exists():
+        return MERGED_ENRICHED_DATASET_PATH
+    if MERGED_DATASET_PATH.exists():
+        return MERGED_DATASET_PATH
+    if GOODREADS_DATASET_PATH.exists():
+        return GOODREADS_DATASET_PATH
+    return BOOKS_MIN_DATASET_PATH
+
+
 def _resolve_dataset_path(dataset_path: Path | None = None) -> Path:
     if dataset_path is not None:
-        return dataset_path
+        return _normalize_dataset_path(dataset_path)
 
     env_path = str(os.getenv(DATASET_ENV_KEY) or "").strip()
     if env_path:
-        return Path(env_path)
+        return _normalize_dataset_path(Path(env_path))
 
     if MERGED_ENRICHED_DATASET_PATH.exists():
         return MERGED_ENRICHED_DATASET_PATH

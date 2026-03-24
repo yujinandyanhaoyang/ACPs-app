@@ -270,6 +270,144 @@ def load_mtls_context(
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     return ssl_context
 
+def _extract_cert_common_name(cert_file: str) -> Optional[str]:
+    try:
+        cert_info = ssl._ssl._test_decode_cert(cert_file)
+    except Exception:
+        return None
+
+    subject = cert_info.get("subject") or []
+    for item in subject:
+        if not isinstance(item, tuple):
+            continue
+        for pair in item:
+            if not isinstance(pair, tuple) or len(pair) != 2:
+                continue
+            if str(pair[0]).strip().lower() == "commonname":
+                return str(pair[1]).strip()
+    return None
+
+
+def _normalize_endpoint_path(url_or_path: str) -> str:
+    value = str(url_or_path or "").strip()
+    if not value:
+        return ""
+    if value.startswith("/"):
+        return value
+    from urllib.parse import urlparse
+
+    parsed = urlparse(value)
+    return str(parsed.path or "").strip() or "/"
+
+
+def validate_startup_identity(
+    json_path: str,
+    *,
+    expected_aic: Optional[str],
+    expected_endpoint_path: Optional[str],
+    cert_dir: Optional[str] = None,
+    strict_cert_cn: Optional[bool] = None,
+) -> Dict[str, Any]:
+    """Fail-fast startup validation for ACS/runtime/cert consistency."""
+    import json
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    raw = payload.get("acs") if isinstance(payload, dict) and isinstance(payload.get("acs"), dict) else payload
+    if not isinstance(raw, dict):
+        raise ValueError(f"Invalid ACS payload in {json_path}")
+
+    aic = str(raw.get("aic") or "").strip()
+    if not aic:
+        raise ValueError(f"Missing ACS aic in {json_path}")
+
+    if expected_aic and aic != str(expected_aic).strip():
+        raise ValueError(
+            f"ACS AIC mismatch: expected={expected_aic}, actual={aic}, config={json_path}"
+        )
+
+    protocol_version = str(raw.get("protocolVersion") or "").strip()
+    if not protocol_version:
+        raise ValueError(f"Missing ACS protocolVersion in {json_path}")
+
+    skills = raw.get("skills")
+    if not isinstance(skills, list) or not skills:
+        raise ValueError(f"ACS skills must be a non-empty list in {json_path}")
+
+    endpoints = raw.get("endPoints") or raw.get("endpoints") or raw.get("endpoint") or []
+    if isinstance(endpoints, str):
+        endpoints = [endpoints]
+    if isinstance(endpoints, dict):
+        endpoints = list(endpoints.values())
+    if not isinstance(endpoints, list) or not endpoints:
+        raise ValueError(f"ACS endpoints must be a non-empty list in {json_path}")
+
+    endpoint_urls = []
+    for item in endpoints:
+        if isinstance(item, str):
+            endpoint_urls.append(item)
+        elif isinstance(item, dict):
+            endpoint_urls.append(str(item.get("url") or item.get("endpoint") or "").strip())
+
+    endpoint_urls = [url for url in endpoint_urls if url]
+    if not endpoint_urls:
+        raise ValueError(f"ACS endpoint URLs are empty in {json_path}")
+
+    if expected_endpoint_path:
+        expected_path = _normalize_endpoint_path(expected_endpoint_path)
+        actual_paths = {_normalize_endpoint_path(url) for url in endpoint_urls}
+        if expected_path not in actual_paths:
+            raise ValueError(
+                "ACS endpoint mismatch: expected path "
+                f"{expected_path} not found in {sorted(actual_paths)} for {json_path}"
+            )
+
+    cert_file = ""
+    key_file = ""
+    ca_cert_file = ""
+    if mtls_enabled():
+        cert_file, key_file, ca_cert_file = resolve_mtls_cert_paths(
+            json_path,
+            cert_dir=cert_dir,
+            ca_cert_name="ca.crt",
+        )
+
+    strict = _is_truthy(os.getenv("AGENT_TRUST_STRICT_CERT_CN", "false"))
+    if strict_cert_cn is not None:
+        strict = bool(strict_cert_cn)
+
+    cert_cn = None
+    if cert_file:
+        cert_cn = _extract_cert_common_name(cert_file)
+    if strict and cert_file:
+        if not cert_cn:
+            raise ValueError(f"Unable to parse certificate CN from {cert_file}")
+        if cert_cn != aic:
+            raise ValueError(
+                "Certificate CN mismatch: "
+                f"expected {aic}, actual {cert_cn}, cert={cert_file}"
+            )
+
+    info = {
+        "aic": aic,
+        "protocolVersion": protocol_version,
+        "endpoint_paths": sorted({_normalize_endpoint_path(url) for url in endpoint_urls}),
+        "mtls_enabled": mtls_enabled(),
+        "cert_file": cert_file,
+        "key_file": key_file,
+        "ca_cert_file": ca_cert_file,
+        "cert_common_name": cert_cn,
+    }
+    logger.info(
+        "startup_identity_validated aic=%s endpoint_paths=%s mtls=%s cert=%s",
+        info["aic"],
+        info["endpoint_paths"],
+        info["mtls_enabled"],
+        bool(info["cert_file"]),
+    )
+    return info
+
 
 def build_uvicorn_ssl_kwargs(
     json_path: str,

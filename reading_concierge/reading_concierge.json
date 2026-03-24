@@ -1,25 +1,39 @@
 {
   "aic": "reading_concierge_001",
   "active": true,
-  "protocolVersion": "01.00",
+  "lastModifiedTime": "2026-03-24T17:58:59+08:00",
+  "protocolVersion": "02.00",
   "name": "Reading Concierge Coordinator",
   "description": "Leader coordinator for ACPs-based personalized reading recommendation orchestration.",
   "version": "1.0.0",
+  "iconUrl": "https://example.com/icons/reading-concierge.png",
+  "documentationUrl": "https://example.com/docs/reading-concierge",
+  "webAppUrl": "https://example.com/demo/reading-concierge",
   "provider": {
-    "organization": "BUPT",
-    "department": "AI School"
+    "countryCode": "CN",
+    "organization": "Beijing University of Posts and Telecommunications",
+    "department": "School of Artificial Intelligence",
+    "url": "https://ai.bupt.edu.cn",
+    "license": "TO_BE_FILLED",
+    "name": "TO_BE_FILLED",
+    "email": "TO_BE_FILLED"
   },
   "securitySchemes": {
     "mtls": {
       "type": "mutualTLS",
-      "description": "mTLS for ACPs inter-agent communication"
+      "description": "mTLS for ACPs inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.147.68.125:8004/acps-atr-v2/"
     }
   },
   "endPoints": [
     {
-      "transport": "JSONRPC",
       "url": "http://localhost:8100/user_api",
-      "description": "Primary orchestration endpoint"
+      "transport": "JSONRPC",
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
     }
   ],
   "capabilities": {
@@ -27,11 +41,42 @@
     "notification": false,
     "messageQueue": []
   },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
   "skills": [
     {
       "id": "reading.orchestrate",
       "name": "reading.orchestrate",
-      "description": "Orchestrate profile/content/ranking agents into unified recommendation flow"
+      "description": "Orchestrate profile/content/ranking agents into unified recommendation flow",
+      "version": "1.0.0",
+      "tags": [
+        "reading",
+        "orchestration",
+        "multi-agent",
+        "recommendation"
+      ],
+      "examples": [
+        "Recommend personalized books for a warm-start reader.",
+        "Run profile/content/ranking workflow for user_id + query."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
     }
-  ]
+  ],
+  "entityMeta": {
+    "environment": "production",
+    "role": "leader"
+  }
 }

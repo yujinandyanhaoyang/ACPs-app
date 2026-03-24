@@ -34,4 +34,4 @@ class RpcRequest(JSONRPCRequest):
 
 
 class RpcResponse(JSONRPCResponse):
-    result: Union[Task, Message]
+    result: Optional[Union[Task, Message]] = None

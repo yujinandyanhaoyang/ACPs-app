@@ -2,9 +2,17 @@ import json
 import os
 import sqlite3
 import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from services.db import run_migrations
+from services.repositories import (
+    ProfileRepository,
+    RecommendationRepository,
+    TaskLogRepository,
+)
 
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -27,7 +35,12 @@ class UserProfileStore:
         self.db_path = Path(configured_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
+        self._profile_repo = ProfileRepository()
+        self._recommendation_repo = RecommendationRepository()
+        self._task_log_repo = TaskLogRepository()
         self._init_schema()
+        # Keep the legacy store operational while also initializing the new migration-managed runtime schema.
+        run_migrations()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path), timeout=30)
@@ -91,6 +104,12 @@ class UserProfileStore:
             finally:
                 conn.close()
 
+        try:
+            self._profile_repo.append_event(user_id, event_type, payload)
+        except Exception:
+            # Legacy store remains source of truth if runtime-db sync fails.
+            pass
+
     def _ensure_columns(self, conn: sqlite3.Connection, table: str, columns: Dict[str, str]) -> None:
         existing = {
             row["name"]
@@ -117,6 +136,11 @@ class UserProfileStore:
                 conn.commit()
             finally:
                 conn.close()
+
+        try:
+            self._profile_repo.save_profile_snapshot(user_id, snapshot)
+        except Exception:
+            pass
 
     def _append_event_dedup(self, user_id: str, event_type: str, payload: Dict[str, Any]) -> None:
         if not user_id or not isinstance(payload, dict) or not payload:
@@ -382,9 +406,10 @@ class UserProfileStore:
         ranking_policy_version: Optional[str],
         weights_or_policy_snapshot: Optional[Dict[str, Any]],
         candidate_provenance: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    ) -> Optional[str]:
         if not user_id or not query:
-            return
+            return None
+        run_id = f"run-{uuid.uuid4()}"
         with self._lock:
             conn = self._connect()
             try:
@@ -419,6 +444,62 @@ class UserProfileStore:
                 conn.commit()
             finally:
                 conn.close()
+
+        try:
+            self._recommendation_repo.create_recommendation_run(
+                run_id=run_id,
+                user_id=user_id,
+                query=query,
+                profile_version=profile_version,
+                candidate_set_version_or_hash=candidate_set_version_or_hash,
+                candidate_provenance=candidate_provenance,
+                book_feature_version_or_hash=book_feature_version_or_hash,
+                ranking_policy_version=ranking_policy_version,
+                weights_or_policy_snapshot=weights_or_policy_snapshot,
+            )
+        except Exception:
+            pass
+        return run_id
+
+    def record_recommendation_items(
+        self,
+        *,
+        run_id: str,
+        recommendations: List[Dict[str, Any]],
+        scenario_policy: Optional[str] = None,
+    ) -> None:
+        if not run_id:
+            return
+        try:
+            self._recommendation_repo.save_recommendations(
+                run_id=run_id,
+                recommendations=recommendations,
+                scenario_policy=scenario_policy,
+            )
+        except Exception:
+            pass
+
+    def append_agent_task_log(
+        self,
+        *,
+        task_id: str,
+        session_id: Optional[str],
+        sender_id: Optional[str],
+        receiver_id: Optional[str],
+        state_transition: str,
+        payload: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        try:
+            self._task_log_repo.append(
+                task_id=task_id,
+                session_id=session_id,
+                sender_id=sender_id,
+                receiver_id=receiver_id,
+                state_transition=state_transition,
+                payload=payload or {},
+            )
+        except Exception:
+            pass
 
 
 profile_store = UserProfileStore()

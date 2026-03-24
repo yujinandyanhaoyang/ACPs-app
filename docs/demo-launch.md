@@ -1,151 +1,79 @@
 # Demo System Launch Guide
 
-This document explains how to launch and verify the ACPs personalized reading recommendation demo.
+This guide describes launch and verification for the reading recommender demo after P3/P4/P5 hardening.
 
 ## 1) Prerequisites
 
-- OS: Windows (PowerShell examples below)
-- Python: 3.13 (project virtual environment already configured)
+- Python environment available (for example `.venv`)
 - Dependencies installed from `requirements.txt`
+- Working directory at repository root
 
-## 2) Open project root
+## 2) Apply DB migrations
 
-```powershell
-Set-Location "F:\Pythonfiles\work_files\work_project\school\ACPs-Demo-Project\ACPs-personalized-reading-recsys"
+```bash
+python scripts/migrate_db.py
 ```
 
-## 3) Activate virtual environment
+Optional historical backfill:
 
-```powershell
-.\venv\Scripts\Activate.ps1
+```bash
+python scripts/backfill_user_events.py --legacy-db data/user_profile_store.db
+python scripts/backfill_book_features.py --books-jsonl data/processed/merged/books_master_merged.jsonl --limit 2000
 ```
 
-## 4) Start demo service (HTTP, no mTLS)
+## 3) Start service (HTTP)
 
-```powershell
-$env:AGENT_MTLS_ENABLED = "false"
+```bash
+export AGENT_MTLS_ENABLED=false
 python -m reading_concierge.reading_concierge
 ```
 
-Expected startup log:
-- `Uvicorn running on http://0.0.0.0:8100`
+## 4) Verify runtime status
 
-> Keep this terminal running.
-
-## 5) Verify service health
-
-In a new PowerShell terminal:
-
-```powershell
-Set-Location "F:\Pythonfiles\work_files\work_project\school\ACPs-Demo-Project\ACPs-personalized-reading-recsys"
-.\venv\Scripts\Activate.ps1
-curl.exe -sS http://127.0.0.1:8100/demo/status
+```bash
+python - <<'PY'
+import requests
+r = requests.get('http://127.0.0.1:8100/demo/status', timeout=10)
+print(r.status_code)
+print(r.json())
+PY
 ```
 
-Expected response contains:
-- `"service":"reading_concierge"`
-- `"demo_page_available":true`
+Expected status fields include:
 
-## 6) Open demo page in browser
+- `service`
+- `leader_id`
+- `partner_mode`
+- `adp_mode`
+- `adp_discovery_enabled`
 
-- URL: `http://127.0.0.1:8100/demo`
+## 5) Run demo request (production path)
 
-## 7) Send a live recommendation request
-
-Use PowerShell JSON (recommended on Windows):
-
-```powershell
-$payload = @{
-  user_id = "demo_user_001"
-  query = "Recommend thoughtful science fiction and history books"
-  constraints = @{ scenario = "warm"; top_k = 5 }
-} | ConvertTo-Json -Depth 8
-
-Invoke-RestMethod -Uri "http://127.0.0.1:8100/user_api" -Method Post -ContentType "application/json" -Body $payload | ConvertTo-Json -Depth 8
+```bash
+python scripts/demo_reading_workflow.py --base-url http://127.0.0.1:8100 --check-db --pretty
 ```
 
-Expected behavior:
-- `/user_api` requires non-empty `user_id` and `query`.
-- Profile/history/reviews are loaded from local persistent store.
+This sends `user_id + query` to `/user_api` and prints DB evidence counters.
 
-### Optional debug payload injection (nonproduction)
+## 6) Run demo request (debug payload path)
 
-Manual profile/history injection is only supported via `/user_api_debug`.
-
-```powershell
-$debugPayload = @{
-  query = "Recommend thoughtful science fiction and history books"
-  user_profile = @{ preferred_language = "en" }
-  history = @(
-    @{ title = "Dune"; genres = @("science_fiction"); rating = 5; language = "en" },
-    @{ title = "Sapiens"; genres = @("history", "nonfiction"); rating = 4; language = "en" }
-  )
-  reviews = @(
-    @{ rating = 5; text = "I like idea-driven books with social depth" }
-  )
-  constraints = @{ scenario = "warm"; top_k = 5; debug_payload_override = $true }
-} | ConvertTo-Json -Depth 8
-
-Invoke-RestMethod -Uri "http://127.0.0.1:8100/user_api_debug" -Method Post -ContentType "application/json" -Body $debugPayload | ConvertTo-Json -Depth 8
+```bash
+python scripts/demo_reading_workflow.py --base-url http://127.0.0.1:8100 --debug --check-db --pretty
 ```
 
-Check key fields in response:
-- `state` (expected: `completed` or `needs_input`)
-- `recommendations` (non-empty list for successful recommendation)
-- `metric_snapshot` (`avg_diversity`, `avg_novelty`)
+This calls `/user_api_debug` and injects explicit profile/history/books payloads for nonproduction diagnostics.
 
-## 8) Run benchmark performance evaluation
+## 7) mTLS launch (optional)
 
-```powershell
-python .\scripts\phase4_benchmark_compare.py `
-  --cases .\scripts\phase4_cases.json `
-  --out .\scripts\phase4_benchmark_report.json `
-  --summary-out .\scripts\phase4_benchmark_summary.json `
-  --md-out .\scripts\phase4_benchmark_report.md `
-  --pretty
-```
-
-Output files:
-- `scripts/phase4_benchmark_report.json`
-- `scripts/phase4_benchmark_summary.json`
-- `scripts/phase4_benchmark_report.md`
-
-## 9) Optional: launch with mTLS
-
-If you need HTTPS/mTLS demo startup:
-
-1. Generate certs:
-```powershell
-.\scripts\gen_dev_certs.ps1
-```
-
-2. Start service with mTLS:
-```powershell
-$env:AGENT_MTLS_ENABLED = "true"
-$env:AGENT_MTLS_CERT_DIR = (Resolve-Path .\certs).Path
+```bash
+bash scripts/gen_dev_certs.sh
+export AGENT_MTLS_ENABLED=true
+export AGENT_MTLS_CERT_DIR="$PWD/certs"
 python -m reading_concierge.reading_concierge
 ```
 
-3. Verify HTTPS:
-```powershell
-curl.exe -v --ssl-no-revoke --cacert .\certs\ca.crt https://localhost:8100/demo/status
+## 8) Targeted verification tests
+
+```bash
+python -m pytest tests/test_aip_conformance.py tests/test_acs_conformance.py tests/test_persistence_db.py tests/test_reading_workflow_e2e.py -q
 ```
-
-## 10) Stop demo service
-
-In the service terminal, press:
-- `Ctrl + C`
-
----
-
-## Troubleshooting
-
-- Port in use (`[WinError 10048]`):
-  - Stop the old process using port `8100`, then restart.
-- Empty recommendations:
-  - Try broader query text and verify the user has persisted events/profile context.
-- HTTP 422 on `/user_api`:
-  - Ensure both `user_id` and `query` are non-empty.
-  - Use `/user_api_debug` only for explicit nonproduction payload injection.
-- Slow first run:
-  - Initial embedding/model load can take longer than subsequent calls.

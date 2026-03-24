@@ -145,3 +145,43 @@
 - Data status: sufficient for the current project stage.
 - Reporting status: empirical ablation and benchmark paths exist, but development defaults now favor faster runs.
 - Deferred work: Open Library enrichment and deeper semantic/KG-RAG improvements remain optional future tasks.
+## Week 5: 2026-03-24 (P3/P4/P5 execution advance)
+
+### P3 compliance and trust hardening progress
+
+- Added formal partner ACS descriptors:
+  - `agents/reader_profile_agent/acs.json`
+  - `agents/book_content_agent/acs.json`
+  - `agents/rec_ranking_agent/acs.json`
+- Added startup fail-fast validation for ACS/runtime/cert consistency via `acps_aip/mtls_config.py::validate_startup_identity`.
+- Wired startup trust checks into all service `__main__` entrypoints.
+- Declared ADP runtime operating mode (`Mode B`) and exposed diagnostics in `/demo/status` (`adp_mode`, `adp_discovery_enabled`).
+
+### P4 persistence foundation progress
+
+- Added migration-capable DB module: `services/db.py`.
+- Added initial schema migration: `migrations/001_initial_schema.sql`.
+- Added repository layer:
+  - `services/repositories/profile_repository.py`
+  - `services/repositories/recommendation_repository.py`
+  - `services/repositories/task_log_repository.py`
+- Added migration/backfill scripts:
+  - `scripts/migrate_db.py`
+  - `scripts/backfill_user_events.py`
+  - `scripts/backfill_book_features.py`
+- Added persistence integration bridge in `services/user_profile_store.py` so runtime writes mirror to the new schema.
+
+### P5 verification and demo readiness progress
+
+- Added workflow-level persistence verification test: `tests/test_reading_workflow_e2e.py`.
+- Added persistence unit/integration checks: `tests/test_persistence_db.py`.
+- Refreshed demo script: `scripts/demo_reading_workflow.py` with production/debug modes and DB evidence output.
+- Updated launch and design docs:
+  - `docs/demo-launch.md`
+  - `docs/data-spec.md`
+  - `docs/persistence-design.md`
+
+### Validation evidence
+
+- `pytest tests/test_aip_conformance.py tests/test_acs_conformance.py -q` -> passed
+- `pytest tests/test_persistence_db.py tests/test_reading_workflow_e2e.py -q` -> passed

@@ -1,0 +1,122 @@
+{
+  "aic": "book_content_agent_001",
+  "active": true,
+  "lastModifiedTime": "2026-03-24T17:58:59+08:00",
+  "protocolVersion": "02.00",
+  "name": "Book Content Agent",
+  "description": "Partner B for candidate normalization, semantic enrichment, and structured feature extraction.",
+  "version": "1.0.0",
+  "iconUrl": "https://example.com/icons/book-content-agent.png",
+  "documentationUrl": "https://example.com/docs/book-content-agent",
+  "webAppUrl": "https://example.com/demo/book-content-agent",
+  "provider": {
+    "countryCode": "CN",
+    "organization": "Beijing University of Posts and Telecommunications",
+    "department": "School of Artificial Intelligence",
+    "url": "https://ai.bupt.edu.cn",
+    "license": "TO_BE_FILLED",
+    "name": "TO_BE_FILLED",
+    "email": "TO_BE_FILLED"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for ACPs inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.147.68.125:8004/acps-atr-v2/"
+    }
+  },
+  "endPoints": [
+    {
+      "url": "https://localhost:8212/book-content/rpc",
+      "transport": "JSONRPC",
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "notification": false,
+    "messageQueue": []
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "book.vectorize",
+      "name": "book.vectorize",
+      "description": "Generate deterministic embedding-compatible vectors",
+      "version": "1.0.0",
+      "tags": [
+        "book",
+        "embedding",
+        "vector"
+      ],
+      "examples": [
+        "Generate feature vectors for candidate books."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "kg.enrich",
+      "name": "kg.enrich",
+      "description": "Enrich candidates with knowledge-graph context and provenance",
+      "version": "1.0.0",
+      "tags": [
+        "knowledge-graph",
+        "enrichment"
+      ],
+      "examples": [
+        "Attach KG features and provenance to candidate books."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    },
+    {
+      "id": "tag.extract",
+      "name": "tag.extract",
+      "description": "Extract multidimensional tags for ranking evidence",
+      "version": "1.0.0",
+      "tags": [
+        "tags",
+        "content-analysis"
+      ],
+      "examples": [
+        "Extract theme/style/difficulty tags from book metadata."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "text/plain",
+        "application/json"
+      ]
+    }
+  ],
+  "entityMeta": {
+    "environment": "production",
+    "role": "partner-b"
+  }
+}

@@ -43,6 +43,7 @@ LOG_LEVEL = os.getenv("READING_CONCIERGE_LOG_LEVEL", "INFO").upper()
 DISCOVERY_BASE_URL = os.getenv("READING_DISCOVERY_BASE_URL")
 REGISTRY_BASE_URL = os.getenv("READING_REGISTRY_BASE_URL")
 PARTNER_MODE = os.getenv("READING_PARTNER_MODE", "auto").lower()
+ADP_RUNTIME_MODE = os.getenv("READING_ADP_RUNTIME_MODE", "mode_b").strip().lower()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen-plus")
 BOOK_RETRIEVAL_TOP_K = int(os.getenv("BOOK_RETRIEVAL_TOP_K", "8"))
 BOOK_RETRIEVAL_CANDIDATE_POOL = int(os.getenv("BOOK_RETRIEVAL_CANDIDATE_POOL", "30"))
@@ -81,6 +82,17 @@ register_acs_route(
 )
 
 
+def _selected_adp_mode() -> str:
+    mode = ADP_RUNTIME_MODE
+    if mode in {"a", "mode_a", "adp"}:
+        return "Mode A"
+    return "Mode B"
+
+
+def _adp_discovery_enabled() -> bool:
+    return bool(str(DISCOVERY_BASE_URL or "").strip())
+
+
 @app.on_event("startup")
 async def _startup_runtime_diagnostics() -> None:
     retrieval_info = get_active_retrieval_corpus_info()
@@ -89,6 +101,12 @@ async def _startup_runtime_diagnostics() -> None:
         retrieval_info.get("path"),
         retrieval_info.get("exists"),
         retrieval_info.get("selection_source"),
+    )
+    logger.info(
+        "event=adp_mode_selected mode=%s discovery_enabled=%s partner_mode=%s",
+        _selected_adp_mode(),
+        _adp_discovery_enabled(),
+        PARTNER_MODE,
     )
 
 MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
@@ -157,7 +175,7 @@ class UserRequest(BaseModel):
 
 
 def _evaluation_from_response(req: UserRequest, ranking_outputs: Dict[str, Any]) -> Dict[str, Any]:
-    recommendations = ranking_outputs.get("ranking") or []
+    recommendations = _normalize_api_recommendations(ranking_outputs.get("ranking") or [])
     metric_snapshot = ranking_outputs.get("metric_snapshot") or {}
     constraints = req.constraints or {}
 
@@ -480,6 +498,10 @@ def _task_state(rpc_response: Dict[str, Any]) -> str:
         .get("status", {})
         .get("state", "unknown")
     )
+
+
+def _extract_task_id(rpc_response: Dict[str, Any]) -> str:
+    return str(((rpc_response or {}).get("result") or {}).get("id") or "").strip()
 
 
 def _extract_structured_result(rpc_response: Dict[str, Any]) -> Dict[str, Any]:
@@ -810,6 +832,45 @@ def _build_candidate_book_set(req: UserRequest, books: List[Dict[str, Any]], pro
     }
 
 
+def _normalize_api_recommendations(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    normalized: List[Dict[str, Any]] = []
+    for idx, row in enumerate(rows or [], start=1):
+        if not isinstance(row, dict):
+            continue
+        item = dict(row)
+        rank = item.get("rank")
+        rank_position = item.get("rank_position")
+        if rank is None and rank_position is None:
+            rank = idx
+            rank_position = idx
+        elif rank is None:
+            rank = rank_position
+        elif rank_position is None:
+            rank_position = rank
+        try:
+            item["rank"] = int(rank)
+            item["rank_position"] = int(rank_position)
+        except Exception:
+            item["rank"] = idx
+            item["rank_position"] = idx
+
+        score_parts = item.get("score_parts") if isinstance(item.get("score_parts"), dict) else {}
+        if not score_parts:
+            score_parts = {
+                "collaborative": float(item.get("score_cf") or 0.0),
+                "semantic": float(item.get("score_content") or 0.0),
+                "knowledge": float(item.get("score_kg") or 0.0),
+                "diversity": float(item.get("score_diversity") or 0.0),
+            }
+        item["score_parts"] = score_parts
+        if item.get("composite_score") is None:
+            item["composite_score"] = float(item.get("score_total") or 0.0)
+        if item.get("score_total") is None:
+            item["score_total"] = float(item.get("composite_score") or 0.0)
+        normalized.append(item)
+    return normalized
+
+
 def _build_ranked_recommendation_contract(
     ranking_outputs: Dict[str, Any],
     *,
@@ -1041,6 +1102,7 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     }
     partner_results[reader_profile.AGENT_ID] = {
         "state": profile_state,
+        "task_id": _extract_task_id(profile_resp),
         "result": profile_data,
     }
 
@@ -1055,6 +1117,7 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     }
     partner_results[book_content.AGENT_ID] = {
         "state": content_state,
+        "task_id": _extract_task_id(content_resp),
         "result": content_data,
     }
 
@@ -1091,6 +1154,7 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
     }
     partner_results[rec_ranking.AGENT_ID] = {
         "state": ranking_state,
+        "task_id": _extract_task_id(ranking_resp),
         "result": ranking_data,
     }
 
@@ -1151,6 +1215,8 @@ async def demo_status() -> Dict[str, Any]:
         "service": "reading_concierge",
         "leader_id": LEADER_ID,
         "partner_mode": PARTNER_MODE,
+        "adp_mode": _selected_adp_mode(),
+        "adp_discovery_enabled": _adp_discovery_enabled(),
         "demo_page_available": _DEMO_HTML_PATH.exists(),
         "benchmark_summary_available": _BENCHMARK_SUMMARY_PATH.exists(),
         "retrieval_corpus": retrieval_info,
@@ -1198,9 +1264,25 @@ async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[s
 
     session["last_partner_results"] = partner_results
 
+    for receiver_id, task_meta in partner_tasks.items():
+        if not isinstance(task_meta, dict):
+            continue
+        task_payload = dict(task_meta)
+        task_id = str((partner_results.get(receiver_id) or {}).get("task_id") or "").strip()
+        if not task_id:
+            task_id = f"{session_id}:{receiver_id}"
+        profile_store.append_agent_task_log(
+            task_id=task_id,
+            session_id=session_id,
+            sender_id=LEADER_ID,
+            receiver_id=receiver_id,
+            state_transition=str(task_meta.get("state") or "unknown"),
+            payload=task_payload,
+        )
+
     ranking_result = (partner_results.get(rec_ranking.AGENT_ID) or {}).get("result") or {}
     ranking_outputs = ranking_result.get("outputs") or {}
-    recommendations = ranking_outputs.get("ranking") or []
+    recommendations = _normalize_api_recommendations(ranking_outputs.get("ranking") or [])
     policy_data = partner_results.get("_policy") or {}
     scenario_policy = str(policy_data.get("scenario") or _detect_scenario(req))
     ranked_contract = _build_ranked_recommendation_contract(
@@ -1271,7 +1353,7 @@ async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[s
     recommendations = response.get("recommendations") or []
     candidate_provenance = partner_results.get("_candidate_provenance") or {}
     if recommendations:
-        profile_store.record_recommendation_run(
+        run_id = profile_store.record_recommendation_run(
             user_id=req.user_id,
             query=req.query,
             profile_version=str((persisted_snapshot or {}).get("profile_version") or "reader_profile_v1"),
@@ -1285,6 +1367,12 @@ async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[s
             weights_or_policy_snapshot=policy_data.get("ranking_weights") or req.constraints.get("scoring_weights") or {},
             candidate_provenance=candidate_provenance,
         )
+        if run_id:
+            profile_store.record_recommendation_items(
+                run_id=run_id,
+                recommendations=recommendations,
+                scenario_policy=scenario_policy,
+            )
 
     session["messages"].append({"role": "assistant", "content": "orchestration_completed"})
     logger.info(
@@ -1310,12 +1398,23 @@ async def user_api_debug(req: UserRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    from acps_aip.mtls_config import load_mtls_context, build_uvicorn_ssl_kwargs
+    from acps_aip.mtls_config import (
+        load_mtls_context,
+        build_uvicorn_ssl_kwargs,
+        validate_startup_identity,
+    )
 
     host = os.getenv("READING_CONCIERGE_HOST", "0.0.0.0")
     port = int(os.getenv("READING_CONCIERGE_PORT", "8100"))
     config_path = os.getenv("READING_CONCIERGE_MTLS_CONFIG_PATH", _ACS_JSON_PATH)
     cert_dir = os.getenv("AGENT_MTLS_CERT_DIR")
+
+    validate_startup_identity(
+        config_path,
+        expected_aic=LEADER_ID,
+        expected_endpoint_path="/user_api",
+        cert_dir=cert_dir,
+    )
 
     ssl_context = load_mtls_context(config_path, purpose="server", cert_dir=cert_dir)
     ssl_kwargs = build_uvicorn_ssl_kwargs(config_path, cert_dir=cert_dir) if ssl_context else {}
