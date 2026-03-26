@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 
 def _assert_descriptor_shape(body: dict):
     assert isinstance(body, dict)
@@ -44,3 +46,14 @@ def test_rec_ranking_acs_conformance(client_rec_ranking):
 
 def test_reading_concierge_acs_conformance(client_reading_concierge):
     _assert_acs(client_reading_concierge)
+
+
+def test_acps_partner_material_layout_exists():
+    root = Path(__file__).resolve().parents[1]
+    for agent_name in ("reader_profile_agent", "book_content_agent", "rec_ranking_agent"):
+        agent_dir = root / "partners" / "online" / agent_name
+        assert (agent_dir / "acs.json").exists()
+        assert (agent_dir / "config.toml").exists()
+        assert (agent_dir / "prompts.toml").exists()
+        assert (agent_dir / "certs" / "agent.crt").exists()
+        assert (agent_dir / "certs" / "agent.key").exists()

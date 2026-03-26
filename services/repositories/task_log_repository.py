@@ -46,3 +46,32 @@ class TaskLogRepository:
                     timestamp or utc_now(),
                 ),
             )
+
+    def prune_old_logs(self, *, keep_latest_per_task: int = 200) -> int:
+        keep = max(1, int(keep_latest_per_task))
+        with transaction(self.db_url) as conn:
+            rows = conn.execute(
+                """
+                SELECT id
+                FROM (
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY task_id
+                            ORDER BY timestamp DESC, id DESC
+                        ) AS rn
+                    FROM agent_task_logs
+                )
+                WHERE rn > ?
+                """,
+                (keep,),
+            ).fetchall()
+            ids = [int(row["id"]) for row in rows]
+            if not ids:
+                return 0
+            placeholders = ",".join("?" for _ in ids)
+            conn.execute(
+                f"DELETE FROM agent_task_logs WHERE id IN ({placeholders})",
+                tuple(ids),
+            )
+            return len(ids)

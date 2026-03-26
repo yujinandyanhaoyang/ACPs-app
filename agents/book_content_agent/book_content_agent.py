@@ -48,9 +48,15 @@ app = FastAPI(
     description="ACPs-compliant agent that synthesizes book vectors, tags, and KG references.",
 )
 
-_FORMAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
+_FORMAL_ACS_JSON_PATH = Path(_PROJECT_ROOT) / "partners" / "online" / "book_content_agent" / "acs.json"
+_LOCAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
 _LEGACY_ACS_JSON_PATH = Path(_CURRENT_DIR) / "config.example.json"
-_ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH if _FORMAL_ACS_JSON_PATH.exists() else _LEGACY_ACS_JSON_PATH)
+if _FORMAL_ACS_JSON_PATH.exists():
+    _ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH)
+elif _LOCAL_ACS_JSON_PATH.exists():
+    _ACS_JSON_PATH = str(_LOCAL_ACS_JSON_PATH)
+else:
+    _ACS_JSON_PATH = str(_LEGACY_ACS_JSON_PATH)
 register_acs_route(app, _ACS_JSON_PATH)
 
 _BOOK_CONTENT_CONTEXT: Dict[str, Dict[str, Any]] = {}
@@ -226,6 +232,20 @@ def _heuristic_tags_for_book(book: Dict[str, Any], query: str = "") -> Dict[str,
     elif any(token in corpus for token in ["hopeful", "inspiring", "uplifting"]):
         mood = "uplifting"
 
+    theme = "general"
+    if any(token in corpus for token in ["identity", "culture", "society", "community"]):
+        theme = "society"
+    elif any(token in corpus for token in ["technology", "innovation", "science"]):
+        theme = "technology"
+    elif any(token in corpus for token in ["history", "legacy", "civilization"]):
+        theme = "history"
+
+    audience = str(book.get("audience") or "").lower().strip()
+    if not audience:
+        audience = "adult"
+        if any(token in corpus for token in ["young adult", "teen", "kids", "children"]):
+            audience = "young_adult"
+
     difficulty = str(book.get("difficulty") or "").lower().strip()
     if not difficulty:
         page_count = book.get("page_count") or book.get("pages")
@@ -245,8 +265,10 @@ def _heuristic_tags_for_book(book: Dict[str, Any], query: str = "") -> Dict[str,
     return {
         "book_id": book["book_id"],
         "topics": ordered_topics[:4],
+        "theme": theme,
         "style": style,
         "difficulty": difficulty,
+        "audience": audience,
         "mood": mood,
         "diversity_indicators": diversity_indicators,
     }
@@ -280,10 +302,13 @@ def _extract_kg_refs(payload: Dict[str, Any], books: List[Dict[str, Any]]) -> Li
 
     # --- 2. Real local-KG lookup ---
     if _kg_client.is_available():
-        for book in books:
-            ctx = _kg_client.get_book_context(book["book_id"])
-            for node_id in (ctx.get("authors") or []) + (ctx.get("genres") or []):
-                _add(node_id)
+        try:
+            for book in books:
+                ctx = _kg_client.get_book_context(book["book_id"])
+                for node_id in (ctx.get("authors") or []) + (ctx.get("genres") or []):
+                    _add(node_id)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("event=kg_context_unavailable reason=%s", exc)
 
     return deduped
 
@@ -408,9 +433,13 @@ async def _analyze_content(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     # Compute per-book KG connectivity signal and embed into each vector entry
     book_ids = [b["book_id"] for b in books]
-    kg_signals: Dict[str, float] = (
-        _kg_client.compute_kg_signal(book_ids) if _kg_client.is_available() else {}
-    )
+    kg_signals: Dict[str, float] = {}
+    if _kg_client.is_available():
+        try:
+            kg_signals = _kg_client.compute_kg_signal(book_ids)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("event=kg_signal_unavailable reason=%s", exc)
+            kg_signals = {}
     for vec in content_vectors:
         vec["kg_signal"] = kg_signals.get(str(vec["book_id"]), 0.0)
 

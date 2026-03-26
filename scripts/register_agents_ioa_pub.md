@@ -13,9 +13,9 @@ This runbook defines the reproducible process for registering the reading recomm
 
 - ACS descriptors:
   - `reading_concierge/reading_concierge.json`
-  - `agents/reader_profile_agent/acs.json`
-  - `agents/book_content_agent/acs.json`
-  - `agents/rec_ranking_agent/acs.json`
+  - `partners/online/reader_profile_agent/acs.json`
+  - `partners/online/book_content_agent/acs.json`
+  - `partners/online/rec_ranking_agent/acs.json`
 - ATR-issued identity and trust material for each agent
 - Registry account and API credentials for ioa.pub
 

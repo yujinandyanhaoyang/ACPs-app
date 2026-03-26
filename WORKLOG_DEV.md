@@ -185,3 +185,23 @@
 
 - `pytest tests/test_aip_conformance.py tests/test_acs_conformance.py -q` -> passed
 - `pytest tests/test_persistence_db.py tests/test_reading_workflow_e2e.py -q` -> passed
+
+## Week 5: 2026-03-26 (waiting-period parallel advance)
+
+### Status-tagged progress
+
+- `DONE (local)`: Expanded local AIP conformance coverage for command/state transitions and identity lineage checks.
+- `DONE (local)`: Added local fault-injection hardening for KG-backend unavailability in Book Content Agent.
+- `DONE (local)`: Clarified persistence traceability documentation, including `receiver_id` as a system extension field.
+- `PARTIAL_LOCAL_PLACEHOLDER`: Updated ACS descriptors with explicit ioa.pub pending markers for AIC/cert/endpoint identity.
+- `READY_FOR_IOA_PUB`: Prepared local-vs-official status matrix and registration evidence structure for handoff.
+- `BLOCKED_BY_IOA_PUB`: Real AIC issuance, official registration verification, official ATR/AIA/ADP/DSP evidence.
+
+## Week 5: 2026-03-26 (ACPs partner material layout standardization)
+
+### Status-tagged progress
+
+- `DONE (local)`: Added ACPs-standard partner directory layout under `partners/online/{agent}/` with `acs.json`, `config.toml`, `prompts.toml`, and `certs/`.
+- `PARTIAL_LOCAL_PLACEHOLDER`: Added placeholder `certs/agent.crt` and `certs/agent.key` for each partner, explicitly marked as pending ioa.pub official issuance.
+- `DONE (local)`: Updated partner runtime ACS loading to prioritize `partners/online/*/acs.json` with backward-compatible fallback to `agents/*/acs.json`.
+- `DONE (local)`: Updated conformance/docs/runbook references to use the standardized partner material paths.

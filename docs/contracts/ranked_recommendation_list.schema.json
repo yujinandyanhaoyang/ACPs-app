@@ -19,6 +19,7 @@
           "score_kg",
           "score_diversity",
           "rank_position",
+          "scenario_policy",
           "explanation",
           "explanation_evidence_refs"
         ],
@@ -32,10 +33,10 @@
           "score_diversity": { "type": "number" },
           "rank_position": { "type": "integer", "minimum": 1 },
           "scenario_policy": { "type": "string" },
-          "explanation": { "type": "string" },
+          "explanation": { "type": "string", "minLength": 1 },
           "explanation_evidence_refs": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": { "type": "string", "minLength": 1 }
           }
         },
         "additionalProperties": true

@@ -4,20 +4,22 @@
   "x_contract_version": "v1.0.0",
   "title": "BookFeatureMapJSON",
   "type": "object",
-  "required": ["embedding_version", "content_vectors", "book_tags"],
+  "required": ["embedding_version", "content_vectors", "book_tags", "features_metadata"],
   "properties": {
     "embedding_version": { "type": "string" },
     "content_vectors": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["book_id", "vector"],
+        "required": ["book_id", "vector", "vector_dim", "embedding_model", "embedding_backend"],
         "properties": {
           "book_id": { "type": "string" },
           "vector": { "type": "array", "items": { "type": "number" } },
           "vector_dim": { "type": "integer", "minimum": 1 },
           "embedding_model": { "type": "string" },
+          "embedding_version": { "type": "string" },
           "embedding_backend": { "type": "string" },
+          "candidate_source": { "type": "string" },
           "kg_refs": { "type": "array", "items": { "type": "string" } },
           "kg_signal": { "type": "number" }
         },
@@ -28,17 +30,30 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["book_id"],
+        "required": ["book_id", "topics", "theme", "style", "difficulty", "audience"],
         "properties": {
           "book_id": { "type": "string" },
           "topics": { "type": "array", "items": { "type": "string" } },
+          "theme": { "type": "string" },
           "style": { "type": "string" },
           "difficulty": { "type": "string" },
+          "audience": { "type": "string" },
           "mood": { "type": "string" },
           "diversity_indicators": { "type": "array", "items": { "type": "string" } }
         },
         "additionalProperties": true
       }
+    },
+    "features_metadata": {
+      "type": "object",
+      "required": ["metadata_version", "embedding_version", "candidate_count", "candidate_sources"],
+      "properties": {
+        "metadata_version": { "type": "string" },
+        "embedding_version": { "type": "string" },
+        "candidate_count": { "type": "integer", "minimum": 0 },
+        "candidate_sources": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": true

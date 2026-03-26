@@ -48,9 +48,15 @@ app = FastAPI(
     description="ACPs-compliant agent that synthesizes user preference vectors for reading journeys.",
 )
 
-_FORMAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
+_FORMAL_ACS_JSON_PATH = Path(_PROJECT_ROOT) / "partners" / "online" / "reader_profile_agent" / "acs.json"
+_LOCAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
 _LEGACY_ACS_JSON_PATH = Path(_CURRENT_DIR) / "config.example.json"
-_ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH if _FORMAL_ACS_JSON_PATH.exists() else _LEGACY_ACS_JSON_PATH)
+if _FORMAL_ACS_JSON_PATH.exists():
+    _ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH)
+elif _LOCAL_ACS_JSON_PATH.exists():
+    _ACS_JSON_PATH = str(_LOCAL_ACS_JSON_PATH)
+else:
+    _ACS_JSON_PATH = str(_LEGACY_ACS_JSON_PATH)
 register_acs_route(app, _ACS_JSON_PATH)
 
 _PROFILE_CONTEXT: dict[str, Dict[str, Any]] = {}

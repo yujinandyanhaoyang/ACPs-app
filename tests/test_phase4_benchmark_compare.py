@@ -105,6 +105,9 @@ def test_build_compact_summary_contains_demo_fields():
     assert "acps_reliability" in summary
     assert "strict_mode" in summary["acps_reliability"]
     assert "fallback_mode" in summary["acps_reliability"]
+    assert "acceptance_gate" in summary
+    assert "checks" in summary["acceptance_gate"]
+    assert "ndcg_at_k" in summary["acceptance_gate"]["checks"]
 
 
 def test_build_markdown_report_contains_required_sections():
@@ -119,6 +122,7 @@ def test_build_markdown_report_contains_required_sections():
     assert "# Phase IV Benchmark Report (Compact)" in markdown
     assert "## Run Summary" in markdown
     assert "## ACPs Quality" in markdown
+    assert "## P2 Acceptance Gate" in markdown
     assert "## ACPs Efficiency" in markdown
     assert "## ACPs Reliability Dashboard" in markdown
     assert "### Strict Mode" in markdown

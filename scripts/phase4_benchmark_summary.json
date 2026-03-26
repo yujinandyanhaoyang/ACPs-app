@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-02-25T11:27:18Z",
+  "generated_at": "2026-03-25T13:53:43Z",
   "case_count": 8,
-  "winner_method": "multi_agent_proxy",
-  "winner_objective_score": 0.73301,
+  "winner_method": "acps_multi_agent",
+  "winner_objective_score": 0.657385,
   "acps_quality": {
-    "precision_at_k": 0.4167,
-    "recall_at_k": 0.625,
-    "ndcg_at_k": 0.5688
+    "precision_at_k": 0.5,
+    "recall_at_k": 0.875,
+    "ndcg_at_k": 0.7727
   },
   "acps_efficiency": {
-    "latency_ms_mean": 3091.5268
+    "latency_ms_mean": 106398.112
   },
   "acps_reliability": {
     "strict_mode": {
@@ -28,5 +28,42 @@
       "remote_success_rate": 0.125,
       "strict_failure_rate": 0.125
     }
+  },
+  "acceptance_gate": {
+    "thresholds": {
+      "precision_at_k": 0.4,
+      "recall_at_k": 0.6,
+      "ndcg_at_k": 0.6,
+      "diversity": 0.35,
+      "novelty": 0.35
+    },
+    "checks": {
+      "precision_at_k": {
+        "actual": 0.5,
+        "target": 0.4,
+        "passed": true
+      },
+      "recall_at_k": {
+        "actual": 0.875,
+        "target": 0.6,
+        "passed": true
+      },
+      "ndcg_at_k": {
+        "actual": 0.7727,
+        "target": 0.6,
+        "passed": true
+      },
+      "diversity": {
+        "actual": 0.434,
+        "target": 0.35,
+        "passed": true
+      },
+      "novelty": {
+        "actual": 0.4354,
+        "target": 0.35,
+        "passed": true
+      }
+    },
+    "passed": true
   }
 }

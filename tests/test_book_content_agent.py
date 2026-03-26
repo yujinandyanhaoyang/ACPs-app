@@ -228,3 +228,37 @@ def test_book_content_intake_dedup_and_normalization(client_book_content, new_ta
 
     b1_tags = next(t for t in tags if t["book_id"] == "b1")
     assert "science" in b1_tags["topics"] or "fiction" in b1_tags["topics"]
+
+
+@pytest.mark.usefixtures("patch_openai")
+def test_book_content_gracefully_handles_kg_backend_unavailable(monkeypatch, client_book_content, new_task_id):
+    monkeypatch.setattr(
+        "agents.book_content_agent.book_content_agent._kg_client.is_available",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "agents.book_content_agent.book_content_agent._kg_client.get_book_context",
+        lambda _book_id: (_ for _ in ()).throw(RuntimeError("kg backend down")),
+    )
+    monkeypatch.setattr(
+        "agents.book_content_agent.book_content_agent._kg_client.compute_kg_signal",
+        lambda _book_ids: (_ for _ in ()).throw(RuntimeError("kg backend down")),
+    )
+
+    payload = {
+        "books": [
+            {
+                "book_id": "kg-down-1",
+                "title": "Fallback Test",
+                "description": "test kg degraded path",
+                "genres": ["science_fiction"],
+            }
+        ],
+        "kg_mode": "local",
+    }
+
+    res = _post(client_book_content, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    assert outputs["kg_refs"] == []
+    assert outputs["content_vectors"][0]["kg_signal"] == 0.0

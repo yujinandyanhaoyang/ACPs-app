@@ -13,6 +13,7 @@ Planned window: 2026-03-22 to 2026-04-26 (5 weeks, can be compressed by parallel
 
 ## Current Gate Status
 - 2026-03-23 baseline verification: `pytest` -> `117 passed, 9 skipped, 0 failed`.
+- 2026-03-25 P4 persistence hardening verification: `.venv/bin/python -m pytest -q tests/test_persistence_db.py tests/test_backfill_scripts.py` -> `6 passed, 0 failed`.
 - P0 hardening gate decision: **GO** for continuing implementation under the existing phase boundaries.
 - Remaining phase checklists stay authoritative; unchecked items are not implicitly closed by this gate update.
 
@@ -460,9 +461,9 @@ Synchronization and Governance:
 ## 6. Milestone Checklist (Execution Tracking)
 
 P0 Baseline:
-- [ ] Baseline API snapshots captured.
+- [x] Baseline API snapshots captured.
 - [x] Gap matrix written and reviewed.
-- [ ] Baseline benchmark artifacts archived.
+- [x] Baseline benchmark artifacts archived.
 - [x] Leader/Partner runtime flow frozen.
 - [x] Candidate generation owner frozen.
 - [x] Contract v1 schemas reviewed.
@@ -475,11 +476,11 @@ P1 Profile Lifecycle:
 - [x] Debug override path separated from production path.
 
 P2 Partner Optimization:
-- [ ] book_content_agent aligned to redesign schema and enrichment logic.
-- [ ] rec_ranking_agent aligned to redesign scoring and explanation requirements.
-- [ ] New contract tests added and passing.
-- [ ] Benchmark/ablation reports regenerated.
-- [ ] Acceptance thresholds defined and met.
+- [x] book_content_agent aligned to redesign schema and enrichment logic.
+- [x] rec_ranking_agent aligned to redesign scoring and explanation requirements.
+- [x] New contract tests added and passing.
+- [x] Benchmark/ablation reports regenerated.
+- [x] Acceptance thresholds defined and met.
 
 P3 ACPs Officialization:
 - [ ] Real AIC and certificate materials integrated.
@@ -489,16 +490,16 @@ P3 ACPs Officialization:
 - [ ] ADP operating mode declared and documented.
 
 P4 Persistence:
-- [ ] DB schema and migration pipeline landed.
-- [ ] Interaction events and recommendation outputs persisted.
-- [ ] Backfill scripts verified on sample datasets.
-- [ ] Recovery after restart validated.
-- [ ] Recommendation evidence replay/audit validated.
+- [x] DB schema and migration pipeline landed.
+- [x] Interaction events and recommendation outputs persisted.
+- [x] Backfill scripts verified on sample datasets.
+- [x] Recovery after restart validated.
+- [x] Recommendation evidence replay/audit validated.
 
 P5 Release Readiness:
 - [ ] End-to-end tests green.
 - [ ] Security and protocol compliance checks green.
-- [ ] Updated runbook and docs published.
+- [x] Updated runbook and docs published.
 - [ ] Final acceptance demo completed.
 - [ ] Product-level recommendation acceptance tests passed.
 

@@ -71,3 +71,35 @@ def test_reading_workflow_persists_reproducible_artifacts(tmp_path):
     assert logs >= 1
     # completed flows should persist recommendations; needs_input may persist none.
     assert recs >= 0
+
+    audit_runs = client.get("/demo/audit/runs", params={"user_id": "e2e_user_01", "limit": 5})
+    assert audit_runs.status_code == 200
+    audit_payload = audit_runs.json()
+    assert audit_payload.get("count", 0) >= 1
+
+    run_id = str((audit_payload.get("runs") or [])[0].get("run_id") or "")
+    assert run_id
+    detail = client.get(f"/demo/audit/runs/{run_id}")
+    assert detail.status_code == 200
+    detail_payload = detail.json()
+    assert detail_payload.get("user_id") == "e2e_user_01"
+    assert isinstance(detail_payload.get("recommendations"), list)
+    assert str(detail_payload.get("query") or "").strip()
+    assert str(detail_payload.get("profile_version") or "").strip()
+    assert str(detail_payload.get("candidate_set_version_or_hash") or "").strip()
+    assert str(detail_payload.get("book_feature_version_or_hash") or "").strip()
+    assert str(detail_payload.get("ranking_policy_version") or "").strip()
+
+    if detail_payload.get("recommendations"):
+        top_item = detail_payload["recommendations"][0]
+        for key in (
+            "score_total",
+            "score_cf",
+            "score_content",
+            "score_kg",
+            "score_diversity",
+            "rank_position",
+            "explanation",
+            "explanation_evidence_refs",
+        ):
+            assert key in top_item

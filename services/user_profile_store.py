@@ -104,12 +104,6 @@ class UserProfileStore:
             finally:
                 conn.close()
 
-        try:
-            self._profile_repo.append_event(user_id, event_type, payload)
-        except Exception:
-            # Legacy store remains source of truth if runtime-db sync fails.
-            pass
-
     def _ensure_columns(self, conn: sqlite3.Connection, table: str, columns: Dict[str, str]) -> None:
         existing = {
             row["name"]
@@ -138,7 +132,7 @@ class UserProfileStore:
                 conn.close()
 
         try:
-            self._profile_repo.save_profile_snapshot(user_id, snapshot)
+            self._profile_repo.append_event(user_id, event_type, payload)
         except Exception:
             pass
 
@@ -500,6 +494,39 @@ class UserProfileStore:
             )
         except Exception:
             pass
+
+    def list_recommendation_runs(self, *, user_id: Optional[str], limit: int = 20) -> List[Dict[str, Any]]:
+        try:
+            return self._recommendation_repo.list_recommendation_runs(user_id=user_id, limit=limit)
+        except Exception:
+            return []
+
+    def get_recommendation_run(self, run_id: str) -> Dict[str, Any]:
+        try:
+            return self._recommendation_repo.get_run_with_recommendations(run_id)
+        except Exception:
+            return {}
+
+    def prune_retention(self, *, keep_latest_runs_per_user: int = 100, keep_latest_logs_per_task: int = 200) -> Dict[str, int]:
+        pruned_runs = 0
+        pruned_logs = 0
+        try:
+            pruned_runs = int(
+                self._recommendation_repo.prune_old_runs(
+                    keep_latest_per_user=keep_latest_runs_per_user
+                )
+            )
+        except Exception:
+            pruned_runs = 0
+        try:
+            pruned_logs = int(
+                self._task_log_repo.prune_old_logs(
+                    keep_latest_per_task=keep_latest_logs_per_task
+                )
+            )
+        except Exception:
+            pruned_logs = 0
+        return {"recommendation_runs": pruned_runs, "agent_task_logs": pruned_logs}
 
 
 profile_store = UserProfileStore()

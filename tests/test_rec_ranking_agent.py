@@ -231,12 +231,9 @@ def test_ranking_output_contract_compliance(client_rec_ranking, new_task_id):
     # Contract requirement: scenario_policy must be present
     assert "scenario_policy" in outputs
     assert outputs["scenario_policy"] in {
-        "quick_read",
-        "deep_exploration",
-        "discovery",
-        "similarity_based",
-        "casual_reading",
-        "balanced_recommendation",
+        "cold",
+        "warm",
+        "explore",
     }
 
     # Contract requirement: ranking items must have all required fields
@@ -305,9 +302,9 @@ def test_scenario_policy_is_propagated_to_all_ranked_items(client_rec_ranking, n
     assert _state(res) == TaskState.Completed.value
 
     outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
-    assert outputs["scenario_policy"] == "discovery"
+    assert outputs["scenario_policy"] == "explore"
     for item in outputs["ranking"]:
-        assert item["scenario_policy"] == "discovery"
+        assert item["scenario_policy"] == "explore"
 
 
 @pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
@@ -337,3 +334,185 @@ def test_explanation_evidence_refs_are_flat_string_list(client_rec_ranking, new_
     refs = item.get("explanation_evidence_refs") or []
     assert isinstance(refs, list)
     assert all(isinstance(ref, str) for ref in refs)
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_candidate_membership_is_not_expanded_by_vector_only_rows(client_rec_ranking, new_task_id):
+    payload = {
+        "scenario_policy": "warm",
+        "profile_vector": {"genres": {"history": 1.0}},
+        "candidates": [
+            {
+                "book_id": "b1",
+                "title": "Known Candidate",
+                "novelty_score": 0.3,
+                "diversity_score": 0.3,
+            }
+        ],
+        "content_vectors": [
+            {"book_id": "b1", "vector": [0.8, 0.7, 0.6], "kg_signal": 0.4},
+            {"book_id": "rogue-b2", "vector": [0.7, 0.6, 0.5], "kg_signal": 0.9},
+        ],
+        "svd_factors": [{"book_id": "b1", "score": 0.8}, {"book_id": "rogue-b2", "score": 0.95}],
+        "constraints": {"top_k": 3},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    ranking = _products(res)[0]["dataItems"][0]["data"]["outputs"]["ranking"]
+    assert len(ranking) == 1
+    assert ranking[0]["book_id"] == "b1"
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_hard_minimums_for_novelty_and_diversity_are_enforced(client_rec_ranking, new_task_id):
+    payload = {
+        "scenario_policy": "warm",
+        "profile_vector": {"genres": {"science_fiction": 1.0}},
+        "candidates": [
+            {"book_id": "a", "title": "A", "vector": [0.9, 0.9, 0.9], "novelty_score": 0.2, "diversity_score": 0.2},
+            {"book_id": "b", "title": "B", "vector": [0.88, 0.88, 0.88], "novelty_score": 0.3, "diversity_score": 0.25},
+            {"book_id": "c", "title": "C", "vector": [0.7, 0.7, 0.7], "novelty_score": 0.75, "diversity_score": 0.72},
+            {"book_id": "d", "title": "D", "vector": [0.65, 0.65, 0.65], "novelty_score": 0.8, "diversity_score": 0.78},
+        ],
+        "svd_factors": [
+            {"book_id": "a", "score": 0.95},
+            {"book_id": "b", "score": 0.9},
+            {"book_id": "c", "score": 0.4},
+            {"book_id": "d", "score": 0.35},
+        ],
+        "scoring_weights": {"collaborative": 1.0, "semantic": 0.0, "knowledge": 0.0, "diversity": 0.0},
+        "constraints": {
+            "top_k": 3,
+            "novelty_threshold": 0.7,
+            "min_new_items": 2,
+            "diversity_threshold": 0.7,
+            "min_diverse_items": 2,
+        },
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    ranking = outputs["ranking"]
+    metrics = outputs["metric_snapshot"]
+
+    ranked_ids = {item["book_id"] for item in ranking}
+    assert {"c", "d"}.issubset(ranked_ids)
+    assert metrics["new_item_count"] >= 2
+    assert metrics["diverse_item_count"] >= 2
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_constraints_scenario_is_used_as_primary_policy(client_rec_ranking, new_task_id):
+    payload = {
+        "query": "recommend something",
+        "profile_vector": {"genres": {"fantasy": 1.0}},
+        "candidates": [
+            {
+                "book_id": "x1",
+                "title": "X1",
+                "vector": [0.8, 0.7, 0.6],
+                "kg_signal": 0.3,
+                "novelty_score": 0.5,
+                "diversity_score": 0.5,
+            }
+        ],
+        "constraints": {"scenario": "cold", "top_k": 1},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    assert outputs["scenario_policy"] == "cold"
+    assert outputs["ranking"][0]["scenario_policy"] == "cold"
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_query_cue_derives_explore_scenario(client_rec_ranking, new_task_id):
+    payload = {
+        "query": "discover something new",
+        "profile_vector": {"genres": {"science_fiction": 1.0}},
+        "candidates": [
+            {
+                "book_id": "e1",
+                "title": "Explore Candidate",
+                "vector": [0.8, 0.7, 0.6],
+                "kg_signal": 0.3,
+                "novelty_score": 0.6,
+                "diversity_score": 0.6,
+            }
+        ],
+        "constraints": {"top_k": 1},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    assert outputs["scenario_policy"] == "explore"
+    assert outputs["ranking"][0]["scenario_policy"] == "explore"
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_default_branch_derives_warm_scenario(client_rec_ranking, new_task_id):
+    payload = {
+        "query": "recommend classics",
+        "profile_vector": {
+            "genres": {"classic": 1.0},
+            "pacing": {"fast": 0.8, "slow": 0.2},
+            "difficulty": {"beginner": 0.7, "advanced": 0.2},
+        },
+        "candidates": [
+            {
+                "book_id": "w1",
+                "title": "Warm Candidate",
+                "vector": [0.8, 0.7, 0.6],
+                "kg_signal": 0.2,
+                "novelty_score": 0.4,
+                "diversity_score": 0.4,
+            }
+        ],
+        "constraints": {"top_k": 1},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    outputs = _products(res)[0]["dataItems"][0]["data"]["outputs"]
+    assert outputs["scenario_policy"] == "warm"
+    assert outputs["ranking"][0]["scenario_policy"] == "warm"
+
+
+@pytest.mark.usefixtures("patch_openai", "patch_embeddings_384d")
+def test_explanation_evidence_refs_are_field_paths(client_rec_ranking, new_task_id):
+    payload = {
+        "query": "science books",
+        "profile_vector": {"genres": {"science": 1.0}},
+        "candidates": [
+            {
+                "book_id": "r1",
+                "title": "Evidence Candidate",
+                "vector": [0.8, 0.7, 0.6],
+                "kg_signal": 0.7,
+                "novelty_score": 0.6,
+                "diversity_score": 0.5,
+                "genres": ["science"],
+            }
+        ],
+        "constraints": {"top_k": 1},
+    }
+
+    res = _post(client_rec_ranking, _with_payload(new_task_id, payload))
+    assert _state(res) == TaskState.Completed.value
+
+    item = _products(res)[0]["dataItems"][0]["data"]["outputs"]["ranking"][0]
+    refs = item["explanation_evidence_refs"]
+    assert "score_parts.collaborative" in refs
+    assert "score_parts.semantic" in refs
+    assert "score_parts.knowledge" in refs
+    assert "score_parts.diversity" in refs
+    assert "composite_score" in refs

@@ -100,6 +100,34 @@ def test_demo_benchmark_summary_route_available(client_reading_concierge):
         assert "message" in payload
 
 
+@pytest.mark.usefixtures("patch_openai")
+def test_demo_audit_routes_return_persisted_run_data(client_reading_concierge):
+    uid = f"u-audit-{uuid.uuid4()}"
+    payload = {
+        "user_id": uid,
+        "query": "audit route check",
+        "user_profile": {"preferred_language": "en"},
+        "history": [{"title": "Dune", "genres": ["science_fiction"], "rating": 5, "language": "en"}],
+        "books": [{"book_id": "audit-1", "title": "Foundation", "description": "d", "genres": ["science_fiction"]}],
+        "constraints": {"debug_payload_override": True},
+    }
+    _post_user_api(client_reading_concierge, payload)
+
+    list_resp = client_reading_concierge.get("/demo/audit/runs", params={"user_id": uid, "limit": 5})
+    assert list_resp.status_code == 200
+    list_body = list_resp.json()
+    assert int(list_body.get("count") or 0) >= 1
+    runs = list_body.get("runs") or []
+    run_id = str(runs[0].get("run_id") or "")
+    assert run_id
+
+    detail_resp = client_reading_concierge.get(f"/demo/audit/runs/{run_id}")
+    assert detail_resp.status_code == 200
+    detail = detail_resp.json()
+    assert detail.get("user_id") == uid
+    assert isinstance(detail.get("recommendations"), list)
+
+
 def test_user_api_requires_user_id_and_query(client_reading_concierge):
     missing_user = client_reading_concierge.post("/user_api", json={"query": "recommend books"})
     assert missing_user.status_code == 422

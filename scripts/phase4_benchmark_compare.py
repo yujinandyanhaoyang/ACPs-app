@@ -20,6 +20,13 @@ from reading_concierge.reading_concierge import app as concierge_app
 from services.baseline_rankers import traditional_hybrid_rank, multi_agent_sequential_rank, llm_only_rank
 from services.phase4_benchmark import aggregate_method_runs, evaluate_method_case, rank_methods
 
+# Force deterministic offline execution for benchmark/optimization runs.
+# This avoids flaky external API calls and keeps P2 evidence reproducible.
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENAI_BASE_URL"] = ""
+os.environ.setdefault("BOOK_CONTENT_EMBED_MODEL", "all-MiniLM-L6-v2")
+os.environ.setdefault("REC_RANKING_EMBED_MODEL", "all-MiniLM-L6-v2")
+
 
 BASELINE_METHODS: Dict[str, Callable[..., Any]] = {
     "traditional_hybrid": traditional_hybrid_rank,
@@ -36,6 +43,17 @@ DEFAULT_FINDING_THRESHOLDS: Dict[str, float] = {
     "reliability_strict_fail_warn": 0.1,
     "reliability_remote_success_good": 0.2,
 }
+
+# Placeholder acceptance thresholds for P2 sign-off. Update with approved targets
+# before final sign-off per UPDATEPLAN acceptance-gate requirements.
+ACCEPTANCE_GATE_THRESHOLDS: Dict[str, float] = {
+    "precision_at_k": 0.40,
+    "recall_at_k": 0.60,
+    "ndcg_at_k": 0.60,
+    "diversity": 0.35,
+    "novelty": 0.35,
+}
+
 
 
 class _RemoteStressPatch:
@@ -270,6 +288,40 @@ def _build_compact_summary(report: Dict[str, Any]) -> Dict[str, Any]:
             "latency_ms_mean": acps_summary.get("latency_ms_mean"),
         },
         "acps_reliability": (reliability_dashboard.get("acps_reliability") or {}),
+        "acceptance_gate": _build_acceptance_gate(
+            {
+                "acps_quality": {
+                    "precision_at_k": acps_summary.get("precision_at_k"),
+                    "recall_at_k": acps_summary.get("recall_at_k"),
+                    "ndcg_at_k": acps_summary.get("ndcg_at_k"),
+                    "diversity": acps_summary.get("diversity"),
+                    "novelty": acps_summary.get("novelty"),
+                }
+            }
+        ),
+    }
+
+
+def _build_acceptance_gate(
+    summary: Dict[str, Any],
+    thresholds: Dict[str, float] | None = None,
+) -> Dict[str, Any]:
+    quality = summary.get("acps_quality") or {}
+    rules = thresholds or ACCEPTANCE_GATE_THRESHOLDS
+
+    checks: Dict[str, Dict[str, Any]] = {}
+    for key, target in rules.items():
+        actual = float(quality.get(key) or 0.0)
+        checks[key] = {
+            "actual": round(actual, 4),
+            "target": round(float(target), 4),
+            "passed": actual >= float(target),
+        }
+
+    return {
+        "thresholds": {k: round(float(v), 4) for k, v in rules.items()},
+        "checks": checks,
+        "passed": all(item.get("passed") is True for item in checks.values()),
     }
 
 
@@ -344,6 +396,8 @@ def _build_markdown_report(report: Dict[str, Any], summary: Dict[str, Any]) -> s
     fallback_mode = reliability.get("fallback_mode") or {}
     overall = reliability.get("overall") or {}
     decision = _build_findings_and_recommendations(summary)
+    acceptance_gate = summary.get("acceptance_gate") or {}
+    acceptance_checks = acceptance_gate.get("checks") or {}
 
     method_rows = report.get("methods") or []
     method_summaries: List[Dict[str, Any]] = []
@@ -388,6 +442,14 @@ def _build_markdown_report(report: Dict[str, Any], summary: Dict[str, Any]) -> s
         f"- Precision@k: {_fmt_num(quality.get('precision_at_k'))}",
         f"- Recall@k: {_fmt_num(quality.get('recall_at_k'))}",
         f"- NDCG@k: {_fmt_num(quality.get('ndcg_at_k'))}",
+        "",
+        "## P2 Acceptance Gate",
+        f"- Overall passed: {bool(acceptance_gate.get('passed', False))}",
+        f"- Precision@k: actual={_fmt_num((acceptance_checks.get('precision_at_k') or {}).get('actual'))}, target={_fmt_num((acceptance_checks.get('precision_at_k') or {}).get('target'))}",
+        f"- Recall@k: actual={_fmt_num((acceptance_checks.get('recall_at_k') or {}).get('actual'))}, target={_fmt_num((acceptance_checks.get('recall_at_k') or {}).get('target'))}",
+        f"- NDCG@k: actual={_fmt_num((acceptance_checks.get('ndcg_at_k') or {}).get('actual'))}, target={_fmt_num((acceptance_checks.get('ndcg_at_k') or {}).get('target'))}",
+        f"- Diversity: actual={_fmt_num((acceptance_checks.get('diversity') or {}).get('actual'))}, target={_fmt_num((acceptance_checks.get('diversity') or {}).get('target'))}",
+        f"- Novelty: actual={_fmt_num((acceptance_checks.get('novelty') or {}).get('actual'))}, target={_fmt_num((acceptance_checks.get('novelty') or {}).get('target'))}",
         "",
         "## ACPs Efficiency",
         f"- Latency mean (ms): {_fmt_num(efficiency.get('latency_ms_mean'))}",

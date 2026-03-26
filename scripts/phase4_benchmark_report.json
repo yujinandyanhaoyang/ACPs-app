@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-25T11:27:18Z",
+  "generated_at": "2026-03-25T13:53:43Z",
   "case_count": 8,
   "methods": [
     {
@@ -15,7 +15,7 @@
             "diversity": 0.5,
             "novelty": 0.5
           },
-          "latency_ms": 12520.9779,
+          "latency_ms": 129828.7284,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -26,30 +26,66 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "b2",
               "title": "Hyperion",
-              "composite_score": 0.3667,
+              "score_total": 0.3116,
+              "score_cf": 0.5,
+              "score_content": 0.2473,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "This classic science fiction novel is recommended for its layered narrative and diverse character voices, which facilitate a deep exploration of societal themes. It aligns perfectly with your interest in sci-fi that engages meaningfully with social issues.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 1,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.3478,
-                "knowledge": 0.1,
+                "semantic": 0.2473,
+                "knowledge": 0.0,
                 "diversity": 0.5
               },
-              "novelty_score": 0.5
+              "composite_score": 0.3116
             },
             {
-              "rank": 2,
               "book_id": "b1",
               "title": "Foundation",
-              "composite_score": 0.3556,
+              "score_total": 0.2876,
+              "score_cf": 0.5,
+              "score_content": 0.179,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "\"Foundation\" is a seminal work of classic science fiction that investigates the rise and fall of empires through the lens of psychohistory. It is recommended for its deep engagement with sociological concepts and political structures, directly addressing your interest in science fiction with substantial social themes.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.316,
-                "knowledge": 0.1,
+                "semantic": 0.179,
+                "knowledge": 0.0,
                 "diversity": 0.5
               },
-              "novelty_score": 0.5
+              "composite_score": 0.2876
             }
           ]
         },
@@ -63,7 +99,7 @@
             "diversity": 0.5,
             "novelty": 0.5
           },
-          "latency_ms": 2525.4135,
+          "latency_ms": 83650.485,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -74,53 +110,177 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "b4",
               "title": "Homegoing",
-              "composite_score": 0.3983,
+              "score_total": 0.3411,
+              "score_cf": 0.5,
+              "score_content": 0.2645,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 1,
+              "scenario_policy": "explore",
+              "explanation": "This multicultural novel satisfies your request for diverse reading, while its multigenerational narrative aligns with your interests in history and society.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 1,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.4131,
-                "knowledge": 0.1,
+                "semantic": 0.2645,
+                "knowledge": 0.0,
                 "diversity": 0.5
               },
-              "novelty_score": 0.5
+              "composite_score": 0.3411
             },
             {
-              "rank": 2,
               "book_id": "b3",
               "title": "The Left Hand of Darkness",
-              "composite_score": 0.3857,
+              "score_total": 0.3343,
+              "score_cf": 0.5,
+              "score_content": 0.2372,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 2,
+              "scenario_policy": "explore",
+              "explanation": "Although categorized as science fiction, this novel resonates with your interest in society through its exploration of culture and identity. Its high diversity score ensures a unique perspective fitting your request for diverse literature.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.3628,
-                "knowledge": 0.1,
+                "semantic": 0.2372,
+                "knowledge": 0.0,
                 "diversity": 0.5
               },
-              "novelty_score": 0.5
+              "composite_score": 0.3343
             }
           ]
         },
         {
           "case_id": "cold_start",
-          "state": "needs_input",
+          "state": "completed",
           "metrics": {
-            "precision_at_k": 0.0,
-            "recall_at_k": 0.0,
-            "ndcg_at_k": 0.0,
-            "diversity": 0.0,
-            "novelty": 0.0
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.3,
+            "novelty": 0.3
           },
-          "latency_ms": 1259.9483,
+          "latency_ms": 164920.4913,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
           "fallback_rate": 0.0,
           "remote_success_rate": 0.0,
-          "task_count": 2,
+          "task_count": 3,
           "remote_attempted_count": 0,
           "fallback_count": 0,
-          "recommendations": []
+          "recommendations": [
+            {
+              "book_id": "c3",
+              "title": "c3",
+              "score_total": 0.61,
+              "score_cf": 1.0,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.3,
+              "rank_position": 1,
+              "scenario_policy": "cold",
+              "explanation": "Chosen for perfect semantic alignment with your beginner request and strong collaborative ratings from similar readers.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.novelty_score"
+              ],
+              "rank": 1,
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.3
+              },
+              "composite_score": 0.61
+            },
+            {
+              "book_id": "c1",
+              "title": "c1",
+              "score_total": 0.1446,
+              "score_cf": 0.0,
+              "score_content": 0.1879,
+              "score_kg": 0.0,
+              "score_diversity": 0.3,
+              "rank_position": 2,
+              "scenario_policy": "cold",
+              "explanation": "Recommended to diversify your initial selection. As a new reader, this title offers a fresh perspective alongside your preferred fiction and history genres.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 0.1879,
+                "knowledge": 0.0,
+                "diversity": 0.3
+              },
+              "composite_score": 0.1446
+            },
+            {
+              "book_id": "c2",
+              "title": "c2",
+              "score_total": 0.11,
+              "score_cf": 0.5,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.3,
+              "rank_position": 3,
+              "scenario_policy": "cold",
+              "explanation": "This book is recommended because it consistently appeals to new readers, offering an accessible and engaging entry point that aligns with your request for beginner-friendly content.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.novelty_score"
+              ],
+              "rank": 3,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.0,
+                "knowledge": 0.0,
+                "diversity": 0.3
+              },
+              "composite_score": 0.11
+            }
+          ]
         },
         {
           "case_id": "warm_nonfiction",
@@ -132,7 +292,7 @@
             "diversity": 0.5556,
             "novelty": 0.5667
           },
-          "latency_ms": 2515.1959,
+          "latency_ms": 137510.032,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -143,43 +303,97 @@
           "fallback_count": 0,
           "recommendations": [
             {
+              "book_id": "b7",
+              "title": "Designing Data-Intensive Applications",
+              "score_total": 0.6223,
+              "score_cf": 1.0,
+              "score_content": 0.6828,
+              "score_kg": 0.0,
+              "score_diversity": 0.6667,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "Matches your technology and engineering preferences with practical strategies for system reliability. Highly endorsed by similar readers (collaborative score: 1.0), it provides essential technical depth for scalable product development.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
               "rank": 1,
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.6828,
+                "knowledge": 0.0,
+                "diversity": 0.6667
+              },
+              "composite_score": 0.6223
+            },
+            {
               "book_id": "b5",
               "title": "Inspired",
-              "composite_score": 0.6388,
+              "score_total": 0.6188,
+              "score_cf": 0.2753,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 1.0,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "\"Inspired\" is an essential read for bridging the gap between high-level business strategy and hands-on technical execution. It offers a practical framework for product management and innovation, making it an ideal match for your interest in the engineering and leadership sides of the technology sector.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
               "score_parts": {
                 "collaborative": 0.2753,
                 "semantic": 1.0,
-                "knowledge": 0.1,
+                "knowledge": 0.0,
                 "diversity": 1.0
               },
-              "novelty_score": 0.7
+              "composite_score": 0.6188
             },
             {
-              "rank": 2,
-              "book_id": "b7",
-              "title": "Designing Data-Intensive Applications",
-              "composite_score": 0.6301,
-              "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 0.648,
-                "knowledge": 0.1,
-                "diversity": 0.6667
-              },
-              "novelty_score": 0.6000000000000001
-            },
-            {
-              "rank": 3,
               "book_id": "b6",
               "title": "Zero to One",
-              "composite_score": 0.02,
+              "score_total": 0.0,
+              "score_cf": 0.0,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.0,
+              "rank_position": 3,
+              "scenario_policy": "warm",
+              "explanation": "\"Zero to One\" aligns perfectly with your interest in innovation and business strategy. It provides practical frameworks for building unique tech products and scaling startups, offering actionable insights on moving from idea to market dominance.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 3,
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 0.0,
-                "knowledge": 0.1,
+                "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "novelty_score": 0.4
+              "composite_score": 0.0
             }
           ]
         },
@@ -193,7 +407,7 @@
             "diversity": 0.6667,
             "novelty": 0.6667
           },
-          "latency_ms": 2409.1367,
+          "latency_ms": 117113.2031,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -204,43 +418,97 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "b8",
               "title": "Kindred",
-              "composite_score": 0.6887,
+              "score_total": 0.6997,
+              "score_cf": 0.3316,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 1.0,
+              "rank_position": 1,
+              "scenario_policy": "explore",
+              "explanation": "*Kindred* bridges your interests in history and speculative fiction, exploring societal themes through a time-travel narrative. Its perfect semantic match ensures it delivers the cultural depth you seek.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 1,
               "score_parts": {
                 "collaborative": 0.3316,
-                "semantic": 0.8759,
-                "knowledge": 0.1,
+                "semantic": 1.0,
+                "knowledge": 0.0,
                 "diversity": 1.0
               },
-              "novelty_score": 0.7
+              "composite_score": 0.6997
             },
             {
-              "rank": 2,
               "book_id": "b10",
               "title": "Babel",
-              "composite_score": 0.67,
+              "score_total": 0.6261,
+              "score_cf": 0.0,
+              "score_content": 0.9044,
+              "score_kg": 0.0,
+              "score_diversity": 1.0,
+              "rank_position": 2,
+              "scenario_policy": "explore",
+              "explanation": "While your profile indicates a preference for nonfiction, \"Babel\" is recommended because it bridges your established interest in history and society with your current curiosity about speculative fiction. It retains the thematic depth you value—specifically regarding language, empire, and culture—making it an intellectually stimulating entry into the fantasy genre.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 1.0,
-                "knowledge": 0.1,
+                "semantic": 0.9044,
+                "knowledge": 0.0,
                 "diversity": 1.0
               },
-              "novelty_score": 0.7
+              "composite_score": 0.6261
             },
             {
-              "rank": 3,
               "book_id": "b9",
               "title": "The Silk Roads",
-              "composite_score": 0.17,
+              "score_total": 0.15,
+              "score_cf": 1.0,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.0,
+              "rank_position": 3,
+              "scenario_policy": "explore",
+              "explanation": "Matches your history and nonfiction preferences, focusing on global society and culture. Recommended based on a perfect collaborative relevance score.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 3,
               "score_parts": {
                 "collaborative": 1.0,
                 "semantic": 0.0,
-                "knowledge": 0.1,
+                "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "novelty_score": 0.6000000000000001
+              "composite_score": 0.15
             }
           ]
         },
@@ -254,7 +522,7 @@
             "diversity": 0.65,
             "novelty": 0.65
           },
-          "latency_ms": 2289.8752,
+          "latency_ms": 72373.9207,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 1.0,
@@ -265,53 +533,177 @@
           "fallback_count": 3,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "rs1",
               "title": "Accelerate",
-              "composite_score": 0.4147,
+              "score_total": 0.3396,
+              "score_cf": 0.5,
+              "score_content": 0.2132,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "Matches your engineering and technology interests with evidence-based strategies for delivery performance. Selected for its high diversity and focus on balancing speed with system stability.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 1,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.3706,
-                "knowledge": 0.1,
+                "semantic": 0.2132,
+                "knowledge": 0.0,
                 "diversity": 0.7
               },
-              "novelty_score": 0.7
+              "composite_score": 0.3396
             },
             {
-              "rank": 2,
               "book_id": "rs2",
               "title": "The Phoenix Project",
-              "composite_score": 0.3828,
+              "score_total": 0.3101,
+              "score_cf": 0.5,
+              "score_content": 0.1859,
+              "score_kg": 0.0,
+              "score_diversity": 0.6,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "Although categorized as fiction, this book is a cornerstone for understanding IT operations and systems thinking. It translates complex DevOps and engineering principles into an accessible narrative, providing stable, high-quality insights that meet your interest in technical depth and systems design.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.3367,
-                "knowledge": 0.1,
+                "semantic": 0.1859,
+                "knowledge": 0.0,
                 "diversity": 0.6
               },
-              "novelty_score": 0.6000000000000001
+              "composite_score": 0.3101
             }
           ]
         },
         {
           "case_id": "remote_stress_cold",
-          "state": "needs_input",
+          "state": "completed",
           "metrics": {
-            "precision_at_k": 0.0,
-            "recall_at_k": 0.0,
-            "ndcg_at_k": 0.0,
-            "diversity": 0.0,
-            "novelty": 0.0
+            "precision_at_k": 0.3333,
+            "recall_at_k": 1.0,
+            "ndcg_at_k": 1.0,
+            "diversity": 0.3,
+            "novelty": 0.3
           },
-          "latency_ms": 1210.0146,
+          "latency_ms": 145770.5492,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 1.0,
           "fallback_rate": 1.0,
           "remote_success_rate": 0.0,
-          "task_count": 2,
-          "remote_attempted_count": 2,
-          "fallback_count": 2,
-          "recommendations": []
+          "task_count": 3,
+          "remote_attempted_count": 3,
+          "fallback_count": 3,
+          "recommendations": [
+            {
+              "book_id": "rsc1",
+              "title": "rsc1",
+              "score_total": 0.51,
+              "score_cf": 0.0,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.3,
+              "rank_position": 1,
+              "scenario_policy": "cold",
+              "explanation": "Selected for its perfect semantic match to your request for innovation and product thinking resources, prioritizing your current topic interest over your preferred genres.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.novelty_score"
+              ],
+              "rank": 1,
+              "score_parts": {
+                "collaborative": 0.0,
+                "semantic": 1.0,
+                "knowledge": 0.0,
+                "diversity": 0.3
+              },
+              "composite_score": 0.51
+            },
+            {
+              "book_id": "rsc2",
+              "title": "rsc2",
+              "score_total": 0.4735,
+              "score_cf": 0.5,
+              "score_content": 0.8077,
+              "score_kg": 0.0,
+              "score_diversity": 0.3,
+              "rank_position": 2,
+              "scenario_policy": "cold",
+              "explanation": "This selection features high semantic relevance (0.81) to your request, ensuring accessible, foundational content on innovation and product thinking for beginners.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.novelty_score"
+              ],
+              "rank": 2,
+              "score_parts": {
+                "collaborative": 0.5,
+                "semantic": 0.8077,
+                "knowledge": 0.0,
+                "diversity": 0.3
+              },
+              "composite_score": 0.4735
+            },
+            {
+              "book_id": "rsc3",
+              "title": "rsc3",
+              "score_total": 0.16,
+              "score_cf": 1.0,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.3,
+              "rank_position": 3,
+              "scenario_policy": "cold",
+              "explanation": "This recommendation relies on strong peer validation for beginner innovation. Although it diverges from your preferred fiction and history genres, its perfect collaborative score ensures it is a trusted starting point for product thinking.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.novelty_score"
+              ],
+              "rank": 3,
+              "score_parts": {
+                "collaborative": 1.0,
+                "semantic": 0.0,
+                "knowledge": 0.0,
+                "diversity": 0.3
+              },
+              "composite_score": 0.16
+            }
+          ]
         },
         {
           "case_id": "remote_strict_warm",
@@ -323,7 +715,7 @@
             "diversity": 0.0,
             "novelty": 0.0
           },
-          "latency_ms": 1.6522,
+          "latency_ms": 17.486,
           "strict_remote_validation": true,
           "strict_failure": 1.0,
           "remote_attempt_rate": 1.0,
@@ -337,18 +729,18 @@
       ],
       "summary": {
         "cases": 8.0,
-        "precision_at_k": 0.4167,
-        "recall_at_k": 0.625,
-        "ndcg_at_k": 0.5688,
-        "diversity": 0.359,
-        "novelty": 0.3604,
-        "latency_ms_mean": 3091.5268,
+        "precision_at_k": 0.5,
+        "recall_at_k": 0.875,
+        "ndcg_at_k": 0.7727,
+        "diversity": 0.434,
+        "novelty": 0.4354,
+        "latency_ms_mean": 106398.112,
         "strict_failure_rate": 0.125,
         "remote_attempt_rate": 0.375,
         "fallback_rate": 0.25,
         "remote_success_rate": 0.125,
-        "objective_score": 0.500195,
-        "objective_score_latency_aware": 0.438364
+        "objective_score": 0.657385,
+        "objective_score_latency_aware": -1.470577
       }
     },
     {
@@ -364,7 +756,7 @@
             "diversity": 0.0,
             "novelty": 0.55
           },
-          "latency_ms": 526.914,
+          "latency_ms": 42172.3941,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -376,28 +768,28 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_6452760",
-              "title": "Stones Into Schools: Promoting Peace With Books, Not Bombs, in Afghanistan and Pakistan",
+              "book_id": "amz_0062641387",
+              "title": "Blood of the Four",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.1429,
+                "semantic": 0.4286,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.5714,
+              "composite_score": 0.7143,
               "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "gr_8073",
-              "title": "Cloudy With a Chance of Meatballs",
+              "book_id": "amz_0312329288",
+              "title": "The Year's Best Fantasy and Horror: Seventeenth Annual Collection (Year's Best Fantasy &amp; Horror)",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.1429,
+                "semantic": 0.5714,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.0714,
+              "composite_score": 0.2857,
               "novelty_score": 1.0
             }
           ]
@@ -412,7 +804,7 @@
             "diversity": 0.0,
             "novelty": 0.55
           },
-          "latency_ms": 151.6592,
+          "latency_ms": 41096.5984,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -424,28 +816,28 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_7769",
-              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
+              "book_id": "amz_0062292064",
+              "title": "Lovecraft Country: A Novel",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.1429,
+                "semantic": 0.7143,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.5714,
+              "composite_score": 0.8571,
               "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "gr_775597",
-              "title": "Caps for Sale: A Tale of a Peddler, Some Monkeys and Their Monkey Business",
+              "book_id": "amz_006231727X",
+              "title": "The Distance Between Lost and Found",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.2857,
+                "semantic": 0.7143,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.1429,
+              "composite_score": 0.3571,
               "novelty_score": 1.0
             }
           ]
@@ -460,7 +852,7 @@
             "diversity": 0.0,
             "novelty": 0.5333
           },
-          "latency_ms": 51.7429,
+          "latency_ms": 7618.6789,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -521,7 +913,7 @@
             "diversity": 0.0,
             "novelty": 0.5333
           },
-          "latency_ms": 137.1311,
+          "latency_ms": 41471.0411,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -533,41 +925,41 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_16071764",
-              "title": "Lean In: Women, Work, and the Will to Lead",
+              "book_id": "amz_0070382980",
+              "title": "The Optimum Kayak",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.25,
+                "semantic": 0.75,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.625,
+              "composite_score": 0.875,
               "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "gr_69242",
-              "title": "Made to Stick: Why Some Ideas Survive and Others Die",
+              "book_id": "amz_0071416625",
+              "title": "IMC, the Next Generation Five Steps for Delivering Value and Measuring Returns Using Marketing Communication",
               "score_parts": {
                 "collaborative": 0.5,
-                "semantic": 0.25,
+                "semantic": 0.625,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.375,
+              "composite_score": 0.5625,
               "novelty_score": 0.5
             },
             {
               "rank": 3,
-              "book_id": "gr_13588394",
-              "title": "The Signal and the Noise: Why So Many Predictions Fail - But Some Don't",
+              "book_id": "amz_0071843159",
+              "title": "Global Kata: Success Through the Lean Business System Reference Model",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.25,
+                "semantic": 0.75,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.125,
+              "composite_score": 0.375,
               "novelty_score": 1.0
             }
           ]
@@ -580,9 +972,9 @@
             "recall_at_k": 0.0,
             "ndcg_at_k": 0.0,
             "diversity": 0.0,
-            "novelty": 0.6924
+            "novelty": 0.5333
           },
-          "latency_ms": 145.5077,
+          "latency_ms": 42115.7196,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -594,41 +986,41 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_2002",
-              "title": "Harry Potter Schoolbooks Box Set: Two Classic Books from the Library of Hogwarts School of Witchcraft and Wizardry",
+              "book_id": "amz_0312329288",
+              "title": "The Year's Best Fantasy and Horror: Seventeenth Annual Collection (Year's Best Fantasy &amp; Horror)",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.25,
+                "semantic": 1.0,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.625,
+              "composite_score": 1.0,
               "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "gr_23522",
-              "title": "Mythology: Timeless Tales of Gods and Heroes",
+              "book_id": "amz_0143118706",
+              "title": "Committed: A Love Story",
               "score_parts": {
-                "collaborative": 0.0229,
-                "semantic": 0.125,
+                "collaborative": 0.5,
+                "semantic": 0.625,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.0739,
-              "novelty_score": 0.9771
+              "composite_score": 0.5625,
+              "novelty_score": 0.5
             },
             {
               "rank": 3,
-              "book_id": "gr_29925",
-              "title": "Gods and Generals (The Civil War Trilogy, #1)",
+              "book_id": "amz_0143126253",
+              "title": "Careless People: Murder, Mayhem, and the Invention of The Great Gatsby",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.125,
+                "semantic": 0.5,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.0625,
+              "composite_score": 0.25,
               "novelty_score": 1.0
             }
           ]
@@ -643,7 +1035,7 @@
             "diversity": 0.0,
             "novelty": 0.55
           },
-          "latency_ms": 131.8105,
+          "latency_ms": 41101.9898,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -655,28 +1047,28 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_12691",
-              "title": "Marley and Me: Life and Love With the World's Worst Dog",
+              "book_id": "amz_0023548568",
+              "title": "Computer Graphics Using Open GL (2nd Edition)",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.375,
+                "semantic": 0.625,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.6875,
+              "composite_score": 0.8125,
               "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "gr_6346975",
-              "title": "Moonwalking with Einstein: The Art and Science of Remembering Everything",
+              "book_id": "amz_0120882531",
+              "title": "Rivers of North America",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.375,
+                "semantic": 0.5,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.1875,
+              "composite_score": 0.25,
               "novelty_score": 1.0
             }
           ]
@@ -691,7 +1083,7 @@
             "diversity": 0.0,
             "novelty": 0.5333
           },
-          "latency_ms": 251.2754,
+          "latency_ms": 7014.0367,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -752,7 +1144,7 @@
             "diversity": 0.0,
             "novelty": 0.55
           },
-          "latency_ms": 141.8683,
+          "latency_ms": 42180.4272,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -764,28 +1156,28 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_7769",
-              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
+              "book_id": "amz_0130213438",
+              "title": "Distributed COM Application Development Using Visual Basic 6.0 and MTS",
               "score_parts": {
                 "collaborative": 1.0,
-                "semantic": 0.0,
+                "semantic": 0.8,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.5,
+              "composite_score": 0.9,
               "novelty_score": 0.1
             },
             {
               "rank": 2,
-              "book_id": "gr_949709",
-              "title": "There Was An Old Lady Who Swallowed A Fly (Classic Books)",
+              "book_id": "amz_0131463071",
+              "title": "Core Security Patterns: Best Practices and Strategies for J2EE, Web Services, and Identity Management",
               "score_parts": {
                 "collaborative": 0.0,
-                "semantic": 0.0,
+                "semantic": 0.8,
                 "knowledge": 0.0,
                 "diversity": 0.0
               },
-              "composite_score": 0.0,
+              "composite_score": 0.4,
               "novelty_score": 1.0
             }
           ]
@@ -797,14 +1189,14 @@
         "recall_at_k": 0.25,
         "ndcg_at_k": 0.25,
         "diversity": 0.0,
-        "novelty": 0.5615,
-        "latency_ms_mean": 192.2386,
+        "novelty": 0.5416,
+        "latency_ms_mean": 33096.3607,
         "strict_failure_rate": 0.0,
         "remote_attempt_rate": 0.0,
         "fallback_rate": 0.0,
         "remote_success_rate": 0.0,
-        "objective_score": 0.214475,
-        "objective_score_latency_aware": 0.21063
+        "objective_score": 0.212485,
+        "objective_score_latency_aware": -0.449442
       }
     },
     {
@@ -817,10 +1209,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.6309,
-            "diversity": 0.5,
-            "novelty": 0.5
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2416.7622,
+          "latency_ms": 132146.5005,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -831,30 +1223,50 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "b2",
               "title": "Hyperion",
-              "composite_score": 0.3667,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.3478,
-                "knowledge": 0.1,
-                "diversity": 0.5
-              },
-              "novelty_score": 0.5
+              "score_total": 0.3116,
+              "score_cf": 0.5,
+              "score_content": 0.2473,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "Hyperion aligns with your sci-fi and classic preferences, utilizing a layered narrative with diverse voices to explore social themes. The stories examine complex political structures, matching your interest in thematic depth.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 2,
               "book_id": "b1",
               "title": "Foundation",
-              "composite_score": 0.3556,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.316,
-                "knowledge": 0.1,
-                "diversity": 0.5
-              },
-              "novelty_score": 0.5
+              "score_total": 0.2876,
+              "score_cf": 0.5,
+              "score_content": 0.179,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "Matching your preference for sci-fi classics, *Foundation* explores civilization-scale politics and sociology. It strongly aligns with your request for social themes and your interest in political narratives within the genre.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -865,10 +1277,10 @@
             "precision_at_k": 1.0,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.5,
-            "novelty": 0.5
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2454.472,
+          "latency_ms": 181008.1285,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -879,30 +1291,50 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "b4",
               "title": "Homegoing",
-              "composite_score": 0.3896,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.4131,
-                "knowledge": 0.1,
-                "diversity": 0.5
-              },
-              "novelty_score": 0.5
+              "score_total": 0.3176,
+              "score_cf": 0.5,
+              "score_content": 0.2645,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "Matches your request for diverse novels with a strong diversity score. Its multigenerational, multicultural narrative aligns with your interests in history and societal themes.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 2,
               "book_id": "b3",
               "title": "The Left Hand of Darkness",
-              "composite_score": 0.372,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.3628,
-                "knowledge": 0.1,
-                "diversity": 0.5
-              },
-              "novelty_score": 0.5
+              "score_total": 0.308,
+              "score_cf": 0.5,
+              "score_content": 0.2372,
+              "score_kg": 0.0,
+              "score_diversity": 0.5,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "While classified as science fiction, this novel deeply explores society and culture, aligning with your thematic interests. Its unique anthropological perspective offers the depth you enjoy, fulfilling your request for diverse and novel narratives.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -913,10 +1345,10 @@
             "precision_at_k": 0.3333,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.5,
-            "diversity": 0.7,
-            "novelty": 0.7
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2559.4784,
+          "latency_ms": 195299.3581,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -927,43 +1359,70 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
-              "book_id": "c2",
-              "title": "c2",
-              "composite_score": 0.635,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 1.0,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
-            },
-            {
-              "rank": 2,
               "book_id": "c3",
               "title": "c3",
-              "composite_score": 0.41,
-              "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 0.0,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
+              "score_total": 0.74,
+              "score_cf": 1.0,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 1,
+              "scenario_policy": "explore",
+              "explanation": "This recommendation is tailored to your status as a new reader, specifically targeting your interests in fiction, science fiction, and history. The maximum collaborative and semantic scores confirm this title is a highly relevant and accessible entry point, making it an ideal starting place for your reading journey.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 3,
+              "book_id": "c2",
+              "title": "c2",
+              "score_total": 0.265,
+              "score_cf": 0.5,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 2,
+              "scenario_policy": "explore",
+              "explanation": "Selected for its high diversity score to broaden your reading horizons, with moderate support from similar readers.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
+            },
+            {
               "book_id": "c1",
               "title": "c1",
-              "composite_score": 0.1691,
-              "score_parts": {
-                "collaborative": 0.0,
-                "semantic": 0.026,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
+              "score_total": 0.1673,
+              "score_cf": 0.0,
+              "score_content": 0.0781,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 3,
+              "scenario_policy": "explore",
+              "explanation": "This recommendation aligns with your request for beginner-friendly content, offering an accessible entry point for new readers.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -974,10 +1433,10 @@
             "precision_at_k": 0.6667,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.5556,
-            "novelty": 0.5667
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2549.4505,
+          "latency_ms": 131330.5172,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -988,43 +1447,73 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
-              "book_id": "b5",
-              "title": "Inspired",
-              "composite_score": 0.6388,
-              "score_parts": {
-                "collaborative": 0.2753,
-                "semantic": 1.0,
-                "knowledge": 0.1,
-                "diversity": 1.0
-              },
-              "novelty_score": 0.7
-            },
-            {
-              "rank": 2,
               "book_id": "b7",
               "title": "Designing Data-Intensive Applications",
-              "composite_score": 0.6301,
-              "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 0.648,
-                "knowledge": 0.1,
-                "diversity": 0.6667
-              },
-              "novelty_score": 0.6000000000000001
+              "score_total": 0.6223,
+              "score_cf": 1.0,
+              "score_content": 0.6828,
+              "score_kg": 0.0,
+              "score_diversity": 0.6667,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "This book is recommended for its authoritative guide to engineering reliability and system design, directly aligning with your interest in practical technology. It bridges complex architectural concepts with actionable strategies for building robust, business-critical applications.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 3,
+              "book_id": "b5",
+              "title": "Inspired",
+              "score_total": 0.6188,
+              "score_cf": 0.2753,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 1.0,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "We recommend 'Inspired' as it perfectly matches your request for practical nonfiction at the intersection of technology and business. The book's emphasis on product management and leadership directly supports your interest in innovation and engineering themes.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
+            },
+            {
               "book_id": "b6",
               "title": "Zero to One",
-              "composite_score": 0.02,
-              "score_parts": {
-                "collaborative": 0.0,
-                "semantic": 0.0,
-                "knowledge": 0.1,
-                "diversity": 0.0
-              },
-              "novelty_score": 0.4
+              "score_total": 0.0,
+              "score_cf": 0.0,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.0,
+              "rank_position": 3,
+              "scenario_policy": "warm",
+              "explanation": "\"Zero to One\" aligns with your interest in practical business and technology nonfiction. It provides actionable strategies on innovation and product development, specifically focusing on startup thinking and building unique ventures.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -1035,10 +1524,10 @@
             "precision_at_k": 0.6667,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.9197,
-            "diversity": 0.6667,
-            "novelty": 0.6667
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2587.8666,
+          "latency_ms": 116405.4795,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1049,43 +1538,73 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "b8",
               "title": "Kindred",
-              "composite_score": 0.6095,
-              "score_parts": {
-                "collaborative": 0.3316,
-                "semantic": 0.8759,
-                "knowledge": 0.1,
-                "diversity": 1.0
-              },
-              "novelty_score": 0.7
+              "score_total": 0.6329,
+              "score_cf": 0.3316,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 1.0,
+              "rank_position": 1,
+              "scenario_policy": "explore",
+              "explanation": "Kindred seamlessly merges your requested genres of history and speculative fiction. By examining societal structures and identity, it delivers the cultural depth you seek while maintaining a perfect semantic match to your query.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 2,
               "book_id": "b10",
               "title": "Babel",
-              "composite_score": 0.57,
-              "score_parts": {
-                "collaborative": 0.0,
-                "semantic": 1.0,
-                "knowledge": 0.1,
-                "diversity": 1.0
-              },
-              "novelty_score": 0.7
+              "score_total": 0.5165,
+              "score_cf": 0.0,
+              "score_content": 0.9044,
+              "score_kg": 0.0,
+              "score_diversity": 1.0,
+              "rank_position": 2,
+              "scenario_policy": "explore",
+              "explanation": "Aligns with your request for speculative fiction exploring history and culture. Its focus on language, empire, and society offers the thematic depth you prefer, bridging your nonfiction interests with a fantasy narrative.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 3,
               "book_id": "b9",
               "title": "The Silk Roads",
-              "composite_score": 0.27,
-              "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 0.0,
-                "knowledge": 0.1,
-                "diversity": 0.0
-              },
-              "novelty_score": 0.6000000000000001
+              "score_total": 0.25,
+              "score_cf": 1.0,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.0,
+              "rank_position": 3,
+              "scenario_policy": "explore",
+              "explanation": "This title aligns with your preferred history and nonfiction genres, exploring global culture and societal development.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -1096,10 +1615,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 1.0,
-            "diversity": 0.65,
-            "novelty": 0.65
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2570.0025,
+          "latency_ms": 141310.5226,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1110,30 +1629,50 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "rs1",
               "title": "Accelerate",
-              "composite_score": 0.4147,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.3706,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
+              "score_total": 0.3396,
+              "score_cf": 0.5,
+              "score_content": 0.2132,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "\"Accelerate\" aligns with your interest in engineering systems by focusing on data-driven performance and delivery outcomes. As a foundational technology text, it offers the stable, evidence-based quality you requested.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 2,
               "book_id": "rs2",
               "title": "The Phoenix Project",
-              "composite_score": 0.3828,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.3367,
-                "knowledge": 0.1,
-                "diversity": 0.6
-              },
-              "novelty_score": 0.6000000000000001
+              "score_total": 0.3101,
+              "score_cf": 0.5,
+              "score_content": 0.1859,
+              "score_kg": 0.0,
+              "score_diversity": 0.6,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "Recommended for its stable, enduring quality in systems engineering. Though narrative-driven, it delivers practical IT operations insights that align with your thematic interests, functioning effectively as technical nonfiction.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -1143,11 +1682,11 @@
           "metrics": {
             "precision_at_k": 0.3333,
             "recall_at_k": 1.0,
-            "ndcg_at_k": 0.5,
-            "diversity": 0.7,
-            "novelty": 0.7
+            "ndcg_at_k": 0.6309,
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2812.8572,
+          "latency_ms": 193479.8321,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1158,43 +1697,70 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
-              "book_id": "rsc3",
-              "title": "rsc3",
-              "composite_score": 0.76,
-              "score_parts": {
-                "collaborative": 1.0,
-                "semantic": 1.0,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
-            },
-            {
-              "rank": 2,
               "book_id": "rsc2",
               "title": "rsc2",
-              "composite_score": 0.285,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.0,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
+              "score_total": 0.615,
+              "score_cf": 0.5,
+              "score_content": 1.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 1,
+              "scenario_policy": "explore",
+              "explanation": "This book is recommended for its perfect semantic alignment with your request for beginner innovation and product thinking resources. It prioritizes your immediate learning goals over your typical genre preferences.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 3,
               "book_id": "rsc1",
               "title": "rsc1",
-              "composite_score": 0.192,
-              "score_parts": {
-                "collaborative": 0.0,
-                "semantic": 0.0915,
-                "knowledge": 0.1,
-                "diversity": 0.7
-              },
-              "novelty_score": 0.7
+              "score_total": 0.4736,
+              "score_cf": 0.0,
+              "score_content": 0.9531,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 2,
+              "scenario_policy": "explore",
+              "explanation": "Selected for its strong semantic alignment (0.95) with your request for beginner-friendly innovation and product thinking resources.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
+            },
+            {
+              "book_id": "rsc3",
+              "title": "rsc3",
+              "score_total": 0.39,
+              "score_cf": 1.0,
+              "score_content": 0.0,
+              "score_kg": 0.0,
+              "score_diversity": 0.7,
+              "rank_position": 3,
+              "scenario_policy": "explore",
+              "explanation": "This book is recommended to provide an accessible introduction to innovation and product thinking, tailored for someone new to the subject. While your reading history favors fiction and history, this title is selected for its clarity and direct relevance to your current learning objective.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         },
@@ -1205,10 +1771,10 @@
             "precision_at_k": 0.5,
             "recall_at_k": 1.0,
             "ndcg_at_k": 0.6309,
-            "diversity": 0.6,
-            "novelty": 0.6
+            "diversity": 0.0,
+            "novelty": 0.0
           },
-          "latency_ms": 2536.3521,
+          "latency_ms": 78724.7438,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1219,30 +1785,50 @@
           "fallback_count": 0,
           "recommendations": [
             {
-              "rank": 1,
               "book_id": "rss2",
               "title": "Software Architecture: The Hard Parts",
-              "composite_score": 0.4202,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.4433,
-                "knowledge": 0.1,
-                "diversity": 0.6
-              },
-              "novelty_score": 0.6000000000000001
+              "score_total": 0.4023,
+              "score_cf": 0.5,
+              "score_content": 0.4493,
+              "score_kg": 0.0,
+              "score_diversity": 0.6,
+              "rank_position": 1,
+              "scenario_policy": "warm",
+              "explanation": "Matches your technology and nonfiction preferences with a focus on architecture decisions and modern engineering patterns. Strong semantic relevance ensures it directly addresses your request for robust architectural guidance.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             },
             {
-              "rank": 2,
               "book_id": "rss1",
               "title": "Building Microservices",
-              "composite_score": 0.3842,
-              "score_parts": {
-                "collaborative": 0.5,
-                "semantic": 0.3405,
-                "knowledge": 0.1,
-                "diversity": 0.6
-              },
-              "novelty_score": 0.6000000000000001
+              "score_total": 0.3304,
+              "score_cf": 0.5,
+              "score_content": 0.244,
+              "score_kg": 0.0,
+              "score_diversity": 0.6,
+              "rank_position": 2,
+              "scenario_policy": "warm",
+              "explanation": "Aligns with your technology and architecture preferences by exploring distributed systems trade-offs. It provides essential strategies for constructing robust service architectures, directly addressing your need for solid design foundations.",
+              "explanation_evidence_refs": [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+                "candidate.kg_signal",
+                "candidate.genres",
+                "candidate.topics",
+                "candidate.novelty_score"
+              ]
             }
           ]
         }
@@ -1251,16 +1837,16 @@
         "cases": 8.0,
         "precision_at_k": 0.5625,
         "recall_at_k": 1.0,
-        "ndcg_at_k": 0.7727,
-        "diversity": 0.609,
-        "novelty": 0.6104,
-        "latency_ms_mean": 2560.9052,
+        "ndcg_at_k": 0.7891,
+        "diversity": 0.0,
+        "novelty": 0.0,
+        "latency_ms_mean": 146213.1353,
         "strict_failure_rate": 0.0,
         "remote_attempt_rate": 0.0,
         "fallback_rate": 0.0,
         "remote_success_rate": 0.0,
-        "objective_score": 0.73301,
-        "objective_score_latency_aware": 0.681792
+        "objective_score": 0.61681,
+        "objective_score_latency_aware": -2.307453
       }
     },
     {
@@ -1276,7 +1862,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 207.7654,
+          "latency_ms": 41544.9186,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1288,8 +1874,8 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_6452760",
-              "title": "Stones Into Schools: Promoting Peace With Books, Not Bombs, in Afghanistan and Pakistan",
+              "book_id": "amz_0062641387",
+              "title": "Blood of the Four",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1301,8 +1887,8 @@
             },
             {
               "rank": 2,
-              "book_id": "gr_8073",
-              "title": "Cloudy With a Chance of Meatballs",
+              "book_id": "amz_0312329288",
+              "title": "The Year's Best Fantasy and Horror: Seventeenth Annual Collection (Year's Best Fantasy &amp; Horror)",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1324,7 +1910,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 176.1602,
+          "latency_ms": 41645.3956,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1336,8 +1922,8 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_775597",
-              "title": "Caps for Sale: A Tale of a Peddler, Some Monkeys and Their Monkey Business",
+              "book_id": "amz_0062292064",
+              "title": "Lovecraft Country: A Novel",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1349,8 +1935,8 @@
             },
             {
               "rank": 2,
-              "book_id": "gr_7769",
-              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
+              "book_id": "amz_006231727X",
+              "title": "The Distance Between Lost and Found",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1372,7 +1958,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 72.0908,
+          "latency_ms": 7349.8026,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1433,7 +2019,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 239.5934,
+          "latency_ms": 42132.8874,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1445,8 +2031,8 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_16071764",
-              "title": "Lean In: Women, Work, and the Will to Lead",
+              "book_id": "amz_0070382980",
+              "title": "The Optimum Kayak",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1458,8 +2044,8 @@
             },
             {
               "rank": 2,
-              "book_id": "gr_69242",
-              "title": "Made to Stick: Why Some Ideas Survive and Others Die",
+              "book_id": "amz_0071416625",
+              "title": "IMC, the Next Generation Five Steps for Delivering Value and Measuring Returns Using Marketing Communication",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1471,8 +2057,8 @@
             },
             {
               "rank": 3,
-              "book_id": "gr_13588394",
-              "title": "The Signal and the Noise: Why So Many Predictions Fail - But Some Don't",
+              "book_id": "amz_0071843159",
+              "title": "Global Kata: Success Through the Lean Business System Reference Model",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1494,7 +2080,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 188.4894,
+          "latency_ms": 41278.5061,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1506,8 +2092,8 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_23522",
-              "title": "Mythology: Timeless Tales of Gods and Heroes",
+              "book_id": "amz_0312329288",
+              "title": "The Year's Best Fantasy and Horror: Seventeenth Annual Collection (Year's Best Fantasy &amp; Horror)",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1519,8 +2105,8 @@
             },
             {
               "rank": 2,
-              "book_id": "gr_29925",
-              "title": "Gods and Generals (The Civil War Trilogy, #1)",
+              "book_id": "amz_0143118706",
+              "title": "Committed: A Love Story",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1532,8 +2118,8 @@
             },
             {
               "rank": 3,
-              "book_id": "gr_2002",
-              "title": "Harry Potter Schoolbooks Box Set: Two Classic Books from the Library of Hogwarts School of Witchcraft and Wizardry",
+              "book_id": "amz_0143126253",
+              "title": "Careless People: Murder, Mayhem, and the Invention of The Great Gatsby",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1555,7 +2141,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 177.9693,
+          "latency_ms": 41417.5668,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1567,8 +2153,8 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_12691",
-              "title": "Marley and Me: Life and Love With the World's Worst Dog",
+              "book_id": "amz_0023548568",
+              "title": "Computer Graphics Using Open GL (2nd Edition)",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1580,8 +2166,8 @@
             },
             {
               "rank": 2,
-              "book_id": "gr_6346975",
-              "title": "Moonwalking with Einstein: The Art and Science of Remembering Everything",
+              "book_id": "amz_0120882531",
+              "title": "Rivers of North America",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1603,7 +2189,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 61.501,
+          "latency_ms": 7529.6196,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1664,7 +2250,7 @@
             "diversity": 0.0,
             "novelty": 0.5
           },
-          "latency_ms": 426.0528,
+          "latency_ms": 41572.9632,
           "strict_remote_validation": false,
           "strict_failure": 0.0,
           "remote_attempt_rate": 0.0,
@@ -1676,8 +2262,8 @@
           "recommendations": [
             {
               "rank": 1,
-              "book_id": "gr_7769",
-              "title": "Dr. Seuss's ABC: An Amazing Alphabet Book! (Bright and Early Board Books)",
+              "book_id": "amz_0130213438",
+              "title": "Distributed COM Application Development Using Visual Basic 6.0 and MTS",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1689,8 +2275,8 @@
             },
             {
               "rank": 2,
-              "book_id": "gr_949709",
-              "title": "There Was An Old Lady Who Swallowed A Fly (Classic Books)",
+              "book_id": "amz_0131463071",
+              "title": "Core Security Patterns: Best Practices and Strategies for J2EE, Web Services, and Identity Management",
               "score_parts": {
                 "collaborative": 0.0,
                 "semantic": 1.0,
@@ -1710,50 +2296,50 @@
         "ndcg_at_k": 0.25,
         "diversity": 0.0,
         "novelty": 0.5,
-        "latency_ms_mean": 193.7028,
+        "latency_ms_mean": 33058.9575,
         "strict_failure_rate": 0.0,
         "remote_attempt_rate": 0.0,
         "fallback_rate": 0.0,
         "remote_success_rate": 0.0,
         "objective_score": 0.208325,
-        "objective_score_latency_aware": 0.204451
+        "objective_score_latency_aware": -0.452854
       }
     }
   ],
   "leaderboard": [
     {
-      "method": "multi_agent_proxy",
-      "objective_score": 0.73301,
-      "objective_score_latency_aware": 0.681792,
-      "ndcg_at_k": 0.7727,
-      "precision_at_k": 0.5625,
-      "latency_ms_mean": 2560.9052,
-      "strict_failure_rate": 0.0,
-      "remote_attempt_rate": 0.0,
-      "fallback_rate": 0.0,
-      "remote_success_rate": 0.0,
-      "rank": 1
-    },
-    {
       "method": "acps_multi_agent",
-      "objective_score": 0.500195,
-      "objective_score_latency_aware": 0.438364,
-      "ndcg_at_k": 0.5688,
-      "precision_at_k": 0.4167,
-      "latency_ms_mean": 3091.5268,
+      "objective_score": 0.657385,
+      "objective_score_latency_aware": -1.470577,
+      "ndcg_at_k": 0.7727,
+      "precision_at_k": 0.5,
+      "latency_ms_mean": 106398.112,
       "strict_failure_rate": 0.125,
       "remote_attempt_rate": 0.375,
       "fallback_rate": 0.25,
       "remote_success_rate": 0.125,
+      "rank": 1
+    },
+    {
+      "method": "multi_agent_proxy",
+      "objective_score": 0.61681,
+      "objective_score_latency_aware": -2.307453,
+      "ndcg_at_k": 0.7891,
+      "precision_at_k": 0.5625,
+      "latency_ms_mean": 146213.1353,
+      "strict_failure_rate": 0.0,
+      "remote_attempt_rate": 0.0,
+      "fallback_rate": 0.0,
+      "remote_success_rate": 0.0,
       "rank": 2
     },
     {
       "method": "traditional_hybrid",
-      "objective_score": 0.214475,
-      "objective_score_latency_aware": 0.21063,
+      "objective_score": 0.212485,
+      "objective_score_latency_aware": -0.449442,
       "ndcg_at_k": 0.25,
       "precision_at_k": 0.0833,
-      "latency_ms_mean": 192.2386,
+      "latency_ms_mean": 33096.3607,
       "strict_failure_rate": 0.0,
       "remote_attempt_rate": 0.0,
       "fallback_rate": 0.0,
@@ -1763,10 +2349,10 @@
     {
       "method": "llm_only",
       "objective_score": 0.208325,
-      "objective_score_latency_aware": 0.204451,
+      "objective_score_latency_aware": -0.452854,
       "ndcg_at_k": 0.25,
       "precision_at_k": 0.0833,
-      "latency_ms_mean": 193.7028,
+      "latency_ms_mean": 33058.9575,
       "strict_failure_rate": 0.0,
       "remote_attempt_rate": 0.0,
       "fallback_rate": 0.0,
@@ -1775,16 +2361,16 @@
     }
   ],
   "winner": {
-    "method": "multi_agent_proxy",
-    "objective_score": 0.73301,
-    "objective_score_latency_aware": 0.681792,
+    "method": "acps_multi_agent",
+    "objective_score": 0.657385,
+    "objective_score_latency_aware": -1.470577,
     "ndcg_at_k": 0.7727,
-    "precision_at_k": 0.5625,
-    "latency_ms_mean": 2560.9052,
-    "strict_failure_rate": 0.0,
-    "remote_attempt_rate": 0.0,
-    "fallback_rate": 0.0,
-    "remote_success_rate": 0.0,
+    "precision_at_k": 0.5,
+    "latency_ms_mean": 106398.112,
+    "strict_failure_rate": 0.125,
+    "remote_attempt_rate": 0.375,
+    "fallback_rate": 0.25,
+    "remote_success_rate": 0.125,
     "rank": 1
   },
   "reliability_dashboard": {

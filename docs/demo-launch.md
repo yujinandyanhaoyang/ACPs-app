@@ -2,6 +2,12 @@
 
 This guide describes launch and verification for the reading recommender demo after P3/P4/P5 hardening.
 
+## Status Scope
+
+- `DONE (local)`: all commands in this runbook are for local verification.
+- `PARTIAL_LOCAL_PLACEHOLDER`: local ACS/AIC/cert metadata may use placeholders.
+- `BLOCKED_BY_IOA_PUB`: official registry identity/certificate validation is outside this local runbook.
+
 ## 1) Prerequisites
 
 - Python environment available (for example `.venv`)
@@ -76,4 +82,17 @@ python -m reading_concierge.reading_concierge
 
 ```bash
 python -m pytest tests/test_aip_conformance.py tests/test_acs_conformance.py tests/test_persistence_db.py tests/test_reading_workflow_e2e.py -q
+```
+
+## 9) Audit and replay evidence from DB
+
+```bash
+curl "http://127.0.0.1:8100/demo/audit/runs?user_id=demo_user_001&limit=5"
+curl "http://127.0.0.1:8100/demo/audit/runs/<run_id>"
+```
+
+## 10) Retention pruning (optional)
+
+```bash
+python scripts/prune_runtime_data.py --keep-runs-per-user 100 --keep-logs-per-task 200
 ```

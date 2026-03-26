@@ -5,6 +5,7 @@ from pathlib import Path
 
 from services.db import run_migrations
 from services.repositories import ProfileRepository, RecommendationRepository, TaskLogRepository
+from services.user_profile_store import UserProfileStore
 
 
 def _db_url(tmp_path: Path) -> str:
@@ -112,3 +113,75 @@ def test_repositories_write_run_recommendations_and_task_logs(tmp_path):
     assert recs == 1
     assert logs == 1
     assert profiles == 1
+
+
+def test_recovery_after_restart_reuses_persisted_profile_events(tmp_path):
+    store_path = tmp_path / "legacy_store.db"
+    first = UserProfileStore(db_path=str(store_path))
+    first.append_event("restart-user", "review", {"text": "great read", "rating": 5})
+    first.save_profile_snapshot(
+        "restart-user",
+        {
+            "profile_version": "restart-user-v1",
+            "generated_at": "2026-03-25T00:00:00+00:00",
+            "source_event_window": {"review_count": 1},
+            "feature_vector": [0.1, 0.2],
+        },
+    )
+
+    second = UserProfileStore(db_path=str(store_path))
+    context = second.get_user_context("restart-user")
+    snapshot = second.get_latest_profile("restart-user")
+
+    assert len(context.get("reviews") or []) >= 1
+    assert snapshot.get("profile_version") == "restart-user-v1"
+
+
+def test_retention_hooks_prune_old_runs_and_task_logs(tmp_path):
+    db_url = _db_url(tmp_path)
+    run_migrations(db_url=db_url)
+    rec_repo = RecommendationRepository(db_url=db_url)
+    task_repo = TaskLogRepository(db_url=db_url)
+
+    for idx in range(1, 4):
+        run_id = f"run-prune-{idx}"
+        rec_repo.create_recommendation_run(
+            run_id=run_id,
+            user_id="u-prune",
+            query=f"query-{idx}",
+            profile_version=f"v{idx}",
+            candidate_set_version_or_hash=f"cand-{idx}",
+            candidate_provenance={"retrieval_rule": "test"},
+            book_feature_version_or_hash=f"bf-{idx}",
+            ranking_policy_version="policy-v1",
+            weights_or_policy_snapshot={"semantic": 0.4},
+            run_timestamp=f"2026-03-25T00:00:0{idx}+00:00",
+        )
+        task_repo.append(
+            task_id="task-prune-1",
+            session_id="session-prune",
+            sender_id="leader",
+            receiver_id="partner",
+            state_transition="completed",
+            payload={"seq": idx},
+            timestamp=f"2026-03-25T00:00:0{idx}+00:00",
+        )
+
+    pruned_runs = rec_repo.prune_old_runs(keep_latest_per_user=1)
+    pruned_logs = task_repo.prune_old_logs(keep_latest_per_task=1)
+
+    conn = sqlite3.connect(str(tmp_path / "runtime_test.db"))
+    try:
+        remaining_runs = conn.execute(
+            "SELECT COUNT(*) FROM recommendation_runs WHERE user_id = 'u-prune'"
+        ).fetchone()[0]
+        remaining_logs = conn.execute(
+            "SELECT COUNT(*) FROM agent_task_logs WHERE task_id = 'task-prune-1'"
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+    assert pruned_runs == 2
+    assert pruned_logs == 2
+    assert remaining_runs == 1
+    assert remaining_logs == 1

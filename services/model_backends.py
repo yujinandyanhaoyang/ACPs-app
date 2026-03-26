@@ -16,6 +16,7 @@ _DEFAULT_CF_BOOK_INDEX_PATH = get_processed_data_path("cf_book_id_index.json")
 _CF_ITEM_VECTORS_CACHE: Dict[str, List[float]] | None = None
 _SENTENCE_MODEL_CACHE: Dict[str, Any] = {}
 _DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"
+_LOCAL_EMBED_MODEL_ENV = "BOOK_CONTENT_EMBED_MODEL_PATH"
 _LOGGER = logging.getLogger("services.model_backends")
 
 
@@ -114,6 +115,19 @@ def load_cf_item_vectors(force_reload: bool = False) -> Dict[str, List[float]]:
 		return _CF_ITEM_VECTORS_CACHE
 
 
+def _resolve_embedding_model_name(model_name: str) -> str:
+        configured_path = str(os.getenv(_LOCAL_EMBED_MODEL_ENV) or "").strip()
+        if configured_path:
+                local_path = Path(configured_path).expanduser()
+                if local_path.exists():
+                        return str(local_path)
+                _LOGGER.info(
+                        "event=local_embed_model_missing path=%s fallback=remote-hf",
+                        configured_path,
+                )
+        return str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
+
+
 def _resolve_sentence_transformer(model_name: str):
 	cached = _SENTENCE_MODEL_CACHE.get(model_name)
 	if cached is not None:
@@ -142,7 +156,7 @@ def generate_text_embeddings(
 	if not text_list:
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
 
-	effective_model = str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
+	effective_model = _resolve_embedding_model_name(model_name)
 	model = _resolve_sentence_transformer(effective_model)
 	if model is not None:
 		vectors = model.encode(text_list, normalize_embeddings=True)

@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-02-25T05:10:11Z",
+  "generated_at": "2026-03-25T13:04:47Z",
   "top_k": 5,
-  "requested_users": 80,
-  "candidate_users": 406,
-  "evaluated_users": 61,
+  "requested_users": 12,
+  "candidate_users": 0,
+  "evaluated_users": 0,
   "filters": {
-    "min_history": 5,
-    "min_ground_truth": 2,
+    "min_history": 3,
+    "min_ground_truth": 1,
     "min_ground_truth_rating": 4.0
   },
   "rows": [
@@ -18,13 +18,13 @@
         "knowledge": 0.2,
         "diversity": 0.2
       },
-      "evaluated_users": 61,
-      "precision_at_5": 0.006557,
-      "recall_at_5": 0.008743,
-      "ndcg_at_5": 0.008362,
+      "evaluated_users": 0,
+      "precision_at_5": 0.0,
+      "recall_at_5": 0.0,
+      "ndcg_at_5": 0.0,
       "delta_ndcg_at_5_vs_full": 0.0,
-      "diversity": 0.7,
-      "novelty": 0.7
+      "diversity": 0.0,
+      "novelty": 0.0
     },
     {
       "scenario": "ablate_collaborative",
@@ -34,13 +34,13 @@
         "knowledge": 0.266667,
         "diversity": 0.266667
       },
-      "evaluated_users": 61,
-      "precision_at_5": 0.006557,
-      "recall_at_5": 0.008743,
-      "ndcg_at_5": 0.009407,
-      "delta_ndcg_at_5_vs_full": 0.001045,
-      "diversity": 0.7,
-      "novelty": 0.7
+      "evaluated_users": 0,
+      "precision_at_5": 0.0,
+      "recall_at_5": 0.0,
+      "ndcg_at_5": 0.0,
+      "delta_ndcg_at_5_vs_full": 0.0,
+      "diversity": 0.0,
+      "novelty": 0.0
     },
     {
       "scenario": "ablate_semantic",
@@ -50,13 +50,13 @@
         "knowledge": 0.307692,
         "diversity": 0.307692
       },
-      "evaluated_users": 61,
-      "precision_at_5": 0.006557,
-      "recall_at_5": 0.008743,
-      "ndcg_at_5": 0.008362,
+      "evaluated_users": 0,
+      "precision_at_5": 0.0,
+      "recall_at_5": 0.0,
+      "ndcg_at_5": 0.0,
       "delta_ndcg_at_5_vs_full": 0.0,
-      "diversity": 0.7,
-      "novelty": 0.7
+      "diversity": 0.0,
+      "novelty": 0.0
     },
     {
       "scenario": "ablate_knowledge",
@@ -66,13 +66,13 @@
         "knowledge": 0.0,
         "diversity": 0.25
       },
-      "evaluated_users": 61,
-      "precision_at_5": 0.006557,
-      "recall_at_5": 0.008743,
-      "ndcg_at_5": 0.005708,
-      "delta_ndcg_at_5_vs_full": -0.002654,
-      "diversity": 0.7,
-      "novelty": 0.7
+      "evaluated_users": 0,
+      "precision_at_5": 0.0,
+      "recall_at_5": 0.0,
+      "ndcg_at_5": 0.0,
+      "delta_ndcg_at_5_vs_full": 0.0,
+      "diversity": 0.0,
+      "novelty": 0.0
     },
     {
       "scenario": "ablate_diversity",
@@ -82,13 +82,13 @@
         "knowledge": 0.25,
         "diversity": 0.0
       },
-      "evaluated_users": 61,
-      "precision_at_5": 0.006557,
-      "recall_at_5": 0.008743,
-      "ndcg_at_5": 0.008362,
+      "evaluated_users": 0,
+      "precision_at_5": 0.0,
+      "recall_at_5": 0.0,
+      "ndcg_at_5": 0.0,
       "delta_ndcg_at_5_vs_full": 0.0,
-      "diversity": 0.7,
-      "novelty": 0.7
+      "diversity": 0.0,
+      "novelty": 0.0
     }
   ]
 }

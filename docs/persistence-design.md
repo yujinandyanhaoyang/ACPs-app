@@ -4,6 +4,11 @@
 
 This document describes the local persistent database foundation for the reading recommendation runtime.
 
+## Status
+
+- `DONE (local)`: schema/migration/repository/replay/audit hooks in local runtime.
+- `READY_FOR_IOA_PUB`: persistence evidence package can be attached to official review bundle.
+
 ## Runtime Backend
 
 - Default backend: SQLite
@@ -53,6 +58,21 @@ These repositories isolate SQL writes for user lifecycle state, recommendation a
   - `python scripts/backfill_user_events.py --legacy-db data/user_profile_store.db`
 - Backfill books and features:
   - `python scripts/backfill_book_features.py --books-jsonl data/processed/merged/books_master_merged.jsonl --limit 2000`
+- Apply retention pruning hooks:
+  - `python scripts/prune_runtime_data.py --keep-runs-per-user 100 --keep-logs-per-task 200`
+
+## Audit and Replay
+
+- List persisted recommendation runs:
+  - `GET /demo/audit/runs?user_id=<uid>&limit=20`
+- Fetch full run evidence for replay/audit:
+  - `GET /demo/audit/runs/{run_id}`
+
+Returned run details include:
+- run-level provenance and policy snapshots
+- per-item factor scores
+- explanation evidence refs
+- ranking order for deterministic audit trails
 
 ## Reproducibility Fields
 
@@ -83,7 +103,7 @@ These repositories isolate SQL writes for user lifecycle state, recommendation a
 - `task_id`
 - `session_id`
 - `sender_id`
-- `receiver_id`
+- `receiver_id` (system extension field for local routing/audit; not a strict ACPs core identity field)
 - `state_transition`
 - `timestamp`
 
@@ -91,4 +111,3 @@ These repositories isolate SQL writes for user lifecycle state, recommendation a
 
 - Add PostgreSQL runtime adapter implementation behind the existing DB URL abstraction.
 - Add migration down scripts and CI migration up/down verification.
-- Add retention and archival job hooks for old runs and task logs.

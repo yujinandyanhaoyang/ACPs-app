@@ -17,6 +17,13 @@ if _PROJECT_ROOT not in sys.path:
 from reading_concierge.reading_concierge import app as concierge_app
 from services.phase4_optimizer import aggregate_experiment_runs, select_best_experiment
 
+# Force deterministic offline execution for benchmark/optimization runs.
+# This avoids flaky external API calls and keeps P2 evidence reproducible.
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["OPENAI_BASE_URL"] = ""
+os.environ.setdefault("BOOK_CONTENT_EMBED_MODEL", "all-MiniLM-L6-v2")
+os.environ.setdefault("REC_RANKING_EMBED_MODEL", "all-MiniLM-L6-v2")
+
 
 DEFAULT_CONFIGS: List[Dict[str, Any]] = [
     {

@@ -66,8 +66,10 @@ def test_user_profile_snapshot_conforms_to_contract_schema(client_reading_concie
 @pytest.mark.usefixtures("patch_openai")
 def test_target_runtime_artifacts_conform_to_contract_schemas(client_reading_concierge):
     candidate_schema = json.loads((_CONTRACT_DIR / "candidate_book_set.schema.json").read_text(encoding="utf-8"))
+    book_feature_schema = json.loads((_CONTRACT_DIR / "book_feature_map.schema.json").read_text(encoding="utf-8"))
     ranked_schema = json.loads((_CONTRACT_DIR / "ranked_recommendation_list.schema.json").read_text(encoding="utf-8"))
     candidate_validator = Draft202012Validator(candidate_schema)
+    book_feature_validator = Draft202012Validator(book_feature_schema)
     ranked_validator = Draft202012Validator(ranked_schema)
 
     payload = {
@@ -107,14 +109,18 @@ def test_target_runtime_artifacts_conform_to_contract_schemas(client_reading_con
 
     artifacts = body.get("contract_artifacts") or {}
     candidate_set = artifacts.get("candidate_book_set") or {}
+    book_feature_map = artifacts.get("book_feature_map") or {}
     ranked_list = artifacts.get("ranked_recommendation_list") or {}
 
     candidate_errors = sorted(candidate_validator.iter_errors(candidate_set), key=lambda err: list(err.path))
+    book_feature_errors = sorted(book_feature_validator.iter_errors(book_feature_map), key=lambda err: list(err.path))
     ranked_errors = sorted(ranked_validator.iter_errors(ranked_list), key=lambda err: list(err.path))
 
     assert not candidate_errors, "candidate schema errors: " + "; ".join(e.message for e in candidate_errors)
+    assert not book_feature_errors, "book feature schema errors: " + "; ".join(e.message for e in book_feature_errors)
     assert not ranked_errors, "ranked schema errors: " + "; ".join(e.message for e in ranked_errors)
 
     contract_validation = body.get("contract_validation") or {}
     assert contract_validation.get("candidate_book_set", {}).get("passed") is True
+    assert contract_validation.get("book_feature_map", {}).get("passed") is True
     assert contract_validation.get("ranked_recommendation_list", {}).get("passed") is True

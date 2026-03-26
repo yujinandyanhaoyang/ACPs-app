@@ -2,6 +2,12 @@
 
 This document records AIP lifecycle conformance coverage for the reading recommender multi-agent runtime.
 
+## Status
+
+- `DONE (local)`: local command/state conformance baseline and regression tests.
+- `READY_FOR_IOA_PUB`: evidence bundle structure (test file, run commands, expected assertions) is ready for official replay.
+- `BLOCKED_BY_IOA_PUB`: official identity-bound evidence (real AIC + official ATR/AIA chain + registry runtime path).
+
 ## Scope
 
 - Runtime implementation: `acps_aip/aip_rpc_server.py`
@@ -17,6 +23,7 @@ Validated commands:
 
 - `Start`
 - `Get`
+- `Continue`
 - `Complete`
 - `Cancel`
 
@@ -24,8 +31,12 @@ Reference test: `tests/test_aip_conformance.py`
 
 ## State Coverage
 
-Validated terminal-state behavior:
+Validated states in tests:
 
+- `Accepted`
+- `Working`
+- `AwaitingInput`
+- `AwaitingCompletion`
 - `Completed`
 - `Failed`
 - `Canceled`
@@ -35,8 +46,10 @@ Behavior expectations:
 
 - `Start` creates a task when not existing and is idempotent on existing task.
 - `Get` returns current snapshot for existing task and returns not-found error for unknown task.
+- `Continue` appends lineage message and remains no-op by default unless agent business logic advances state.
 - `Complete` transitions only when current state is `AwaitingCompletion`.
 - `Cancel` is idempotent and must not overwrite terminal states.
+- Handler exceptions transition task state to `Failed` with explicit diagnostic data item.
 
 ## Identity and Lineage Fields
 
@@ -56,8 +69,9 @@ These fields are validated in request/response lifecycle tests and are expected 
 
 ## Outstanding Items
 
-1. Add integration-level AIP conformance checks that run through all partner services in mTLS-only mode.
-2. Attach production evidence snapshots after official ioa.pub identity and certificate rollout.
+1. `DONE (local)`: unit-level command/state coverage in `tests/test_aip_conformance.py`.
+2. `READY_FOR_IOA_PUB`: replay the same lifecycle checks against ioa.pub-issued identities and official endpoints.
+3. `BLOCKED_BY_IOA_PUB`: attach production-grade evidence snapshots after official identity/certificate rollout.
 
 
 ## ADP Runtime Mode

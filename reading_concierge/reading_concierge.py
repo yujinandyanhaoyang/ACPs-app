@@ -1123,16 +1123,37 @@ async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], D
 
     partner_results["_candidate_set"] = candidate_book_set
     partner_results["_candidate_provenance"] = candidate_provenance
+
+    content_outputs = content_data.get("outputs") or {}
+    if content_ok:
+        book_feature_map_contract = {
+            "embedding_version": str(
+                content_data.get("embedding_version")
+                or ((content_outputs.get("features_metadata") or {}).get("embedding_version") or "")
+            ),
+            "content_vectors": content_outputs.get("content_vectors") or [],
+            "book_tags": content_outputs.get("book_tags") or [],
+            "features_metadata": content_outputs.get("features_metadata") or {},
+        }
+        feature_valid, feature_reason = _validate_contract_payload(
+            "book_feature_map.schema.json", book_feature_map_contract
+        )
+    else:
+        book_feature_map_contract = {}
+        feature_valid, feature_reason = True, f"skipped_due_partner_state:{content_state}"
+
+    partner_results["_book_feature_map"] = book_feature_map_contract
     partner_results["_contract_validation"] = {
-        "candidate_book_set": {"passed": candidate_valid, "reason": candidate_reason}
+        "candidate_book_set": {"passed": candidate_valid, "reason": candidate_reason},
+        "book_feature_map": {"passed": feature_valid, "reason": feature_reason},
     }
 
     if not profile_ok or not content_ok:
         return partner_tasks, partner_results
 
-    content_outputs = content_data.get("outputs") or {}
     ranking_payload = {
         "query": req.query,
+        "scenario_policy": scenario,
         "profile_vector": profile_data.get("preference_vector") or {},
         "candidates": _build_ranking_candidates(content_outputs, books),
         "history": policy["profile"]["history"],
@@ -1226,6 +1247,40 @@ async def demo_status() -> Dict[str, Any]:
 @app.get("/demo/retrieval-corpus")
 async def demo_retrieval_corpus() -> Dict[str, Any]:
     return get_active_retrieval_corpus_info()
+
+
+@app.get("/demo/audit/runs")
+async def demo_audit_runs(user_id: Optional[str] = None, limit: int = 20) -> Dict[str, Any]:
+    runs = profile_store.list_recommendation_runs(user_id=user_id, limit=limit)
+    return {
+        "count": len(runs),
+        "runs": runs,
+    }
+
+
+@app.get("/demo/audit/runs/{run_id}")
+async def demo_audit_run_detail(run_id: str) -> Dict[str, Any]:
+    payload = profile_store.get_recommendation_run(run_id)
+    if not payload:
+        raise HTTPException(status_code=404, detail="run_id not found")
+    return payload
+
+
+@app.post("/demo/retention/prune")
+async def demo_retention_prune(
+    keep_latest_runs_per_user: int = 100,
+    keep_latest_logs_per_task: int = 200,
+) -> Dict[str, Any]:
+    summary = profile_store.prune_retention(
+        keep_latest_runs_per_user=keep_latest_runs_per_user,
+        keep_latest_logs_per_task=keep_latest_logs_per_task,
+    )
+    return {
+        "status": "ok",
+        "pruned": summary,
+        "keep_latest_runs_per_user": max(1, int(keep_latest_runs_per_user)),
+        "keep_latest_logs_per_task": max(1, int(keep_latest_logs_per_task)),
+    }
 
 
 async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[str, Any]:
@@ -1339,6 +1394,7 @@ async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[s
         "evaluation": evaluation,
         "contract_artifacts": {
             "candidate_book_set": partner_results.get("_candidate_set") or {},
+            "book_feature_map": partner_results.get("_book_feature_map") or {},
             "ranked_recommendation_list": ranked_contract,
         },
         "contract_validation": contract_validation,

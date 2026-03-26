@@ -103,6 +103,11 @@ def patch_openai(monkeypatch):
         "_resolve_dashscope_embeddings",
         fake_dashscope_embeddings,
     )
+    monkeypatch.setattr(
+        model_backends_module,
+        "_resolve_sentence_transformer",
+        lambda _model_name: None,
+    )
 
 
 @pytest.fixture(scope="session")

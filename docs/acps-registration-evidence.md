@@ -5,17 +5,21 @@ This document tracks objective evidence for P3 (official registration and trust 
 ## Evidence Status
 
 - Current state: in progress
-- Last updated: 2026-03-24
+- Last updated: 2026-03-26
 - Owner: engineering
+- Status tags:
+  - `PARTIAL_LOCAL_PLACEHOLDER`: ACS placeholders and local IDs/cert paths exist.
+  - `READY_FOR_IOA_PUB`: submission package/runbook prepared.
+  - `BLOCKED_BY_IOA_PUB`: official real AIC/cert/registry/discovery evidence.
 
 ## Agent Identity and ACS Evidence
 
 | Agent | ACS File | Registry Registration | Registry Lookup Verified | Notes |
 | --- | --- | --- | --- | --- |
-| reading_concierge_001 | reading_concierge/reading_concierge.json | pending | pending | leader descriptor ready |
-| reader_profile_agent_001 | agents/reader_profile_agent/acs.json | pending | pending | partner A descriptor ready |
-| book_content_agent_001 | agents/book_content_agent/acs.json | pending | pending | partner B descriptor ready |
-| rec_ranking_agent_001 | agents/rec_ranking_agent/acs.json | pending | pending | partner C descriptor ready |
+| reading_concierge_001 | reading_concierge/reading_concierge.json | pending | pending | `PARTIAL_LOCAL_PLACEHOLDER` |
+| reader_profile_agent_001 | partners/online/reader_profile_agent/acs.json | pending | pending | `PARTIAL_LOCAL_PLACEHOLDER` |
+| book_content_agent_001 | partners/online/book_content_agent/acs.json | pending | pending | `PARTIAL_LOCAL_PLACEHOLDER` |
+| rec_ranking_agent_001 | partners/online/rec_ranking_agent/acs.json | pending | pending | `PARTIAL_LOCAL_PLACEHOLDER` |
 
 ## Trust Material Evidence (ATR/AIA)
 
@@ -35,7 +39,7 @@ This document tracks objective evidence for P3 (official registration and trust 
 
 - Local command/state conformance tests: implemented
 - Test file: `tests/test_aip_conformance.py`
-- Current result: pending execution in CI evidence package
+- Current result: `DONE (local)` for local unit-level conformance
 
 ## Open Gaps
 

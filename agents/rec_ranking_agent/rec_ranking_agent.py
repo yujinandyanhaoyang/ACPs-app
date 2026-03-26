@@ -38,6 +38,12 @@ EMBED_VECTOR_DIM = max(8, int(os.getenv("BOOK_CONTENT_VECTOR_DIM", "12")))
 RANKING_VERSION = os.getenv("REC_RANKING_VERSION", "rec_ranking_v1")
 DEFAULT_TOP_K = max(1, int(os.getenv("REC_RANKING_TOP_K", "5")))
 DEFAULT_NOVELTY_THRESHOLD = float(os.getenv("REC_RANKING_NOVELTY_THRESHOLD", "0.45"))
+_SCENARIO_ALIASES = {
+    "cold_start": "cold",
+    "new_user": "cold",
+    "exploration": "explore",
+    "discovery": "explore",
+}
 
 logger = get_agent_logger("agent.rec_ranking", "REC_RANKING_AGENT_LOG_LEVEL", LOG_LEVEL)
 
@@ -46,9 +52,15 @@ app = FastAPI(
     description="ACPs-compliant recommendation decision agent with multi-factor scoring.",
 )
 
-_FORMAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
+_FORMAL_ACS_JSON_PATH = Path(_PROJECT_ROOT) / "partners" / "online" / "rec_ranking_agent" / "acs.json"
+_LOCAL_ACS_JSON_PATH = Path(_CURRENT_DIR) / "acs.json"
 _LEGACY_ACS_JSON_PATH = Path(_CURRENT_DIR) / "config.example.json"
-_ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH if _FORMAL_ACS_JSON_PATH.exists() else _LEGACY_ACS_JSON_PATH)
+if _FORMAL_ACS_JSON_PATH.exists():
+    _ACS_JSON_PATH = str(_FORMAL_ACS_JSON_PATH)
+elif _LOCAL_ACS_JSON_PATH.exists():
+    _ACS_JSON_PATH = str(_LOCAL_ACS_JSON_PATH)
+else:
+    _ACS_JSON_PATH = str(_LEGACY_ACS_JSON_PATH)
 register_acs_route(app, _ACS_JSON_PATH)
 
 _RANKING_CONTEXT: Dict[str, Dict[str, Any]] = {}
@@ -101,6 +113,27 @@ def _validate_payload(payload: Dict[str, Any]) -> List[str]:
     if not (has_vectors or has_candidates):
         missing.append("content_vectors|candidates")
 
+    # Contract-first guardrails for profile/content payload shape.
+    vectors = payload.get("content_vectors") or []
+    if vectors and not isinstance(vectors, list):
+        missing.append("content_vectors:list")
+    if isinstance(vectors, list):
+        for idx, row in enumerate(vectors[:3]):
+            if isinstance(row, dict) and (row.get("book_id") or row.get("id")):
+                continue
+            missing.append(f"content_vectors[{idx}].book_id")
+            break
+
+    candidates = payload.get("candidates") or []
+    if candidates and not isinstance(candidates, list):
+        missing.append("candidates:list")
+    if isinstance(candidates, list):
+        for idx, row in enumerate(candidates[:3]):
+            if isinstance(row, dict) and (row.get("book_id") or row.get("id")):
+                continue
+            missing.append(f"candidates[{idx}].book_id")
+            break
+
     return missing
 
 
@@ -142,42 +175,49 @@ def _tokenize_text(value: Any) -> List[str]:
 
 
 def _derive_scenario_policy(payload: Dict[str, Any]) -> str:
-    """Derive scenario_policy from payload or profile characteristics."""
+    """Derive scenario policy with cold/warm/explore as primary branches."""
+    explicit = str(payload.get("scenario_policy") or "").strip().lower()
+    explicit = _SCENARIO_ALIASES.get(explicit, explicit)
+    if explicit in {"cold", "warm", "explore"}:
+        return explicit
+
+    constraints = payload.get("constraints") or {}
+    constrained = str(constraints.get("scenario") or payload.get("scenario") or "").strip().lower()
+    constrained = _SCENARIO_ALIASES.get(constrained, constrained)
+    if constrained in {"cold", "warm", "explore"}:
+        return constrained
+
     profile_vector = payload.get("profile_vector", {})
     query = payload.get("query", "")
-    
-    # Check for explicit scenario indicators in query
+
+    # Query cues can explicitly request exploration.
     query_lower = query.lower()
-    if "quick" in query_lower or "short" in query_lower:
-        return "quick_read"
-    if "deep" in query_lower or "comprehensive" in query_lower:
-        return "deep_exploration"
-    if "new" in query_lower or "discover" in query_lower:
-        return "discovery"
-    if "similar" in query_lower or "like" in query_lower:
-        return "similarity_based"
-    
-    # Derive from profile characteristics
+    if any(token in query_lower for token in ["new", "discover", "explore"]):
+        return "explore"
+
+    # Cold-start: minimal profile context and no history/reviews.
+    history = payload.get("history") or []
+    reviews = payload.get("reviews") or []
+    if (not isinstance(profile_vector, dict) or not profile_vector) and not history and not reviews:
+        return "cold"
+
+    # Derive from profile characteristics.
     pacing = profile_vector.get("pacing", {})
     if isinstance(pacing, dict):
         fast_pace = _safe_float(pacing.get("fast", 0))
         slow_pace = _safe_float(pacing.get("slow", 0))
-        if fast_pace > slow_pace:
-            return "quick_read"
-        elif slow_pace > fast_pace:
-            return "deep_exploration"
-    
+        if slow_pace > fast_pace + 0.15:
+            return "explore"
+
     difficulty = profile_vector.get("difficulty", {})
     if isinstance(difficulty, dict):
         high_diff = _safe_float(difficulty.get("advanced", 0))
         low_diff = _safe_float(difficulty.get("beginner", 0))
-        if high_diff > low_diff:
-            return "deep_exploration"
-        elif low_diff > high_diff:
-            return "casual_reading"
-    
-    # Default scenario
-    return "balanced_recommendation"
+        if high_diff > low_diff + 0.15:
+            return "explore"
+
+    # Default scenario branch.
+    return "warm"
 
 
 def _query_candidate_alignment(query: str, candidate: Dict[str, Any]) -> float:
@@ -268,6 +308,7 @@ def _candidate_pool(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     candidates = payload.get("candidates") or []
 
     by_id: Dict[str, Dict[str, Any]] = {}
+    lock_membership = bool(candidates)
 
     for item in candidates:
         if not isinstance(item, dict):
@@ -279,11 +320,64 @@ def _candidate_pool(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         cid = str(item.get("book_id") or item.get("id") or item.get("title") or uuid.uuid4())
+
+        # Partner-C boundary: when candidate membership is provided by upstream,
+        # do not expand membership from vector-only rows.
+        if lock_membership and cid not in by_id:
+            continue
+
         current = by_id.get(cid, {"book_id": cid})
         current.update(item)
         by_id[cid] = current
 
     return list(by_id.values())
+
+
+def _enforce_hard_minimum(
+    selected: List[Dict[str, Any]],
+    ranked_rows: List[Dict[str, Any]],
+    predicate,
+    minimum: int,
+    top_k: int,
+) -> List[Dict[str, Any]]:
+    if minimum <= 0 or not ranked_rows or top_k <= 0:
+        return selected
+
+    feasible = min(minimum, sum(1 for row in ranked_rows if predicate(row)))
+    if feasible <= 0:
+        return selected
+
+    current = list(selected)
+    current_ids = {row.get("book_id") for row in current}
+
+    def _count_ok(rows: List[Dict[str, Any]]) -> int:
+        return sum(1 for row in rows if predicate(row))
+
+    for fresh in ranked_rows:
+        if _count_ok(current) >= feasible:
+            break
+        if not predicate(fresh):
+            continue
+        if fresh.get("book_id") in current_ids:
+            continue
+
+        replace_idx = None
+        for idx in range(len(current) - 1, -1, -1):
+            if not predicate(current[idx]):
+                replace_idx = idx
+                break
+
+        if replace_idx is None:
+            break
+
+        old_id = current[replace_idx].get("book_id")
+        if old_id in current_ids:
+            current_ids.remove(old_id)
+        current[replace_idx] = fresh
+        current_ids.add(fresh.get("book_id"))
+
+    current = sorted(current, key=lambda item: item.get("composite_score", 0.0), reverse=True)[:top_k]
+    return current
 
 
 def _build_svd_map(payload: Dict[str, Any]) -> Dict[str, float]:
@@ -324,21 +418,43 @@ def _normalize_score_rows(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 async def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     profile_vector = payload.get("profile_vector") or {}
+    constraints = payload.get("constraints") or {}
+    scenario_policy = str(payload.get("scenario_policy") or _derive_scenario_policy(payload))
+
+    incoming_weights = payload.get("scoring_weights") or constraints.get("scoring_weights") or {}
+    if not incoming_weights:
+        if scenario_policy == "cold":
+            incoming_weights = {"collaborative": 0.1, "semantic": 0.45, "knowledge": 0.25, "diversity": 0.2}
+        elif scenario_policy == "explore":
+            incoming_weights = {"collaborative": 0.15, "semantic": 0.25, "knowledge": 0.2, "diversity": 0.4}
+        else:
+            incoming_weights = {"collaborative": 0.25, "semantic": 0.35, "knowledge": 0.2, "diversity": 0.2}
+
     scoring_weights = _normalize_weights(
         {
-            "collaborative": _safe_float((payload.get("scoring_weights") or {}).get("collaborative"), 0.25),
-            "semantic": _safe_float((payload.get("scoring_weights") or {}).get("semantic"), 0.35),
-            "knowledge": _safe_float((payload.get("scoring_weights") or {}).get("knowledge"), 0.2),
-            "diversity": _safe_float((payload.get("scoring_weights") or {}).get("diversity"), 0.2),
+            "collaborative": _safe_float(incoming_weights.get("collaborative"), 0.25),
+            "semantic": _safe_float(incoming_weights.get("semantic"), 0.35),
+            "knowledge": _safe_float(incoming_weights.get("knowledge"), 0.2),
+            "diversity": _safe_float(incoming_weights.get("diversity"), 0.2),
         }
     )
 
-    constraints = payload.get("constraints") or {}
     top_k = int(constraints.get("top_k") or payload.get("top_k") or DEFAULT_TOP_K)
+    default_novelty_threshold = 0.5 if scenario_policy == "explore" else DEFAULT_NOVELTY_THRESHOLD
     novelty_threshold = _safe_float(
-        constraints.get("novelty_threshold"), _safe_float(payload.get("novelty_threshold"), DEFAULT_NOVELTY_THRESHOLD)
+        constraints.get("novelty_threshold"), _safe_float(payload.get("novelty_threshold"), default_novelty_threshold)
     )
     min_new_items = int(constraints.get("min_new_items") or payload.get("min_new_items") or 0)
+
+    diversity_threshold = _safe_float(
+        constraints.get("diversity_threshold"),
+        _safe_float(payload.get("diversity_threshold"), 0.45 if scenario_policy == "explore" else 0.35),
+    )
+    min_diverse_items = int(constraints.get("min_diverse_items") or payload.get("min_diverse_items") or 0)
+
+    if scenario_policy == "explore":
+        min_new_items = max(min_new_items, 1)
+        min_diverse_items = max(min_diverse_items, 1)
 
     query_text = str(payload.get("query") or payload.get("query_text") or "")
     profile_summary = _profile_to_sentence(profile_vector, query_text)
@@ -409,19 +525,20 @@ async def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]
 
     selected = rows[: max(top_k, 1)]
 
-    if min_new_items > 0:
-        new_items = [r for r in rows if r["novelty_score"] >= novelty_threshold]
-        keep_ids = {item["book_id"] for item in selected}
-        injected = 0
-        for fresh in new_items:
-            if fresh["book_id"] in keep_ids:
-                continue
-            selected.append(fresh)
-            keep_ids.add(fresh["book_id"])
-            injected += 1
-            if injected >= min_new_items:
-                break
-        selected = sorted(selected, key=lambda item: item["composite_score"], reverse=True)[: max(top_k, 1)]
+    selected = _enforce_hard_minimum(
+        selected,
+        rows,
+        predicate=lambda item: _safe_float(item.get("novelty_score"), 0.0) >= novelty_threshold,
+        minimum=min_new_items,
+        top_k=max(top_k, 1),
+    )
+    selected = _enforce_hard_minimum(
+        selected,
+        rows,
+        predicate=lambda item: _safe_float((item.get("score_parts") or {}).get("diversity"), 0.0) >= diversity_threshold,
+        minimum=min_diverse_items,
+        top_k=max(top_k, 1),
+    )
 
     novelty_values = [_safe_float(r.get("novelty_score"), 0.0) for r in selected]
     diversity_values = [_safe_float(r.get("score_parts", {}).get("diversity"), 0.0) for r in selected]
@@ -434,7 +551,13 @@ async def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]
         "avg_novelty": round(sum(novelty_values) / len(novelty_values), 4) if novelty_values else 0.0,
         "avg_diversity": round(sum(diversity_values) / len(diversity_values), 4) if diversity_values else 0.0,
         "novelty_threshold": novelty_threshold,
+        "diversity_threshold": diversity_threshold,
         "new_item_count": sum(1 for r in selected if r["novelty_score"] >= novelty_threshold),
+        "diverse_item_count": sum(
+            1
+            for r in selected
+            if _safe_float((r.get("score_parts") or {}).get("diversity"), 0.0) >= diversity_threshold
+        ),
     }
 
     return selected, {
@@ -448,7 +571,10 @@ async def _rank_candidates(payload: Dict[str, Any]) -> Tuple[List[Dict[str, Any]
             "top_k": top_k,
             "novelty_threshold": novelty_threshold,
             "min_new_items": min_new_items,
+            "diversity_threshold": diversity_threshold,
+            "min_diverse_items": min_diverse_items,
         },
+        "scenario_policy": scenario_policy,
     }
 
 
@@ -469,6 +595,21 @@ async def _generate_explanation_for_item(
         f"Knowledge signal: {parts.get('knowledge', 0)}",
         f"Diversity signal: {parts.get('diversity', 0)}",
     ]
+    evidence_refs = [
+        "score_parts.collaborative",
+        "score_parts.semantic",
+        "score_parts.knowledge",
+        "score_parts.diversity",
+        "composite_score",
+    ]
+    if raw_candidate.get("kg_signal") is not None:
+        evidence_refs.append("candidate.kg_signal")
+    if raw_candidate.get("genres"):
+        evidence_refs.append("candidate.genres")
+    if raw_candidate.get("topics"):
+        evidence_refs.append("candidate.topics")
+    if raw_candidate.get("novelty_score") is not None:
+        evidence_refs.append("candidate.novelty_score")
 
     if not os.getenv("OPENAI_API_KEY"):
         return {
@@ -478,6 +619,7 @@ async def _generate_explanation_for_item(
                 f"Matches query '{query}' using available content signals; "
                 f"themes/genres considered: {', '.join(str(g) for g in genres[:3]) or 'n/a'}."
             ),
+            "evidence_refs": evidence_refs,
             "source": "heuristic",
         }
 
@@ -506,6 +648,7 @@ async def _generate_explanation_for_item(
             "book_id": item.get("book_id"),
             "bullet_summary": bullet_summary,
             "justification": (raw or "").strip() or "Model returned empty explanation.",
+            "evidence_refs": evidence_refs,
             "source": "llm",
         }
     except Exception as exc:  # pragma: no cover
@@ -514,6 +657,7 @@ async def _generate_explanation_for_item(
             "book_id": item.get("book_id"),
             "bullet_summary": bullet_summary,
             "justification": "Fallback explanation due to model call failure.",
+            "evidence_refs": evidence_refs,
             "source": "heuristic",
         }
 
@@ -548,7 +692,12 @@ async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
     start_ts = time.perf_counter()
 
     ranked_rows, meta = await _rank_candidates(payload)
-    scenario_policy = payload.get("scenario_policy") or _derive_scenario_policy(payload)
+    scenario_policy = _derive_scenario_policy(
+        {
+            **payload,
+            "scenario_policy": meta.get("scenario_policy") or payload.get("scenario_policy"),
+        }
+    )
     
     for row in ranked_rows:
         row["_explain_meta"] = {
@@ -563,10 +712,19 @@ async def _analyze_ranking(payload: Dict[str, Any]) -> Dict[str, Any]:
     for rank_idx, item in enumerate(ranked_rows, start=1):
         score_parts = item.get("score_parts", {})
         expl = explanations[rank_idx - 1] if rank_idx <= len(explanations) else {}
-        evidence_refs = []
-        for bullet in expl.get("bullet_summary") or []:
-            if isinstance(bullet, str) and bullet.strip():
-                evidence_refs.append(bullet.strip())
+        evidence_refs = [
+            str(ref).strip()
+            for ref in (expl.get("evidence_refs") or [])
+            if str(ref).strip()
+        ]
+        if not evidence_refs:
+            evidence_refs = [
+                "score_parts.collaborative",
+                "score_parts.semantic",
+                "score_parts.knowledge",
+                "score_parts.diversity",
+                "composite_score",
+            ]
         ranked_items.append(
             {
                 "book_id": item.get("book_id"),
