@@ -1,8 +1,8 @@
 {
-  "aic": "rec_ranking_agent_001",
-  "x_ioa_pub_aic_status": "PARTIAL_LOCAL_PLACEHOLDER",
+  "aic": "1.2.156.3088.0001.00001.09RLA8.91R7Z2.1.01CM",
+  "x_ioa_pub_aic_status": "DONE (local)",
   "active": true,
-  "lastModifiedTime": "2026-03-26T10:00:00+08:00",
+  "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
   "name": "Recommendation Ranking Agent",
   "description": "面向个性化推荐排序与解释生成的智能体。基于已校验的读者画像和图书特征，综合用户偏好信号、内容特征、知识图谱信号、多样性约束及场景化排序策略，对候选图书进行打分排序，并输出包含总分、分项得分、排序位置和证据化解释的推荐结果。适用于上游已完成画像构建和图书特征准备的场景。不负责扩展候选集合，也不修改上游提供的源画像数据。",
@@ -124,6 +124,6 @@
     "environment": "local-preofficial",
     "role": "partner-c",
     "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
-    "ioa_pub_registration_status": "BLOCKED_BY_IOA_PUB"
+    "ioa_pub_registration_status": "DONE (local)"
   }
 }

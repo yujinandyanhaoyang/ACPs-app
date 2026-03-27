@@ -20,9 +20,10 @@ This document separates local completion from official ioa.pub-dependent complet
 | Traceability replay/audit endpoints | `DONE (local)` | `/demo/audit/runs`, `/demo/audit/runs/{run_id}` |
 | ACS descriptors with local AIC/cert metadata | `PARTIAL_LOCAL_PLACEHOLDER` | `reading_concierge/reading_concierge.json`, `partners/online/*/acs.json` |
 | ACPs-standard partner material layout (`acs.json`, `config.toml`, `prompts.toml`, `certs/agent.crt`, `certs/agent.key`) | `DONE (local)` | `partners/online/reader_profile_agent/*`, `partners/online/book_content_agent/*`, `partners/online/rec_ranking_agent/*` |
-| ioa.pub real AIC replacement | `BLOCKED_BY_IOA_PUB` | pending official issuance |
+| ioa.pub real AIC replacement | `DONE (local)` | `reading_concierge/reading_concierge.json`, `partners/online/*/acs.json` updated with issued AICs |
+| Real CA-client installation and ATR cert application workflow | `READY_FOR_IOA_PUB` | `scripts/phase3_issue_real_certs.sh` (requires official `ca-client`) |
 | Official ATR certificate issuance | `BLOCKED_BY_IOA_PUB` | pending official workflow |
-| Official registry registration verification | `BLOCKED_BY_IOA_PUB` | pending ioa.pub review |
+| Official registry registration verification | `DONE (local)` | ioa.pub certification approved; AICs updated in ACS descriptors |
 | Official AIA mTLS verification evidence | `BLOCKED_BY_IOA_PUB` | pending official cert and environment |
-| Official ADP/DSP production evidence | `BLOCKED_BY_IOA_PUB` | pending official endpoint/process |
+| Official ADP/DSP production evidence | `READY_FOR_IOA_PUB` | `scripts/phase3_dsp_sync_verify.sh` + discovery endpoint access |
 | ACS + registration submission package | `READY_FOR_IOA_PUB` | `scripts/register_agents_ioa_pub.md`, `docs/acps-registration-evidence.md` |

@@ -436,7 +436,7 @@ Exit criteria:
 ## 5. ACPs Compliance Checklist (Formal)
 
 Identity and Capability:
-- [ ] All 4 agents have real AIC values from ioa.pub.
+- [x] All 4 agents have real AIC values from ioa.pub.
 - [ ] Each agent exposes valid ACS JSON with required fields.
 - [ ] ACS endpoint and runtime metadata are consistent.
 

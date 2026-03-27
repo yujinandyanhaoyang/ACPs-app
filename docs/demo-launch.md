@@ -96,3 +96,21 @@ curl "http://127.0.0.1:8100/demo/audit/runs/<run_id>"
 ```bash
 python scripts/prune_runtime_data.py --keep-runs-per-user 100 --keep-logs-per-task 200
 ```
+
+## 11) Phase 3 Officialization Commands (post-AIC)
+
+When running against official ACPs infrastructure per `ACPsProtocolGuide.md`:
+
+```bash
+source .venv/bin/activate
+# Install official ca-client package first
+pip install acps_ca_client-2.0.0-py3-none-any.whl
+
+# Issue ATR certificates for all 4 AICs
+export CHALLENGE_SERVER_BASE_URL=http://<your-ip>:8004/acps-atr-v2
+bash scripts/phase3_issue_real_certs.sh
+
+# Trigger DSP sync and verify ADP search
+export DISCOVERY_BASE_URL=http://<discovery-host>:8005
+bash scripts/phase3_dsp_sync_verify.sh
+```

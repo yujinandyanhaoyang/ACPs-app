@@ -205,3 +205,33 @@
 - `PARTIAL_LOCAL_PLACEHOLDER`: Added placeholder `certs/agent.crt` and `certs/agent.key` for each partner, explicitly marked as pending ioa.pub official issuance.
 - `DONE (local)`: Updated partner runtime ACS loading to prioritize `partners/online/*/acs.json` with backward-compatible fallback to `agents/*/acs.json`.
 - `DONE (local)`: Updated conformance/docs/runbook references to use the standardized partner material paths.
+
+## Week 5: 2026-03-27 (Phase 3 post-AIC protocol execution prep)
+
+### Status-tagged progress
+
+- `DONE (local)`: Replaced all placeholder AIC values in leader/partner ACS descriptors with ioa.pub-issued real AICs.
+- `READY_FOR_IOA_PUB`: Added official ATR/AIA execution script `scripts/phase3_issue_real_certs.sh` (expects real `ca-client` package and challenge URL).
+- `READY_FOR_IOA_PUB`: Added DSP sync + ADP verification script `scripts/phase3_dsp_sync_verify.sh` to generate auditable artifacts under `artifacts/phase3/`.
+- `READY_FOR_IOA_PUB`: Updated registration/evidence/status docs to align with ACPsProtocolGuide steps and current P3 state.
+
+## Week 5: 2026-03-27 (Phase 3 official service outage hold)
+
+### Status-tagged progress
+
+- `DONE (local)`: Completed preflight execution for Phase 3 scripts in local environment with `.venv` and proxy-disabled command mode (`env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY`).
+- `DONE (local)`: Verified local prerequisites and executable entrypoints for official ATR issuance workflow.
+- `BLOCKED_BY_IOA_PUB`: Official ACPs target service endpoint is temporarily unavailable; certificate issuance cannot be completed until provider-side recovery.
+- `BLOCKED_BY_IOA_PUB`: Discovery-side verification is pending official/local service restoration in the target environment.
+
+### Blocking evidence
+
+- ATR issuance attempt command executed from repo root with proxy variables disabled:
+  - `source .venv/bin/activate && env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY CA_SERVER_BASE_URL='http://bupt.ioa.pub:8003/acps-atr-v2' CHALLENGE_SERVER_BASE_URL='http://127.0.0.1:8004/acps-atr-v2' bash scripts/phase3_issue_real_certs.sh`
+- Result:
+  - Command exited with non-zero status (`exit code 1`) due to upstream service unavailability.
+
+### Next action after provider recovery
+
+- Re-run `scripts/phase3_issue_real_certs.sh` and `scripts/phase3_dsp_sync_verify.sh` in proxy-disabled mode.
+- Append generated evidence paths under `artifacts/phase3/` to registration and conformance documents.

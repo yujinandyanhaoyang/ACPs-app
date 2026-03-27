@@ -1,8 +1,8 @@
 {
-  "aic": "book_content_agent_001",
-  "x_ioa_pub_aic_status": "PARTIAL_LOCAL_PLACEHOLDER",
+  "aic": "1.2.156.3088.0001.00001.BPRK2Q.JLWHSY.1.06P9",
+  "x_ioa_pub_aic_status": "DONE (local)",
   "active": true,
-  "lastModifiedTime": "2026-03-26T10:00:00+08:00",
+  "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
   "name": "Book Content Agent",
   "description": "面向候选图书内容分析与特征补全的智能体。对已给定的候选图书进行校验、元数据规范化，并生成用于下游排序的结构化内容特征，包括语义表示、知识图谱上下文以及主题、风格、难度、适读人群等标签。适用于候选书单已经确定、需要补充内容侧特征的场景。不负责生成最终推荐列表，除已声明的规范化或过滤规则外，不主动扩展候选集合。",  "version": "1.0.0",
@@ -121,6 +121,6 @@
     "environment": "local-preofficial",
     "role": "partner-b",
     "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
-    "ioa_pub_registration_status": "BLOCKED_BY_IOA_PUB"
+    "ioa_pub_registration_status": "DONE (local)"
   }
 }

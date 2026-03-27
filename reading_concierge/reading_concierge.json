@@ -1,8 +1,8 @@
 {
-  "aic": "reading_concierge_001",
-  "x_ioa_pub_aic_status": "PARTIAL_LOCAL_PLACEHOLDER",
+  "aic": "1.2.156.3088.0001.00001.U3IBA8.JI874M.1.03Y1",
+  "x_ioa_pub_aic_status": "DONE (local)",
   "active": true,
-  "lastModifiedTime": "2026-03-26T10:00:00+08:00",
+  "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
   "name": "Reading Concierge Coordinator",
   "description": "面向个性化阅读推荐场景的协调智能体。接收用户ID和阅读需求，负责联动读者画像、候选图书获取、内容分析和排序服务，输出带可追踪解释的推荐结果。适用于需要端到端完成图书个性化推荐的场景。自身不直接进行读者画像建模、图书内容特征提取或最终打分计算，且生产路径不依赖手工输入用户画像或历史数据。",  "version": "1.0.0",
@@ -81,6 +81,6 @@
     "environment": "local-preofficial",
     "role": "leader",
     "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
-    "ioa_pub_registration_status": "BLOCKED_BY_IOA_PUB"
+    "ioa_pub_registration_status": "DONE (local)"
   }
 }

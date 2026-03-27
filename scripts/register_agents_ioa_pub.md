@@ -4,10 +4,10 @@ This runbook defines the reproducible process for registering the reading recomm
 
 ## Scope
 
-- Leader: `reading_concierge_001`
-- Partner A: `reader_profile_agent_001`
-- Partner B: `book_content_agent_001`
-- Partner C: `rec_ranking_agent_001`
+- Leader: `1.2.156.3088.0001.00001.U3IBA8.JI874M.1.03Y1`
+- Partner A: `1.2.156.3088.0001.00001.FRMFWE.LBOY6M.1.1EGZ`
+- Partner B: `1.2.156.3088.0001.00001.BPRK2Q.JLWHSY.1.06P9`
+- Partner C: `1.2.156.3088.0001.00001.09RLA8.91R7Z2.1.01CM`
 
 ## Inputs
 
@@ -46,6 +46,36 @@ This runbook defines the reproducible process for registering the reading recomm
    - `sessionId`
    - `senderId`
 4. Save evidence links and command output hashes in `docs/acps-registration-evidence.md`.
+
+## ATR/AIA Certificate Issuance (Real CA-Client)
+
+Follow ACPsProtocolGuide Step 2.4 with the official CA client:
+
+```bash
+source .venv/bin/activate
+pip install acps_ca_client-2.0.0-py3-none-any.whl
+export CHALLENGE_SERVER_BASE_URL=http://<your-ip>:8004/acps-atr-v2
+bash scripts/phase3_issue_real_certs.sh
+```
+
+After issuance:
+- move or map generated cert/key assets into production cert inventory.
+- update ACS trust status fields (`x_ioa_pub_cert_status`) from placeholder to official status.
+- record issuance log path under evidence.
+
+## DSP Sync Verification
+
+Run DSP-trigger + ADP search verification according to ACPsProtocolGuide Step 5:
+
+```bash
+export DISCOVERY_BASE_URL=http://<discovery-host>:8005
+bash scripts/phase3_dsp_sync_verify.sh
+```
+
+Expected evidence output:
+- `artifacts/phase3/dsp-sync-*.json`
+- `artifacts/phase3/adp-search-*.json`
+- `artifacts/phase3/dsp-adp-summary-*.json`
 
 ## Evidence Capture Template
 

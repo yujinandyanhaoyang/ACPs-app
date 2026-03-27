@@ -1,8 +1,8 @@
 {
-  "aic": "reader_profile_agent_001",
-  "x_ioa_pub_aic_status": "PARTIAL_LOCAL_PLACEHOLDER",
+  "aic": "1.2.156.3088.0001.00001.FRMFWE.LBOY6M.1.1EGZ",
+  "x_ioa_pub_aic_status": "DONE (local)",
   "active": true,
-  "lastModifiedTime": "2026-03-26T10:00:00+08:00",
+  "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
   "name": "Reader Profile Agent",
   "description": "面向读者画像构建与更新的智能体。基于持久化的评分、浏览、评论文本及可用用户信息，提取显式偏好、隐式偏好、情感倾向和特征向量，输出供下游排序使用的读者画像结果。适用于需要从历史交互中恢复或刷新用户阅读偏好的场景。不负责检索图书或生成最终推荐结果；在冷启动场景下，画像效果依赖可获得的用户行为数据或预设初始化策略。",  "version": "1.0.0",
@@ -121,6 +121,6 @@
     "environment": "local-preofficial",
     "role": "partner-a",
     "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
-    "ioa_pub_registration_status": "BLOCKED_BY_IOA_PUB"
+    "ioa_pub_registration_status": "DONE (local)"
   }
 }
