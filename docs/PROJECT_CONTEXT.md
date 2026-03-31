@@ -3,8 +3,20 @@
 
 **Repository**: [ACPs-app / feature/recommendation-optimization](https://github.com/yujinandyanhaoyang/ACPs-app/tree/feature/recommendation-optimization)  
 **ACPs Reference Implementation**: [AIP-PUB/ACPs-Demo-Project](https://github.com/AIP-PUB/ACPs-Demo-Project)  
-**Document Version**: 2026-03-30  
+**Document Version**: 2026-03-31 (v2 — Architecture Simplified)  
 **Status**: Active Development — System Refactoring in Progress
+
+---
+
+## Revision Notes (v2)
+
+| Change | Detail |
+|---|---|
+| Agent count | 8 → **6 Agents** |
+| RDA layer correction | RDA was incorrectly placed in Layer 1 alongside RC. Corrected: **RDA is a Partner (Neutral Mediator) in Layer 2**, not a second Leader |
+| Execution layer merger | Recall Agent (8214) + Ranking Policy Agent (8215) + Explanation Agent (8216) merged into a single **Recommendation Engine Agent (port 8214)** with three internal functional modules |
+| ACPs config scope | Only Agents with genuine cross-agent ACPs communication require `acs.json` + CAI certificate. Internal pipeline steps within Recommendation Engine Agent are intra-process module calls, not ACPs messages |
+| Negotiation terminology | `query-if` performative replaced with `request (supplement_proposal)` for multi-round Evidence Request, which more accurately reflects FIPA ACL semantics |
 
 ---
 
@@ -30,10 +42,11 @@
 **Proposed Solution**: Explicitly model these two conflicting research directions as opposing objectives held by two independent agents — Reader Profile Agent (maximizing behavioral consistency, representing the accuracy side) and Book Content Agent (maximizing semantic coverage, representing the diversity side). A neutral mediator agent, the Recommendation Decision Agent, resolves the conflict through a Contextual Bandit-based arbitration mechanism. The system achieves dynamic, per-request weight balancing through multi-round inter-agent negotiation governed by the ACPs protocol.
 
 **Key Contributions**:
-1. A four-agent negotiation architecture (Organizer + Two Proposal Parties + Neutral Mediator) grounded in Mediator-Based Negotiation theory (Jennings et al., 1998)
+1. A four-role negotiation architecture (Organizer + Two Proposal Parties + Neutral Mediator) grounded in Mediator-Based Negotiation theory (Jennings et al., 1998), implemented across **6 ACPs-compliant Agents**
 2. A Contextual Bandit arbitration mechanism (UCB; Auer et al., 2002) that learns from historical recommendation feedback, enabling decision quality to improve over time
 3. Full ACPs protocol compliance across three layers — AIA (identity authentication), ADP (dynamic discovery), and AIP (message semantics) — ensuring all inter-agent communication is cryptographically authenticated and semantically structured
 4. A closed-loop online learning system driven by the Feedback Agent, enabling continuous model updates without periodic offline retraining
+5. An Iterated Contract Net Protocol with Conditional Re-solicitation for multi-round negotiation: RDA issues `request (supplement_proposal)` Evidence Requests to RPA/BCA when proposal quality is insufficient, with a hard cap of 3 rounds
 
 ---
 
@@ -53,7 +66,7 @@ ACPs-app/
 ├── partners/online/                ← ACPs standard directory; currently 3 Partners only
 │   ├── book_content_agent/         ← acs.json present; config/prompts: 0 bytes
 │   ├── reader_profile_agent/       ← acs.json present; config/prompts: 0 bytes
-│   └── rec_ranking_agent/          ← To be deprecated and split
+│   └── rec_ranking_agent/          ← To be deprecated; merged into recommendation_engine_agent
 ├── migrations/
 │   └── 001_initial_schema.sql      ← Present; missing behavior-event and profile tables
 ├── scripts/
@@ -79,12 +92,12 @@ ACPs-app/
 
 | Category | Issue | Severity |
 |---|---|---|
-| Architecture | Only 3 Partners present; missing RDA, Recall, RankingPolicy, Explanation, Feedback Agents | 🔴 Blocking |
+| Architecture | Only 3 Partners present; missing RDA, Recommendation Engine, Feedback Agents | 🔴 Blocking |
 | Architecture | `agents/` and `partners/online/` overlap in responsibility; roles unclear | 🟡 Cleanup required |
-| Business Logic | `reading_concierge.py`: no arbitration logic, no GroupMgmt broadcast, no dynamic weight generation | 🔴 Blocking |
+| Business Logic | `reading_concierge.py`: no arbitration routing, no GroupMgmt broadcast, no dynamic weight generation | 🔴 Blocking |
 | Business Logic | `reader_profile_agent`: no PostgreSQL persistence, no decay-weighted encoding | 🔴 Blocking |
-| Business Logic | `book_content_agent`: 12-dim vectors (target: 384-dim); no projection matrix; no alignment validation interface | 🔴 Blocking |
-| Business Logic | `rec_ranking_agent`: pseudo-SVD implementation; to be split and deprecated | 🔴 Blocking |
+| Business Logic | `book_content_agent`: 12-dim vectors (target: 384-dim); no projection matrix; no alignment validation | 🔴 Blocking |
+| Business Logic | `rec_ranking_agent`: pseudo-SVD; to be deprecated and merged into Recommendation Engine Agent | 🔴 Blocking |
 | Configuration | All `config.toml` and `prompts.toml` files are empty (0 bytes) | 🔴 Blocking |
 | Database | `001_initial_schema.sql` lacks `user_behavior_events` and `user_profiles` tables | 🔴 Blocking |
 | ACPs Compliance | All AICs are placeholders; ATR formal registration not completed | 🟡 Required |
@@ -94,122 +107,231 @@ ACPs-app/
 
 ## 3. Target System Architecture
 
-### 3.1 System Layering
+### 3.1 System Layering (v2 — 6 Agents)
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  Layer 0: User Interaction Layer                     │
-│  Web Demo / API Entry Point                          │
-└─────────────────────────┬───────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────┐
-│  Layer 1: Negotiation & Coordination Layer           │
-│  Reading Concierge       (port 8210)  — Organizer    │
-│  Recommendation Decision Agent (port 8213) — Mediator│
-└──────────────┬──────────────────────┬───────────────┘
-               ↓                      ↓
-┌──────────────────────┐  ┌──────────────────────────┐
-│  Layer 2: Proposal   │  │  Layer 2: Proposal        │
-│  Negotiation Layer   │  │  Negotiation Layer        │
-│  Reader Profile Agent│  │  Book Content Agent       │
-│  (port 8211)         │  │  (port 8212)              │
-└──────────────────────┘  └──────────────────────────┘
-                           ↓ (arbitration result dispatched)
-┌─────────────────────────────────────────────────────┐
-│  Layer 3: Execution & Evaluation Layer               │
-│  Recall Agent (8214)                                 │
-│  Ranking Policy Agent (8215)                         │
-│  Explanation Agent (8216)                            │
-└─────────────────────────┬───────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────┐
-│  Layer 4: Feedback & Perception Layer                │
-│  Feedback Agent (port 8217)                          │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  Layer 0: User Interaction Layer                          │
+│  Web Demo / API Entry Point                               │
+└───────────────────────────┬──────────────────────────────┘
+                             ↓
+┌──────────────────────────────────────────────────────────┐
+│  Layer 1: Coordination Layer                              │
+│  Reading Concierge  (port 8210)  ★ ONLY Leader           │
+└────────────┬──────────────────────────────────────────────┘
+             ↓ GroupMgmt broadcast
+┌──────────────────────────────────────────────────────────┐
+│  Layer 2: Proposal & Arbitration Layer  (all Partners)    │
+│  Reader Profile Agent      (port 8211)  Proposal Party A  │
+│  Book Content Agent        (port 8212)  Proposal Party B  │
+│  Recommendation Decision Agent (port 8213) Neutral Mediator│
+│                                                           │
+│  ◀── Lateral Negotiation: Profile Proposal / Content     │
+│       Proposal / Counter-Proposal / Evidence Request /   │
+│       Supplementary Inform ──▶                           │
+└───────────────────────────┬──────────────────────────────┘
+                             ↓ Arbitration Result → RC → dispatch
+┌──────────────────────────────────────────────────────────┐
+│  Layer 3: Execution Layer                                 │
+│  Recommendation Engine Agent  (port 8214)                 │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │ RecallModule      Faiss HNSW (ANN) + ALS (CF)       │ │
+│  │ RankingModule     4-dim scoring + MMR re-ranking     │ │
+│  │ ExplanationModule Heuristic confidence + LLM rationale│ │
+│  └─────────────────────────────────────────────────────┘ │
+└───────────────────────────┬──────────────────────────────┘
+                             ↓
+┌──────────────────────────────────────────────────────────┐
+│  Layer 4: Feedback & Perception Layer                     │
+│  Feedback Agent  (port 8215)                              │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 Complete Interaction Sequence
+**Design rationale for merging Recall / Ranking / Explanation into a single Agent**:
+
+The boundary criterion for an independent ACPs Agent is whether the entity requires **autonomous negotiation capability** — i.e., private objectives, proactive communication, and internal state that evolves independently. Recall, Ranking, and Explanation modules satisfy none of these criteria:
+- They hold no private objectives
+- They do not initiate any inter-agent communication
+- They execute a deterministic pipeline: input → processing → output
+
+All three are therefore functional modules within the Recommendation Engine Agent's internal pipeline, communicating via intra-process function calls rather than ACPs messages. This eliminates three unnecessary `acs.json` configurations, three CAI certificates, and three DSP registrations, reducing ACPs protocol overhead and improving system stability.
+
+### 3.2 Agent Communication Map
+
+```
+User
+ │
+ │ natural language request
+ ▼
+Reading Concierge (Leader, port 8210)
+ │
+ ├─ GroupMgmt broadcast (request) ──────────────────────────────┐
+ │                                                               │
+ ▼                                                               ▼
+Reader Profile Agent (port 8211)              Book Content Agent (port 8212)
+ │ Profile Proposal                            │ Content Proposal
+ │ {profile_vector, confidence,                │ {divergence_score, weight_suggestion,
+ │  strategy_suggestion}                       │  coverage_report}
+ │                                             │
+ │  [if divergence > 0.4]                      │ Counter-Proposal
+ │                                             │ {reason, counter_strategy}
+ │                                             │
+ └─────────────────────► Recommendation Decision Agent (port 8213) ◄──┘
+                          │
+                          │ [if confidence < θ or fields missing]
+                          │ Evidence Request (request supplement_proposal)
+                          │ ─────────────────────────────────────────────►  RPA / BCA
+                          │                                                    │
+                          │ Supplementary Inform (inform)                      │
+                          │ ◄─────────────────────────────────────────────────┘
+                          │
+                          │ Arbitration Result
+                          │ {action, final_weights, mmr_lambda, strategy}
+                          ▼
+                    Reading Concierge (routes downstream)
+                          │
+                          │ request: {profile_vector, weights, mmr_lambda, ...}
+                          ▼
+                    Recommendation Engine Agent (port 8214)
+                          │
+                          │  [Internal pipeline — intra-process, not ACPs]
+                          │  RecallModule → RankingModule ↔ ExplanationModule → RankingModule
+                          │
+                          │ inform: {recommendations[], explanations{}}
+                          ▼
+                    Reading Concierge → User: Top-20 + rationales
+
+[Asynchronous feedback loop]
+User behavior events ──► Feedback Agent (port 8215)
+                          │
+                          ├─ inform ──► RDA: reward signal rₜ
+                          ├─ inform ──► RPA: profile update (≥20 events/user)
+                          └─ inform ──► Recommendation Engine Agent: CF retrain (≥500 ratings)
+```
+
+### 3.3 Complete Interaction Sequence (v2)
 
 ```
 t0   User request → Reading Concierge
        LLM parses user intent → structured task parameters
        GroupMgmt broadcast → Reader Profile Agent + Book Content Agent (parallel)
+       RC also notifies RDA to stand by for incoming proposals
 
 t1   [Parallel execution]
      Reader Profile Agent:
        Load behavior sequence from PostgreSQL (90-day window, decay-weighted)
+       Decay encoding: wₜ = e^{-λ(T-t)}, λ = 0.05
        Encode → profile_vector (256-dim) + confidence ∈ [0, 1]
        Cold-start guard: event_count < 5 → force confidence ≤ 0.25, cold_start = true
-       Proposal A: {profile_vector, confidence, behavior_genres, strategy_suggestion}
+       → Profile Proposal to RDA: {profile_vector, confidence, behavior_genres, strategy_suggestion}
 
      Book Content Agent:
        Encode via sentence-transformers (all-MiniLM-L6-v2) → book_vectors (384-dim)
        Project to 256-dim user space via proj_matrix.npy
        Compute JS divergence between declared preferences and behavioral genres
-       Proposal B: {alignment_report, divergence_score, weight_suggestion}
-       [If divergence > 0.4: proactively mention(RDA, performative="reject-proposal")]
+       → Content Proposal to RDA: {divergence_score, alignment_status, weight_suggestion, coverage_report}
+       [If divergence > 0.4: proactively send Counter-Proposal to RDA]
+         Counter-Proposal: {reason: "preference divergence", counter_strategy: "explore", mmr_lambda: 0.65}
 
-t2   RC aggregates both proposals → forwards to Recommendation Decision Agent
+t2   RDA receives Profile Proposal + Content Proposal (+ optional Counter-Proposal)
+     → Proposal Quality Assessment:
+         Trigger Evidence Request if ANY of:
+           - confidence < 0.3  (cold-start / inactive user)
+           - weight_suggestion or coverage_report is null  (BCA incomplete)
+           - divergence > 0.7 AND confidence > 0.6  (extreme misalignment)
+           - Counter-Proposal received but no counter_proposal field  (veto without alternative)
 
-t3   Recommendation Decision Agent (Contextual Bandit arbitration):
+t3   [If Evidence Request triggered — Iterated Contract Net Protocol]
+     RDA → RPA: request {action: supplement_proposal, required_fields: [cold_start_prior, adjusted_confidence]}
+     RDA → BCA: request {action: supplement_proposal, required_fields: [fallback_strategy, exploration_budget]}
+     RPA → RDA: inform {adjusted_confidence, demographic_prior, profile_vector_updated}
+     BCA → RDA: inform {fallback_strategy, exploration_budget}
+     → Re-assess proposal quality; repeat up to max 3 rounds
+     [If round = 3 and still insufficient: force convergence using best available data + conservative prior]
+
+t4   RDA Contextual Bandit Arbitration (UCB):
        Map context: f(confidence, divergence) → one of 4 context classes
-       UCB selection: UCB(a) = r̄(a) + c·√(ln N / n(a)),  c = 1.41
-       [If information insufficient: proactively mention(RPA/BCA, performative="query-if")]
-       [Multi-round negotiation: max 3 rounds; fallback to historical arm mean if not converged]
-       Output: final_weights + strategy + mmr_lambda
-       Differentiated dispatch:
-         → Recall Agent:         {ann_weight, cf_weight, strategy}
-         → Ranking Policy Agent: {weights, mmr_lambda, penalty_params}
-         → Explanation Agent:    {min_coverage, required_evidence_types}
+       Query Redis arm records for current context class
+       UCB(a) = r̄(a) + c·√(ln N / n(a)),  c = 1.41
+       Tie-breaking: if |UCB_best − UCB_second| ≤ 0.05 → adopt RPA's strategy_suggestion
+       Generate Arbitration Result: {action, final_weights, mmr_lambda, strategy, min_coverage, ...}
+       → Return Arbitration Result to Reading Concierge
 
-t4   Recall Agent:
+t5   Reading Concierge routes dispatch to Recommendation Engine Agent:
+       {profile_vector, ann_weight, cf_weight, score_weights, mmr_lambda,
+        confidence_penalty_threshold, min_coverage, required_evidence_types}
+
+t6   Recommendation Engine Agent — Internal Pipeline:
+     RecallModule:
        ANN path: Faiss HNSW, ef_search=100, top_k=200, recall_source="ann"
-       CF  path: ALS model, top_k=100, recall_source="cf"
+       CF  path: Hnswlib top-50 similar users → ALS inference, top_k=100, recall_source="cf"
        Merge and deduplicate → candidates[] (~250 books)
 
-t5   Ranking Policy Agent (Round 1):
+     RankingModule Round 1:
        Four-dimensional scoring (content / cf / novelty / recency)
        → preliminary_ranked_list (top-50)
 
-t6   Explanation Agent (assessment phase):
-       Heuristic evaluation of explain_confidence per candidate (no LLM)
+     ExplanationModule Phase 1 (heuristic, no LLM):
+       Compute explain_confidence per candidate:
+         content_sim > 0.5      → +0.30
+         cf_neighbors present   → +0.30
+         matched_prefs non-empty → +0.20
+         kg_features present    → +0.20
        → confidence_list {book_id: float}
 
-t7   Ranking Policy Agent (Round 2):
+     RankingModule Round 2:
        Apply EA penalty: score × 0.7 if confidence < threshold
-       MMR re-ranking → final_ranked_list (top-20)
-       MMR(dᵢ) = λ·Rel(dᵢ) − (1−λ)·max_{dⱼ∈S} cos(d⃗ᵢ, d⃗ⱼ)
+       MMR re-ranking: MMR(dᵢ) = λ·Rel(dᵢ) − (1−λ)·max_{dⱼ∈S} cos(d⃗ᵢ, d⃗ⱼ)
+       → final_ranked_list (top-20)
 
-t8   Explanation Agent (generation phase):
-       LLM generates personalized recommendation rationales (gpt-4o)
+     ExplanationModule Phase 2 (LLM — gpt-4o, temp=0.4):
+       Generate personalized rationale for each book in final_ranked_list
        → explanations {book_id: text}
 
-t9   Reading Concierge assembles response → returns to user
+     → inform Reading Concierge: {recommendations[], engine_meta{}}
+
+t7   Reading Concierge assembles response → returns Top-20 + rationales to User
 
 [Asynchronous feedback loop]
-t10  User behavior events → DSP Webhook → Feedback Agent
-       Compute reward signal rₜ
-       → mention → Reader Profile Agent  (profile update; threshold: 20 events/user)
-       → mention → Recall Agent          (CF retrain; threshold: 500 rating events globally)
-       → mention → RDA                   (update contextual bandit arm record)
+t8   User behavior events → DSP Webhook → Feedback Agent
+       Map event types to reward weights
+       → inform → RDA: {context_type, action, reward=rₜ, conversation_id}
+         RDA updates arm_record[context_type][action]
+       → inform → RPA: {trigger: update_profile}  (threshold: ≥20 events/user)
+       → inform → Recommendation Engine Agent: {trigger: retrain_cf}  (threshold: ≥500 rating events globally)
 ```
 
-### 3.3 Persistent Storage Architecture
+### 3.4 Persistent Storage Architecture
 
 | Storage | Technology | Owner Agent | Purpose |
 |---|---|---|---|
 | Relational DB | PostgreSQL | Reader Profile Agent | User behavior sequences and profile vectors |
-| Vector Index | Faiss HNSW | Book Content Agent (write) / Recall Agent (read) | Book semantic vector retrieval |
-| User Similarity Index | Hnswlib | Recall Agent | Collaborative filtering user similarity |
+| Vector Index | Faiss HNSW | Recommendation Engine Agent (RecallModule) | Book semantic vector retrieval |
+| User Similarity Index | Hnswlib | Recommendation Engine Agent (RecallModule) | CF user similarity lookup |
 | Session Store | Redis DB 0 | Reading Concierge | Per-session context |
 | Bandit Arm Records | Redis DB 1 | Recommendation Decision Agent | Contextual bandit state persistence |
-| Feedback Queue | Redis DB 2 | Feedback Agent | Behavior event buffer |
+| Feedback Queue | Redis DB 2 | Feedback Agent | Behavior event buffer and global counters |
 
 ---
 
 ## 4. Agent Specifications
 
-### 4.1 Reading Concierge
+### 4.1 Agent Summary Table (v2 — 6 Agents)
+
+| Agent | Port | ACPs Role | Layer | Private Objective | LLM | `acs.json` + CAI Cert |
+|---|---|---|---|---|---|---|
+| Reading Concierge | 8210 | `leader` | 1 | Maintain negotiation order | ✅ Intent parsing | ✅ Required |
+| Reader Profile Agent | 8211 | `partner-rpa` | 2 | Maximize accuracy | ✅ Preference induction | ✅ Required |
+| Book Content Agent | 8212 | `partner-bca` | 2 | Maximize diversity | ❌ | ✅ Required |
+| Recommendation Decision Agent | 8213 | `partner-rda` | 2 | Minimize long-term regret | ❌ | ✅ Required |
+| Recommendation Engine Agent | 8214 | `partner-engine` | 3 | — (execution) | ✅ Rationale (ExplanationModule) | ✅ Required |
+| Feedback Agent | 8215 | `partner-fa` | 4 | — (perception) | ❌ | ✅ Required |
+
+> **Note**: All 6 Agents require `acs.json` + CAI certificate because all 6 participate in ACPs inter-agent communication. The Recommendation Engine Agent communicates with RC (receives dispatch request, returns results) and with Feedback Agent (receives CF retrain trigger) — both are genuine ACPs messages. The internal Recall/Ranking/Explanation pipeline within the Engine Agent are intra-process module calls and do not require separate ACPs identities.
+
+---
+
+### 4.2 Reading Concierge
 
 | Property | Value |
 |---|---|
@@ -224,10 +346,10 @@ t10  User behavior events → DSP Webhook → Feedback Agent
 **Responsibilities**:
 - Parse user natural language request via LLM → structured task parameters
 - GroupMgmt broadcast to RPA and BCA (parallel)
-- Route `mention` messages between agents; maintain negotiation order
-- Aggregate proposals from RPA and BCA → forward to RDA
-- Receive RDA arbitration result → route execution instructions to downstream agents
-- Assemble final recommendation response → return to user
+- Notify RDA to stand by for incoming proposals
+- Aggregate proposals and forward to RDA for arbitration
+- Receive Arbitration Result from RDA → route execution dispatch to Recommendation Engine Agent
+- Receive Engine Agent results → assemble final response → return to user
 
 **Explicitly does NOT**:
 - Perform arbitration or generate recommendation weights
@@ -238,6 +360,12 @@ t10  User behavior events → DSP Webhook → Feedback Agent
 ```toml
 [server]
 port = 8210
+
+[server.mtls]
+cert = "certs/<AIC>.pem"
+key  = "certs/<AIC>.key"
+ca   = "certs/trust-bundle.pem"
+verify_client = true
 
 [llm]
 model = "gpt-4o"
@@ -250,7 +378,7 @@ url = "redis://localhost:6379/0"
 
 ---
 
-### 4.2 Reader Profile Agent
+### 4.3 Reader Profile Agent
 
 | Property | Value |
 |---|---|
@@ -265,16 +393,25 @@ url = "redis://localhost:6379/0"
 **Core Logic**:
 - Load behavior sequence from PostgreSQL (90-day window, up to 500 events)
 - Decay-weighted encoding: $w_t = e^{-\lambda(T-t)}$, $\lambda = 0.05$
-- LLM semantic induction → preference description text → `sentence-transformers` encode → `profile_vector` (256-dim)
-- Compute `confidence` ∈ [0, 1]
+- LLM semantic induction → preference description → `sentence-transformers` encode → `profile_vector` (256-dim)
+- Compute `confidence` ∈ [0, 1] based on event count, recency distribution, behavioral diversity
 - Cold-start guard: event_count < 5 → force `confidence ≤ 0.25`, `cold_start = true`
-- Submit Proposal A to RDA; respond to RDA `query-if` with cold-start prior distribution
+
+**Negotiation interface**:
+- Send **Profile Proposal** to RDA: `{profile_vector, confidence, cold_start, behavior_genres, recent_authors, strategy_suggestion, evidence_summary}`
+- Respond to RDA **Evidence Request**: supplement `{demographic_prior, declared_interests, adjusted_confidence, profile_vector_updated}`
 - Receive Feedback Agent trigger → incremental profile update
 
 **`config.toml` key parameters**:
 ```toml
 [server]
 port = 8211
+
+[server.mtls]
+cert = "certs/<AIC>.pem"
+key  = "certs/<AIC>.key"
+ca   = "certs/trust-bundle.pem"
+verify_client = true
 
 [database]
 dsn = "postgresql://user:pass@localhost:5432/acps"
@@ -287,7 +424,7 @@ VECTOR_DIM = 256
 
 ---
 
-### 4.3 Book Content Agent
+### 4.4 Book Content Agent
 
 | Property | Value |
 |---|---|
@@ -301,17 +438,24 @@ VECTOR_DIM = 256
 
 **Core Logic**:
 - Encode books via `sentence-transformers` (all-MiniLM-L6-v2) → 384-dim vectors
-- Project to 256-dim user space via `proj_matrix.npy` (256×384; initialized via PCA or random projection)
+- Project to 256-dim user space via `proj_matrix.npy` (256×384)
 - Compute JS divergence between user's declared preferences and behavioral genre distribution → `AlignmentReport`
-- Submit Proposal B to RDA
-- If `divergence > MISMATCH_THRESHOLD (0.4)`: proactively `mention(RDA, performative="reject-proposal")` with counter-proposal
 
-**Design rationale for no LLM**: BCA uses mathematical vector operations rather than LLM calls, demonstrating that LLM should only be used where semantic understanding is genuinely required. This avoids over-reliance on LLM, which would reduce system interpretability and increase inference cost — a deliberate architectural decision.
+**Negotiation interface**:
+- Send **Content Proposal** to RDA: `{divergence_score, alignment_status, declared_genres, behavior_genres, weight_suggestion, coverage_report}`
+- If `divergence > 0.4`: proactively send **Counter-Proposal** to RDA: `{reason, divergence_score, counter_proposal: {strategy, mmr_lambda}}`
+- Respond to RDA **Evidence Request**: supplement `{fallback_strategy, exploration_budget, popularity_fallback}`
 
 **`config.toml` key parameters**:
 ```toml
 [server]
 port = 8212
+
+[server.mtls]
+cert = "certs/<AIC>.pem"
+key  = "certs/<AIC>.key"
+ca   = "certs/trust-bundle.pem"
+verify_client = true
 
 [model]
 ENCODER_MODEL = "all-MiniLM-L6-v2"
@@ -321,7 +465,7 @@ MISMATCH_THRESHOLD = 0.4
 
 ---
 
-### 4.4 Recommendation Decision Agent
+### 4.5 Recommendation Decision Agent
 
 | Property | Value |
 |---|---|
@@ -331,77 +475,76 @@ MISMATCH_THRESHOLD = 0.4
 | Private Objective | Minimize long-term recommendation regret (Regret Minimization; Auer et al., 2002) |
 | LLM Calls | ❌ |
 | `prompts.toml` | Not required |
-| Skills | `rda.arbitrate`, `rda.dispatch` |
+| Skills | `rda.arbitrate`, `rda.request_evidence` |
 
-**Core Logic**:
+**Why RDA is in Layer 2 (not Layer 1)**:
+RDA is a **Partner Agent**, not a Leader. It holds no authority over the system's task flow. RC (the sole Leader) organizes the negotiation; RDA participates as a neutral third party that arbitrates between RPA and BCA proposals. RDA's arbitration result is returned to RC, which then routes the execution dispatch — this preserves the Leader's routing authority.
 
-**Step 1 — Context Identification**
+**Arbitration Protocol (Iterated Contract Net with Conditional Re-solicitation)**:
 
-Map the two proposals to a context class:
+**Step 1 — Proposal Quality Assessment**
+
+Trigger **Evidence Request** (`request`, `action: supplement_proposal`) if ANY condition holds:
+- `confidence < 0.3` → RDA → RPA: `{required_fields: [cold_start_prior, adjusted_confidence]}`
+- `weight_suggestion` or `coverage_report` is null → RDA → BCA: `{required_fields: [complete_weight_suggestion]}`
+- `divergence > 0.7` AND `confidence > 0.6` → RDA → both: `{required_fields: [extended_evidence]}`
+- Counter-Proposal received without `counter_proposal` field → RDA → BCA: `{required_fields: [fallback_strategy]}`
+
+Max rounds: 3. After round 3, force convergence.
+
+**Step 2 — Context Identification**
 
 $$\text{context} = f(\text{confidence},\ \text{divergence}) \in \{\texttt{high\_conf\_low\_div},\ \texttt{low\_conf\_high\_div},\ \texttt{low\_conf\_low\_div},\ \texttt{high\_conf\_high\_div}\}$$
 
-**Step 2 — UCB Arbitration**
-
-Query contextual arm records for the identified context class; select the action with the highest UCB value:
+**Step 3 — UCB Arbitration**
 
 $$\text{UCB}(a) = \bar{r}(a) + c\sqrt{\frac{\ln N}{n(a)}}, \quad c = 1.41$$
 
-Where $\bar{r}(a)$ is the historical mean reward for action $a$, $N$ is total trial count, and $n(a)$ is trial count for action $a$.
+- Query `arm_records[context_type]` from Redis DB 1
+- Select action with highest UCB value
+- Tie-breaking (|UCB_best − UCB_second| ≤ 0.05): adopt RPA's `strategy_suggestion` (accuracy side priority)
+- Cold-start guard: if `trials < 20` for all arms → apply conservative prior (balanced weights)
 
-**Step 3 — Multi-Round Negotiation (when triggered)**
-
-```
-Round 1: Receive initial proposals from both parties
-          Compute preliminary equilibrium W₀
-          Broadcast W₀ to both parties: "Evaluate this proposal against your objective function"
-
-Round 2: RPA replies: {objective_score, adjustment_suggestion}
-          BCA replies: {objective_score, adjustment_suggestion}
-
-Round 3: Integrate feedback → compute new equilibrium W₁
-          Verify both parties' objective functions exceed their respective thresholds
-          → Converged: output W₁
-          [If max rounds exceeded: fallback to historical arm mean]
-```
-
-**Step 4 — Differentiated Dispatch**
-
-On convergence, proactively dispatch customized execution instructions to each downstream agent:
+**Step 4 — Generate Arbitration Result**
 
 ```json
-→ Recall Agent:
-  {"ann_weight": 0.65, "cf_weight": 0.35, "strategy": "exploit", "diversity_boost": false}
-
-→ Ranking Policy Agent:
-  {"weights": {"content": 0.62, "cf": 0.20, "novelty": 0.12, "recency": 0.06},
-   "mmr_lambda": 0.55, "confidence_penalty_threshold": 0.6, "penalty_multiplier": 0.7}
-
-→ Explanation Agent:
-  {"min_coverage": 0.6, "required_evidence_types": ["content_sim", "cf_neighbors"]}
+{
+  "performative": "inform",
+  "to": "leader-rc",
+  "content": {
+    "action": "balanced",
+    "final_weights": {
+      "ann_weight": 0.58, "cf_weight": 0.42,
+      "content_score_weight": 0.50, "cf_score_weight": 0.25,
+      "novelty_weight": 0.15, "recency_weight": 0.10
+    },
+    "mmr_lambda": 0.55,
+    "strategy": "balanced",
+    "confidence_penalty_threshold": 0.6,
+    "min_explain_coverage": 0.6,
+    "required_evidence_types": ["content_sim", "cf_neighbors"]
+  }
+}
 ```
 
-**Step 5 — Reward Signal Update**
-
-Receive Feedback Agent `inform` message → update the `(context_type, action)` arm record:
+**Step 5 — Reward Signal Update** (from Feedback Agent)
 
 ```
 arm_record[context_type][action].trials += 1
-arm_record[context_type][action].avg_reward = (
-    (avg_reward × (trials - 1) + r_t) / trials
-)
+arm_record[context_type][action].avg_reward =
+    (avg_reward × (trials − 1) + r_t) / trials
 ```
-
-**Why RDA is a genuine Agent and not a function module**:
-- Its arbitration behavior is determined jointly by the current input **and** its historical arm records (internal private state)
-- Identical conflict inputs at different points in time yield different arbitration results (arm records evolve over time)
-- It proactively initiates `query-if` and multi-round negotiation broadcasts — behaviors not triggered by any external call
-- These properties violate referential transparency, which is the defining characteristic of function calls
 
 **`config.toml` key parameters**:
 ```toml
 [server]
 port = 8213
+
+[server.mtls]
+cert = "certs/<AIC>.pem"
+key  = "certs/<AIC>.key"
+ca   = "certs/trust-bundle.pem"
+verify_client = true
 
 [redis]
 url = "redis://localhost:6379/1"
@@ -414,113 +557,77 @@ MIN_TRIALS_FOR_CONFIDENCE = 20
 
 ---
 
-### 4.5 Recall Agent
+### 4.6 Recommendation Engine Agent
 
 | Property | Value |
 |---|---|
 | Port | 8214 |
-| ACPs Role | `partner-recall` |
+| ACPs Role | `partner-engine` |
 | Academic Classification | Reactive Agent — Execution Layer |
-| Private Objective | None (sense-act mapping) |
-| LLM Calls | ❌ |
-| `prompts.toml` | Not required |
-| Skills | `recall.execute`, `recall.retrain` |
+| Private Objective | None (deterministic execution pipeline) |
+| LLM Calls | ✅ ExplanationModule Phase 2 only (gpt-4o) |
+| `prompts.toml` | Required (ExplanationModule rationale template) |
+| Skills | `engine.recommend`, `engine.retrain_cf` |
 
-**Core Logic**:
-- **ANN path**: Faiss HNSW retrieval, `ef_search=100`, `top_k=200`, tag `recall_source="ann"`
-- **CF path**: Hnswlib finds top-50 similar users; ALS inference, `top_k=100`, tag `recall_source="cf"`
-- Merge and deduplicate: weight by `ann_weight`/`cf_weight` from RDA; `recall_source="both"` for overlapping candidates (take higher score)
-- Inbound mention handler: receive Feedback Agent trigger → invoke `scripts/build_cf_model.py` for incremental ALS retraining
+**ACPs Interface**:
+- Receive `request` from RC: `{profile_vector, ann_weight, cf_weight, score_weights, mmr_lambda, confidence_penalty_threshold, min_coverage, required_evidence_types}`
+- Return `inform` to RC: `{recommendations[], engine_meta{}}`
+- Receive `inform` from Feedback Agent: `{trigger: retrain_cf}` → invoke `build_cf_model.py`
+
+**Internal Pipeline (intra-process module calls — not ACPs)**:
+
+```
+RecallModule.run(profile_vector, ann_weight, cf_weight)
+    ANN:  Faiss HNSW, ef_search=100, top_k=200
+    CF:   Hnswlib top-50 similar users → ALS inference, top_k=100
+    Merge → candidates[] (~250)
+         ↓
+RankingModule.score_round1(candidates, score_weights)
+    → preliminary_ranked_list (top-50)
+         ↓
+ExplanationModule.assess_confidence(preliminary_ranked_list)
+    Heuristic scoring (no LLM):
+      content_sim > 0.5       → +0.30
+      cf_neighbors present    → +0.30
+      matched_prefs non-empty → +0.20
+      kg_features present     → +0.20
+    → confidence_list {book_id: float}
+         ↓
+RankingModule.rerank_round2(preliminary_ranked_list, confidence_list, mmr_lambda)
+    EA penalty: score × 0.7 if confidence < threshold
+    MMR: MMR(dᵢ) = λ·Rel(dᵢ) − (1−λ)·max_{dⱼ∈S} cos(d⃗ᵢ, d⃗ⱼ)
+    → final_ranked_list (top-20)
+         ↓
+ExplanationModule.generate_rationale(final_ranked_list)
+    LLM: gpt-4o, temperature=0.4, max_tokens=300
+    → explanations {book_id: text}
+```
 
 **`config.toml` key parameters**:
 ```toml
 [server]
 port = 8214
 
+[server.mtls]
+cert = "certs/<AIC>.pem"
+key  = "certs/<AIC>.key"
+ca   = "certs/trust-bundle.pem"
+verify_client = true
+
 [index]
 FAISS_INDEX_PATH = "data/book_faiss.index"
 ALS_MODEL_PATH   = "data/als_model.npz"
 HNSWLIB_PATH     = "data/user_sim.bin"
-```
-
----
-
-### 4.6 Ranking Policy Agent
-
-| Property | Value |
-|---|---|
-| Port | 8215 |
-| ACPs Role | `partner-ranking` |
-| Academic Classification | Instrumental Agent — Evaluation Layer |
-| Private Objective | None (provides ranking expertise for the negotiation process) |
-| LLM Calls | ❌ |
-| `prompts.toml` | Not required |
-| Skills | `ranking.score`, `ranking.rerank` |
-
-**Core Logic**:
-- Receive `weights` and `mmr_lambda` from RDA
-- **Round 1**: Four-dimensional scoring (content / cf / novelty / recency) → `preliminary_ranked_list` (top-50)
-- Receive `confidence_list` from Explanation Agent; apply penalty: `score × penalty_multiplier` if `confidence < threshold`
-- **Round 2**: MMR re-ranking → `final_ranked_list` (top-20)
-
-$$\text{MMR}(d_i) = \lambda \cdot \text{Rel}(d_i) - (1-\lambda) \cdot \max_{d_j \in S} \cos(\vec{d}_i,\ \vec{d}_j)$$
-
-**`config.toml` key parameters**:
-```toml
-[server]
-port = 8215
-
-[ranking]
-CONFIDENCE_PENALTY_THRESHOLD = 0.6
-PENALTY_MULTIPLIER           = 0.7
-DEFAULT_MMR_LAMBDA           = 0.5
-```
-
----
-
-### 4.7 Explanation Agent
-
-| Property | Value |
-|---|---|
-| Port | 8216 |
-| ACPs Role | `partner-ea` |
-| Academic Classification | Instrumental Agent — Evaluation Layer |
-| Private Objective | None (provides explainability evaluation for the negotiation process) |
-| LLM Calls | ✅ Phase 2 only: personalized rationale generation |
-| `prompts.toml` | Required |
-| Skills | `ea.assess_confidence`, `ea.generate_explanation` |
-
-**Core Logic**:
-
-**Phase 1 — Heuristic Assessment** (no LLM; fast path):
-
-Compute `explain_confidence` for each candidate in `preliminary_ranked_list`:
-
-| Evidence Field | Condition | Contribution |
-|---|---|---|
-| `content_sim` | > 0.5 | +0.30 |
-| `cf_neighbors` | present | +0.30 |
-| `matched_prefs` | non-empty | +0.20 |
-| `kg_features` | present | +0.20 |
-
-Output: `confidence_list {book_id: float}` → forwarded to Ranking Policy Agent
-
-**Phase 2 — Rationale Generation** (LLM; slow path):
-
-Generate personalized explanation for each book in `final_ranked_list`:
-- Model: gpt-4o, temperature=0.4, max_tokens=300
-- Template variables: `{title}`, `{author}`, `{genre_tags}`, `{content_similarity}`, `{cf_evidence}`, `{matched_preferences}`
-- Fallback template activated when evidence is insufficient
-
-**`config.toml` key parameters**:
-```toml
-[server]
-port = 8216
 
 [llm]
 model       = "gpt-4o"
 temperature = 0.4
 max_tokens  = 300
+
+[ranking]
+CONFIDENCE_PENALTY_THRESHOLD = 0.6
+PENALTY_MULTIPLIER           = 0.7
+DEFAULT_MMR_LAMBDA           = 0.5
 
 [quality]
 DEFAULT_MIN_COVERAGE = 0.6
@@ -528,11 +635,11 @@ DEFAULT_MIN_COVERAGE = 0.6
 
 ---
 
-### 4.8 Feedback Agent
+### 4.7 Feedback Agent
 
 | Property | Value |
 |---|---|
-| Port | 8217 |
+| Port | 8215 |
 | ACPs Role | `partner-fa` |
 | Academic Classification | Environment Agent — Perception Layer |
 | Private Objective | None (closes the system feedback loop) |
@@ -540,10 +647,10 @@ DEFAULT_MIN_COVERAGE = 0.6
 | `prompts.toml` | Not required |
 | Skills | `fa.receive_event`, `fa.compute_reward` |
 
-**Academic positioning**: Feedback Agent satisfies the broadest Agent definition per Russell & Norvig — "an agent is anything that perceives its environment through sensors and acts upon it through actuators." FA's sensors are the DSP Webhook (user behavior events) and its actuators are the `mention` mechanism (internal system trigger signals). Its academic value lies not in negotiation capability, but in transforming the system from an **open-loop** to a **closed-loop** recommender — without FA, the system cannot learn from user behavior.
+**Academic positioning**: Feedback Agent satisfies Russell & Norvig's broadest Agent definition — sensors are the DSP Webhook (user behavior events); actuators are the `inform` messages to RDA, RPA, and Recommendation Engine Agent. Its value lies in transforming the system from an **open-loop** to a **closed-loop** recommender.
 
 **Core Logic**:
-- `POST /feedback/webhook`: receive DSP behavior events; map to reward weights; enqueue in Redis
+- `POST /feedback/webhook`: receive DSP behavior events; map to reward weights; enqueue in Redis DB 2
 - Event weight mapping:
 
 | Event Type | Reward Weight |
@@ -557,14 +664,20 @@ DEFAULT_MIN_COVERAGE = 0.6
 | `rate_1` | −0.8 |
 
 - Accumulation triggers:
-  - Per-user event count ≥ 20 → `mention(RPA, performative="inform", trigger="update_profile")`
-  - Global rating event count ≥ 500 → `mention(RecallAgent, performative="inform", trigger="retrain_cf")`
-  - After every completed recommendation session → `mention(RDA, performative="inform", reward=rₜ, context_type=ctx, action=action)`
+  - After every completed session → `inform(RDA, reward=rₜ, context_type=ctx, action=action)`
+  - Per-user event count ≥ 20 → `inform(RPA, trigger="update_profile")`
+  - Global rating event count ≥ 500 → `inform(RecommendationEngineAgent, trigger="retrain_cf")`
 
 **`config.toml` key parameters**:
 ```toml
 [server]
-port = 8217
+port = 8215
+
+[server.mtls]
+cert = "certs/<AIC>.pem"
+key  = "certs/<AIC>.key"
+ca   = "certs/trust-bundle.pem"
+verify_client = true
 
 [redis]
 url = "redis://localhost:6379/2"
@@ -575,24 +688,9 @@ CF_RETRAIN_THRESHOLD   = 500
 
 [agents]
 RPA_AIC    = "<AIC-RPA>"
-RECALL_AIC = "<AIC-RECALL>"
+ENGINE_AIC = "<AIC-ENGINE>"
 RDA_AIC    = "<AIC-RDA>"
 ```
-
----
-
-### 4.9 Agent Summary Table
-
-| Agent | Port | Role | Academic Class | Private Objective | LLM | `prompts.toml` |
-|---|---|---|---|---|---|---|
-| Reading Concierge | 8210 | Leader / Organizer | Cognitive Agent | Negotiation order | ✅ Intent parsing | Required |
-| Reader Profile Agent | 8211 | Proposal Party A | Cognitive Agent | Maximize accuracy | ✅ Preference induction | Required |
-| Book Content Agent | 8212 | Proposal Party B | Cognitive Agent | Maximize diversity | ❌ | Not required |
-| Recommendation Decision Agent | 8213 | Neutral Mediator | Cognitive Agent | Minimize regret | ❌ | Not required |
-| Recall Agent | 8214 | Execution | Reactive Agent | — | ❌ | Not required |
-| Ranking Policy Agent | 8215 | Evaluation | Instrumental Agent | — | ❌ | Not required |
-| Explanation Agent | 8216 | Evaluation | Instrumental Agent | — | ✅ Rationale generation | Required |
-| Feedback Agent | 8217 | Perception | Environment Agent | — | ❌ | Not required |
 
 ---
 
@@ -600,25 +698,29 @@ RDA_AIC    = "<AIC-RDA>"
 
 ### 5.1 Three-Layer Protocol Satisfaction
 
-| ACPs Layer | Requirement | Satisfaction Method | Evidence |
-|---|---|---|---|
-| **AIA** (Identity Authentication) | Each Agent holds ATR-issued CAI certificate; all communication uses mTLS mutual authentication | 8 Agents each hold independent AIC + CAI certificate; `verify_client = true` | `phase3_issue_real_certs.sh`; `[server.mtls]` in each `config.toml` |
-| **ADP** (Discovery Protocol) | Agents discover each other via DSP; no hardcoded endpoints | Each Agent registers its endpoint and skills in DSP on startup; RC discovers Partners by skill name | `phase3_dsp_sync_verify.sh`; `acps_aip/dsp_client.py` |
-| **AIP** (Interaction Protocol) | Messages carry `performative` semantics; multi-round negotiation tracked by `conversation_id` | All messages contain `from`, `to`, `performative`, `conversation_id` | `base.py` AIP message encapsulation; `mention()` implementations in each Agent |
-
-### 5.2 AIP Message Semantics Table
-
-| Message Scenario | Performative | Sender → Receiver |
+| ACPs Layer | Requirement | Satisfaction Method |
 |---|---|---|
-| RC broadcasts task | `request` | RC → RPA, BCA |
-| RPA submits proposal | `propose` | RPA → RDA |
-| BCA emits veto signal | `reject-proposal` | BCA → RDA |
-| RDA requests supplementary info | `query-if` | RDA → RPA / BCA |
-| RDA broadcasts preliminary equilibrium | `propose` | RDA → RPA, BCA |
-| RDA dispatches execution instructions | `inform` | RDA → RA / RankingPA / EA |
-| FA sends reward signal | `inform` | FA → RDA |
-| FA triggers profile update | `inform` | FA → RPA |
-| FA triggers CF retraining | `inform` | FA → Recall Agent |
+| **AIA** (Identity Authentication) | Each Agent holds ATR-issued CAI certificate; all communication uses mTLS mutual authentication | 6 Agents each hold independent AIC + CAI certificate; `verify_client = true` |
+| **ADP** (Discovery Protocol) | Agents discover each other via DSP; no hardcoded endpoints | Each Agent registers its endpoint and skills in DSP on startup; RC discovers Partners by skill name |
+| **AIP** (Interaction Protocol) | Messages carry `performative` semantics; multi-round negotiation tracked by `conversation_id` | All messages contain `from`, `to`, `performative`, `conversation_id` |
+
+### 5.2 AIP Message Semantics Table (v2)
+
+| Message Scenario | Performative | Sender → Receiver | Label on Architecture Diagram |
+|---|---|---|---|
+| RC broadcasts task | `request` | RC → RPA, BCA | GroupMgmt broadcast |
+| RC notifies RDA to stand by | `request` | RC → RDA | Prepare for proposals |
+| RPA submits user profile evidence | `propose` | RPA → RDA | **Profile Proposal** |
+| BCA submits content alignment evidence | `propose` | BCA → RDA | **Content Proposal** |
+| BCA emits divergence veto | `reject-proposal` | BCA → RDA | **Counter-Proposal** |
+| RDA requests supplementary evidence | `request` | RDA → RPA / BCA | **Evidence Request** |
+| RPA/BCA returns supplementary data | `inform` | RPA/BCA → RDA | **Supplementary Inform** |
+| RDA returns arbitration result to RC | `inform` | RDA → RC | **Arbitration Result** |
+| RC dispatches execution to Engine | `request` | RC → Engine Agent | Execution dispatch |
+| Engine Agent returns results | `inform` | Engine → RC | Recommendations + explanations |
+| FA sends reward signal | `inform` | FA → RDA | reward signal |
+| FA triggers profile update | `inform` | FA → RPA | profile update |
+| FA triggers CF retraining | `inform` | FA → Engine Agent | CF retrain |
 
 ### 5.3 Standard Agent Directory Structure
 
@@ -627,9 +729,9 @@ Each Agent under `partners/online/<agent_name>/`:
 ```
 partners/online/<agent_name>/
 ├── agent.py           # Business logic
-├── acs.json           # ACS definition: AIC, capability declaration, endpoint, skills, description
+├── acs.json           # ACS definition: AIC, capability declaration, endpoint, skills
 ├── config.toml        # Runtime config: LLM, port, [server.mtls] cert paths, business params
-├── prompts.toml       # Prompt templates (RC / RPA / EA only)
+├── prompts.toml       # Prompt templates (RC / RPA / Engine only)
 ├── <AIC>.pem          # CAI certificate (ATR-issued)
 ├── <AIC>.key          # Private key
 └── trust-bundle.pem   # CA trust bundle
@@ -637,13 +739,13 @@ partners/online/<agent_name>/
 
 ### 5.4 Why ACPs Communication Is Not Equivalent to Inter-Process Function Calls
 
-1. **Identity layer**: Every message is preceded by a mTLS handshake in which both parties present ATR-issued certificates. A function call has no concept of caller identity verification.
+1. **Identity layer**: Every message is preceded by a mTLS handshake with ATR-issued certificates. A function call has no concept of caller identity verification.
 
 2. **Discovery layer**: RC does not know the address of RPA at design time. It discovers the endpoint at runtime via DSP by querying `skill="uma.build_profile"`. This location transparency is architecturally impossible with function calls.
 
-3. **Semantics layer**: Messages carry `performative` values such as `propose`, `reject-proposal`, and `query-if`. These semantics — proposal, veto, counter-proposal — cannot be expressed in a function's input-output model. A function call can only return a value; it cannot "reject" its caller's premise.
+3. **Semantics layer**: Messages carry `performative` values: `propose`, `reject-proposal`, `request (supplement_proposal)`. These semantics — proposal, veto, evidence request — cannot be expressed in a function's input-output model.
 
-4. **Asynchrony**: FA's `mention` to RDA is asynchronous — FA continues processing the next event without waiting for RDA's response. Standard function calls are synchronous and blocking.
+4. **Asynchrony**: FA's `inform` to RDA is asynchronous — FA continues processing the next event without waiting for RDA's response.
 
 ---
 
@@ -655,47 +757,36 @@ partners/online/<agent_name>/
 
 **Argument 1 — Externally grounded goal conflict**
 
-The opposing objectives of RPA (accuracy) and BCA (diversity) are not artificially assigned to justify the design. They correspond to independently established research problems:
-- Filter Bubble problem (Pariser, 2011): behavior-based personalization reinforces existing preferences
-- Accuracy-Diversity Dilemma (Kunaver & Požrl, 2017): precision and diversity are structurally in tension
-
-The system makes this pre-existing conflict explicit by instantiating the two sides as separate agents.
+The opposing objectives of RPA (accuracy) and BCA (diversity) correspond to independently established research problems:
+- Filter Bubble problem (Pariser, 2011)
+- Accuracy-Diversity Dilemma (Kunaver & Požrl, 2017)
 
 **Argument 2 — Non-deterministic negotiation outcomes**
 
-Proposals from RPA and BCA are generated independently and are mutually opaque. RDA's UCB arbitration depends on its historical arm records (internal private state). Identical conflict inputs at different times yield different arbitration results because the arm records evolve continuously. This violates referential transparency — the defining property of function calls — and satisfies Wooldridge's autonomy criterion.
+RDA's UCB arbitration depends on its historical arm records (internal private state). Identical conflict inputs at different times yield different arbitration results because arm records evolve continuously. This violates referential transparency — the defining property of function calls.
 
 **Argument 3 — Proactive inter-agent communication**
 
-BCA's `reject-proposal` is initiated by BCA's own computation upon detecting `divergence > 0.4`. It is not triggered by any external call. RDA's multi-round negotiation broadcast is proactively initiated when RDA's internal uncertainty assessment deems the information insufficient. Both behaviors originate from agents' internal states, not from the orchestration logic of a calling function.
+BCA's `Counter-Proposal` is initiated by BCA's own computation upon detecting `divergence > 0.4`, not triggered by any external call. RDA's `Evidence Request` is proactively initiated when RDA's internal quality assessment deems proposals insufficient.
 
 **Argument 4 — Mediator-Based Negotiation architecture**
 
-The four-agent collaboration structure (Organizer + Proposal Party A + Proposal Party B + Neutral Mediator) directly instantiates the Mediator-Based Negotiation model (Jennings et al., 1998). The mediator's neutrality is structurally guaranteed: RDA holds no stake in either the accuracy or the diversity objective.
+The four-role collaboration structure (Organizer + Proposal Party A + Proposal Party B + Neutral Mediator) directly instantiates the Mediator-Based Negotiation model (Jennings et al., 1998). RDA's neutrality is structurally guaranteed: it holds no stake in either accuracy or diversity.
 
-### 6.2 Agent Classification Rationale
+**Argument 5 — Merger of execution modules strengthens the MAS claim**
 
-| Agent | Classification | Justification |
-|---|---|---|
-| Reading Concierge | Cognitive Agent — Organizer | Holds explicit system-level goal; maintains negotiation order; exercises judgment in message routing |
-| Reader Profile Agent | Cognitive Agent — Proposal Party | Holds private objective externally grounded in accuracy research; private state evolves over time; proactively submits proposals |
-| Book Content Agent | Cognitive Agent — Proposal Party | Holds private objective externally grounded in diversity research; proactively emits veto signals based on its own computation |
-| Recommendation Decision Agent | Cognitive Agent — Mediator | Holds private objective (regret minimization); internal state (arm records) evolves from experience; proactively initiates multi-round negotiation |
-| Recall Agent | Reactive Agent | Legitimate sense-act mapping role in MAS execution layer; responds to RDA instructions and FA retraining triggers |
-| Ranking Policy Agent | Instrumental Agent | Provides ranking expertise as an objective third-party evaluation tool for the negotiation process |
-| Explanation Agent | Instrumental Agent | Provides explainability evaluation as an objective third-party evaluation tool for the negotiation process |
-| Feedback Agent | Environment Agent | Satisfies Russell & Norvig's broadest Agent definition; transforms the system from open-loop to closed-loop |
+The simplification of Recall/Ranking/Explanation into a single Engine Agent concentrates the MAS claim precisely on the agents that genuinely satisfy the autonomy criterion. This eliminates a potential challenge: "most of your agents are just pipeline steps." Post-merger, the 5 non-Engine Agents (RC, RPA, BCA, RDA, FA) all have clear autonomous behaviors, private states, or feedback responsibilities.
 
-### 6.3 Anticipated Defense Challenges and Responses
+### 6.2 Anticipated Defense Challenges and Responses
 
 | Challenge | Response |
 |---|---|
-| "Most Agents are just functional modules, not real Agents." | The collaboration claim rests on the four-Agent negotiation core (RC, RPA, BCA, RDA). The other four Agents serve execution and perception roles — a legitimate heterogeneous composition in MAS literature (Ferber, 1999). |
+| "You reduced to 6 Agents — isn't the system simpler than claimed?" | The simplification strengthens the MAS claim. The 3 merged modules were deterministic pipeline steps with no private objectives, no proactive communication, and no evolving internal state — they did not satisfy any Agent autonomy criterion. The 6-Agent design is architecturally more rigorous. |
+| "Most Agents are just functional modules, not real Agents." | RC (organizer), RPA (accuracy advocate), BCA (diversity advocate), RDA (neutral mediator), and FA (environment perceiver) all satisfy specific autonomy criteria. The Engine Agent is a reactive execution component — a legitimate role in MAS execution layers (Ferber, 1999). |
 | "Your negotiation is just conditional branching — that's a function call." | RDA's UCB arbitration depends on its historical arm records. Identical inputs at different times yield different outputs. This violates referential transparency and satisfies Wooldridge's autonomy criterion. |
-| "Your private objectives are invented to justify the design." | RPA and BCA's objectives correspond to the Accuracy-Diversity Dilemma (Kunaver, 2017) and the Filter Bubble problem (Pariser, 2011) — conflicts that exist independently of this system design and are cited extensively in the recommendation systems literature. |
-| "This is just inter-process communication, not genuine Agent communication." | All communication passes through ATR-issued CAI certificates (AIA), DSP dynamic discovery (ADP), and performative-structured messages (AIP). The `reject-proposal` and `query-if` performatives express semantics that cannot be represented in a function's input-output model. |
-| "RDA's arbitration is just a fixed rule set." | RDA uses the UCB algorithm (Auer et al., 2002); its arm records are updated by real user behavior reward signals after every session. Its behavior evolves over time — early sessions and later sessions facing identical inputs may produce different arbitration results. No static rule set can replicate this. |
-| "Your Explanation and Ranking agents have no private objectives — how are they Agents?" | They are classified as Instrumental Agents that provide objective third-party evaluation dimensions for the negotiation process. Their academic value lies not in autonomous goal-pursuit but in supplying evaluative inputs (explainability scores, ranking quality) that inform RDA's arbitration. |
+| "Your private objectives are invented to justify the design." | RPA and BCA's objectives correspond to the Accuracy-Diversity Dilemma (Kunaver, 2017) and the Filter Bubble problem (Pariser, 2011) — conflicts that exist independently of this system design. |
+| "Evidence Request is just a query — that's not negotiation." | Evidence Request is the conditional re-solicitation step of an Iterated Contract Net Protocol. It is triggered by RDA's internal quality assessment, not by any external instruction. Its purpose is to obtain sufficient evidence for a well-grounded arbitration decision — a canonical step in formal negotiation protocols. |
+| "RDA's arbitration is just a fixed rule set." | RDA uses the UCB algorithm; its arm records are updated by real user behavior reward signals after every session. Its behavior evolves over time — early and late sessions facing identical inputs may produce different arbitration results. No static rule set can replicate this. |
 
 ---
 
@@ -703,10 +794,10 @@ The four-agent collaboration structure (Organizer + Proposal Party A + Proposal 
 
 | Ablation Group | Removed Component | Contribution Being Validated |
 |---|---|---|
-| `-CF` | CF path in Recall Agent; ANN only | Collaborative filtering's contribution to recall coverage and cold-start performance |
-| `-Alignment` | Lateral negotiation ①: BCA does not compute JS divergence; RDA uses fixed weights | Declared preference correction's contribution to personalization accuracy |
-| `-ExplainConstraint` | Lateral negotiation ②: skip EA confidence filtering in Ranking Policy Agent | Explainability constraints' impact on recommendation quality and explain coverage |
-| `-MMR` | MMR re-ranking in Ranking Policy Agent; rank directly by score | Diversity re-ranking's contribution to reducing genre concentration (intra-list diversity) |
+| `-CF` | CF path in RecallModule; ANN only | Collaborative filtering's contribution to recall coverage and cold-start performance |
+| `-Alignment` | BCA does not compute JS divergence; RDA uses fixed weights (no Counter-Proposal) | Declared preference correction's contribution to personalization accuracy |
+| `-ExplainConstraint` | ExplanationModule confidence scoring disabled; RankingModule uses raw scores only | Explainability constraints' impact on recommendation quality and explain coverage |
+| `-MMR` | MMR re-ranking disabled; rank directly by composite score | Diversity re-ranking's contribution to reducing genre concentration (intra-list diversity) |
 | `-Feedback` | Feedback Agent disabled; no profile updates; RDA arm records frozen | Online learning's contribution to long-term recommendation accuracy improvement |
 
 **Evaluation metrics** (applied to all ablation groups and the full system):
@@ -758,13 +849,13 @@ CREATE TABLE user_profiles (
 
 ### 8.3 Offline Index Files
 
-| File | Generator Script | Consumer Agent | Description |
+| File | Generator Script | Consumer | Description |
 |---|---|---|---|
-| `data/book_faiss.index` | `build_book_faiss_index.py` | Recall Agent | Faiss HNSW book vector index |
-| `data/als_model.npz` | `build_cf_model.py` | Recall Agent | ALS collaborative filtering model |
-| `data/user_sim.bin` | `build_cf_model.py` | Recall Agent | Hnswlib user similarity index |
+| `data/book_faiss.index` | `build_book_faiss_index.py` | Engine Agent (RecallModule) | Faiss HNSW book vector index |
+| `data/als_model.npz` | `build_cf_model.py` | Engine Agent (RecallModule) | ALS collaborative filtering model |
+| `data/user_sim.bin` | `build_cf_model.py` | Engine Agent (RecallModule) | Hnswlib user similarity index |
 | `partners/online/book_content_agent/proj_matrix.npy` | Generated at BCA init | Book Content Agent | 256×384 projection matrix |
 
 ---
 
-*End of Document*
+*End of Document — Version 2026-03-31 (v2)*
