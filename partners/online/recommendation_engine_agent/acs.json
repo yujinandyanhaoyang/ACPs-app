@@ -1,0 +1,79 @@
+{
+  "aic": "1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY",
+  "active": true,
+  "lastModifiedTime": "2026-04-01T14:30:00+08:00",
+  "protocolVersion": "02.00",
+  "name": "推荐引擎智能体",
+  "description": "个性化图书推荐系统的执行引擎，接收 Reading Concierge 转发的仲裁参数后，通过内部三模块流水线完成从候选召回到个性化解释生成的完整推荐计算，并返回 Top-20 书目及推荐理由。内部包含三个功能模块：RecallModule（Faiss HNSW 语义召回 + ALS 协同过滤召回，约 250 候选）、RankingModule（四维评分初排 + MMR 多样性重排）、ExplanationModule（启发式可解释性置信度评估 + gpt-4o 个性化理由生成）。三个模块之间通过进程内函数调用协作，不经过 ACPs 协议通信。接收 Feedback Agent 的 CF 重训触发信号后，异步调用 build_cf_model.py 更新协同过滤模型。本 Agent 无私有目标、无主动协商行为。",
+  "version": "1.0.0",
+  "provider": {
+    "countryCode": "CN",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
+    "url": "http://ai.bupt.edu.cn",
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.146.235.243:8004/acps-atr-v2/"
+
+    }
+  },
+  "endPoints": [
+    {
+      "url": "http://8.146.235.243:8214/recommendation-engine/rpc",
+      "transport": "JSONRPC",
+
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "notification": true,
+    "messageQueue": []
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "engine.dispatch",
+      "name": "engine.dispatch",
+      "description": "Execute Recall→Ranking→Explanation pipeline and return top recommendations with explanations.",
+      "version": "1.0.0",
+      "tags": ["execution", "recall", "ranking", "explanation"],
+      "examples": ["Return recommendations[] and engine_meta{} to Reading Concierge."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    },
+    {
+      "id": "engine.retrain_cf",
+      "name": "engine.retrain_cf",
+      "description": "Receive feedback trigger and invoke CF model retraining pipeline.",
+      "version": "1.0.0",
+      "tags": ["feedback", "retrain", "cf"],
+      "examples": ["Trigger scripts/build_cf_model.py on FA autonomous inform."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    }
+  ],
+  "entityMeta": {
+    "environment": "local-preofficial",
+    "role": "execution-partner",
+    "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
+    "ioa_pub_registration_status": "PARTIAL_LOCAL_PLACEHOLDER"
+  }
+}

@@ -1,0 +1,39 @@
+[llm.fast]
+api_key = "sk-5955ab75f437457796d1c47630de9658"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+model = "qwen-flash-character"
+
+[llm.default]
+api_key = "sk-5955ab75f437457796d1c47630de9658"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+model = "qwen3.5-27b"
+
+[server]
+host = "0.0.0.0"
+port = 8210
+
+[server.mtls]
+tls_enabled = true
+verify_client = true
+cert_file = "certs/1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W.pem"
+key_file = "certs/1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W.key"
+ca_file = "certs/trust-bundle.pem"
+# Backward-compatible keys used by current runtime parser.
+cert = "certs/1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W.pem"
+key  = "certs/1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W.key"
+ca   = "certs/trust-bundle.pem"
+
+[concurrency]
+max_concurrent_tasks = 10
+
+[log]
+level = "INFO"
+
+[redis]
+url = "redis://localhost:6379/0"
+
+# Backward-compatible runtime section.
+[llm]
+model = "qwen-flash-character"
+temperature = 0.3
+max_tokens = 512

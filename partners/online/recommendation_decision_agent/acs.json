@@ -1,0 +1,90 @@
+{
+  "aic": "1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV",
+
+  "active": true,
+  "lastModifiedTime": "2026-03-31T19:00:00+08:00",
+  "protocolVersion": "02.00",
+  "name": "推荐决策智能体",
+  "description": "个性化图书推荐系统中的中立仲裁者，以最小化长期推荐遗憾为私有目标，通过上下文赌博机（Contextual Bandit，UCB 算法）对 Reader Profile Agent 与 Book Content Agent 的提案进行仲裁，输出最终推荐权重组合与执行策略。在提案质量不足时（置信度过低、字段缺失、散度异常），主动向相关提案方发起证据请求（最多 3 轮），依据迭代合同网协议完成条件重新招标。仲裁结果（包含 ann_weight、cf_weight、score_weights、mmr_lambda 等参数）返回至 Reading Concierge 由其统一下发执行层。臂记录持久化于 Redis，接收 Feedback Agent 的奖励信号后持续更新，使仲裁行为随系统运行自主演化。本 Agent 是 Layer 2 的 Partner，不是 Leader，不直接调度任何执行层 Agent，不访问用户数据库或书目索引。",
+  "version": "1.0.0",
+  "provider": {
+    "countryCode": "CN",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
+    "url": "http://ai.bupt.edu.cn",
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.146.235.243:8004/acps-atr-v2/"
+
+    }
+  },
+  "endPoints": [
+    {
+      "url": "http://8.146.235.243:8213/recommendation-decision/rpc",
+      "transport": "JSONRPC",
+
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "notification": true,
+    "messageQueue": []
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "rda.arbitrate",
+      "name": "rda.arbitrate",
+      "description": "Assess proposal quality, request supplementary evidence, and produce arbitration result.",
+      "version": "1.0.0",
+      "tags": ["arbitration", "ucb", "negotiation"],
+      "examples": ["Return final_weights and strategy for RC dispatch."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    },
+    {
+      "id": "rda.evidence_request",
+      "name": "rda.evidence_request",
+      "description": "Generate Evidence Request actions when proposal quality is insufficient.",
+      "version": "1.0.0",
+      "tags": ["evidence", "request", "quality-gate"],
+      "examples": ["Emit supplement_proposal requests for RPA/BCA."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    },
+    {
+      "id": "rda.update_reward",
+      "name": "rda.update_reward",
+      "description": "Apply Feedback Agent reward signal and update context-arm records.",
+      "version": "1.0.0",
+      "tags": ["feedback", "bandit", "online-learning"],
+      "examples": ["Update avg_reward and trials for context/action arm."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    }
+  ],
+  "entityMeta": {
+    "environment": "local-preofficial",
+    "role": "neutral-mediator",
+    "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
+    "ioa_pub_registration_status": "PARTIAL_LOCAL_PLACEHOLDER"
+  }
+}

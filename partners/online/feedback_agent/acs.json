@@ -1,0 +1,80 @@
+{
+  "aic": "1.2.156.3088.0001.00001.MMOOJJ.E079YU.1.09FY",
+
+  "active": true,
+  "lastModifiedTime": "2026-04-01T16:10:00+08:00",
+  "protocolVersion": "02.00",
+  "name": "反馈感知智能体",
+  "description": "个性化图书推荐系统的闭环反馈入口，通过 DSP Webhook 接收用户真实行为事件（浏览、点击、完读、评分、跳过等），将事件映射为标准化奖励权重后缓存至 Redis，并按累积触发规则向系统内其他 Agent 发送异步通知。触发规则共三类：每次推荐会话结束后向 Recommendation Decision Agent 发送奖励信号（用于更新 UCB 臂记录）；单用户累计 ≥20 条行为事件时向 Reader Profile Agent 发送画像更新触发；全局累计 ≥500 条评分事件时向 Recommendation Engine Agent 发送协同过滤模型重训触发。本 Agent 将系统从开环推荐转变为具备在线学习能力的闭环推荐系统，不参与提案协商、书目排序或推荐理由生成，不持有用户画像数据，仅负责行为事件采集与系统内信号分发。",
+  "version": "1.0.0",
+  "provider": {
+    "countryCode": "CN",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
+    "url": "http://ai.bupt.edu.cn",
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
+  },
+  "securitySchemes": {
+    "mtls": {
+      "type": "mutualTLS",
+      "description": "mTLS for inter-agent communication",
+      "x-caChallengeBaseUrl": "http://8.146.235.243:8004/acps-atr-v2/"
+
+    }
+  },
+  "endPoints": [
+    {
+      "url": "http://8.146.235.243:8215/feedback/rpc",
+      "transport": "JSONRPC",
+
+      "security": [
+        {
+          "mtls": []
+        }
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "notification": true,
+    "messageQueue": []
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "fa.process_event",
+      "name": "fa.process_event",
+      "description": "Process DSP behavior event, compute reward, and enqueue event into Redis DB 2.",
+      "version": "1.0.0",
+      "tags": ["feedback", "reward", "webhook"],
+      "examples": ["Map rate_5 -> +1.0 and emit RDA reward inform."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    },
+    {
+      "id": "fa.emit_triggers",
+      "name": "fa.emit_triggers",
+      "description": "Emit trigger informs to RDA, RPA, and Recommendation Engine Agent according to accumulation thresholds.",
+      "version": "1.0.0",
+      "tags": ["trigger", "coordination", "inform"],
+      "examples": ["Per-user >= 20 events trigger update_profile inform to RPA."],
+      "inputModes": ["text/plain", "application/json"],
+      "outputModes": ["text/plain", "application/json"]
+    }
+  ],
+  "entityMeta": {
+    "environment": "local-preofficial",
+    "role": "feedback-partner",
+    "status_tag": "PARTIAL_LOCAL_PLACEHOLDER",
+    "ioa_pub_registration_status": "PARTIAL_LOCAL_PLACEHOLDER"
+  }
+}

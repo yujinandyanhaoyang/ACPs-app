@@ -62,11 +62,9 @@ EOF
 issue_cert "reading_concierge_001"
 issue_cert "reader_profile_agent_001"
 issue_cert "book_content_agent_001"
-issue_cert "rec_ranking_agent_001"
 
 # Explicit mtls-path names used in config.example.json
 issue_cert "reader_profile"
 issue_cert "book_content"
-issue_cert "rec_ranking"
 
 echo "[mTLS] done. certs generated in $CERT_DIR"

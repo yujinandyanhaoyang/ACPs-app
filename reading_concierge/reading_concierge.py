@@ -1,165 +1,130 @@
+from __future__ import annotations
+
+import json
 import os
 import sys
-import json
 import uuid
-import asyncio
-import re
-import hashlib
-from collections import OrderedDict
 from pathlib import Path
-from datetime import datetime, timezone
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from fastapi import FastAPI
-from fastapi import HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
-from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-from jsonschema import Draft202012Validator
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel, Field
 
-_CURRENT_DIR = os.path.dirname(__file__)
-_PROJECT_ROOT = os.path.abspath(os.path.join(_CURRENT_DIR, os.pardir))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+_CURRENT_DIR = Path(__file__).resolve().parent
+_PROJECT_ROOT = _CURRENT_DIR.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
-_DEMO_HTML_PATH = Path(_PROJECT_ROOT) / "web_demo" / "index.html"
-_BENCHMARK_SUMMARY_PATH = Path(_PROJECT_ROOT) / "scripts" / "phase4_benchmark_summary.json"
-_CONTRACT_SCHEMA_DIR = Path(_PROJECT_ROOT) / "docs" / "contracts"
+from base import call_openai_chat, get_agent_logger, register_acs_route
+from reading_concierge.session_store import SessionStore
 
-from base import get_agent_logger, call_openai_chat, register_acs_route
-from services.evaluation_metrics import compute_recommendation_metrics, build_ablation_report
-from services.book_retrieval import load_books, retrieve_books_by_query, get_active_retrieval_corpus_info
-from services.model_backends import load_cf_item_vectors
-from services.user_profile_store import profile_store
+try:
+    import tomllib
+except Exception:  # pragma: no cover
+    tomllib = None
+
 from agents.reader_profile_agent import profile_agent as reader_profile
 from agents.book_content_agent import book_content_agent as book_content
-from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
+from partners.online.recommendation_decision_agent import agent as recommendation_decision
+from partners.online.recommendation_engine_agent import agent as recommendation_engine
 
 load_dotenv()
 
+CONFIG_PATH = _CURRENT_DIR / "config.toml"
+PROMPTS_PATH = _CURRENT_DIR / "prompts.toml"
+ACS_PATH = (_CURRENT_DIR / "acs.json") if (_CURRENT_DIR / "acs.json").exists() else (_CURRENT_DIR / "reading_concierge.json")
+DEMO_HTML_PATH = _PROJECT_ROOT / "web_demo" / "index.html"
+
 LEADER_ID = os.getenv("READING_CONCIERGE_ID", "reading_concierge_001")
-LOG_LEVEL = os.getenv("READING_CONCIERGE_LOG_LEVEL", "INFO").upper()
-DISCOVERY_BASE_URL = os.getenv("READING_DISCOVERY_BASE_URL")
-REGISTRY_BASE_URL = os.getenv("READING_REGISTRY_BASE_URL")
-PARTNER_MODE = os.getenv("READING_PARTNER_MODE", "auto").lower()
-ADP_RUNTIME_MODE = os.getenv("READING_ADP_RUNTIME_MODE", "mode_b").strip().lower()
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "qwen-plus")
-BOOK_RETRIEVAL_TOP_K = int(os.getenv("BOOK_RETRIEVAL_TOP_K", "8"))
-BOOK_RETRIEVAL_CANDIDATE_POOL = int(os.getenv("BOOK_RETRIEVAL_CANDIDATE_POOL", "30"))
 READING_CONCIERGE_BASE_URL = str(os.getenv("READING_CONCIERGE_BASE_URL", "http://localhost:8100")).rstrip("/")
-
-_REMOTE_ENDPOINT_ENV = {
-    "profile": "READER_PROFILE_RPC_URL",
-    "content": "BOOK_CONTENT_RPC_URL",
-    "ranking": "REC_RANKING_RPC_URL",
-}
-
-_DISCOVERY_QUERY = {
-    "profile": "reader profile analysis agent",
-    "content": "book content analysis agent",
-    "ranking": "recommendation decision ranking agent",
-}
-
-_PARTNER_SKILL_HINTS = {
-    "profile": ["profile.extract", "preference.embedding", "sentiment.analysis"],
-    "content": ["book.vectorize", "kg.enrich", "tag.extract"],
-    "ranking": ["ranking.svd", "ranking.multifactor", "explanation.llm"],
-}
+PARTNER_MODE = str(os.getenv("READING_PARTNER_MODE", "auto")).lower()
+LOG_LEVEL = str(os.getenv("READING_CONCIERGE_LOG_LEVEL", "INFO")).upper()
+DISCOVERY_BASE_URL = str(os.getenv("DISCOVERY_BASE_URL", "http://127.0.0.1:8005")).rstrip("/")
+DISCOVERY_ENABLED = str(os.getenv("READING_DISCOVERY_ENABLED", "true")).strip().lower() in {"1", "true", "yes", "on"}
+DISCOVERY_TIMEOUT = float(str(os.getenv("READING_DISCOVERY_TIMEOUT", "5")))
 
 logger = get_agent_logger("agent.reading_concierge", "READING_CONCIERGE_LOG_LEVEL", LOG_LEVEL)
 
+PARTNER_SKILL_MAP = {
+    "profile": "uma.build_profile",
+    "content": "bca.build_content_proposal",
+    "rda": "rda.arbitrate",
+    "engine": "engine.dispatch",
+}
+_DISCOVERY_CACHE: Dict[str, Dict[str, Any]] = {}
+_DISCOVERY_CACHE_TTL_SEC = 30
+
+
+class RuntimeConfig(BaseModel):
+    port: int = 8210
+    redis_url: str = "redis://localhost:6379/0"
+    llm_model: str = "qwen-flash-character"
+    llm_temperature: float = 0.3
+    llm_max_tokens: int = 512
+
+
+def _load_runtime_config() -> RuntimeConfig:
+    cfg = RuntimeConfig()
+    if tomllib and CONFIG_PATH.exists():
+        try:
+            data = tomllib.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            server = data.get("server") if isinstance(data, dict) else {}
+            redis_cfg = data.get("redis") if isinstance(data, dict) else {}
+            llm = data.get("llm") if isinstance(data, dict) else {}
+
+            if isinstance(server, dict) and server.get("port") is not None:
+                cfg.port = int(server["port"])
+            if isinstance(redis_cfg, dict) and redis_cfg.get("url"):
+                cfg.redis_url = str(redis_cfg["url"])
+            if isinstance(llm, dict):
+                if llm.get("model"):
+                    cfg.llm_model = str(llm["model"])
+                if llm.get("temperature") is not None:
+                    cfg.llm_temperature = float(llm["temperature"])
+                if llm.get("max_tokens") is not None:
+                    cfg.llm_max_tokens = int(llm["max_tokens"])
+        except Exception as exc:
+            logger.warning("event=config_parse_failed error=%s", exc)
+
+    cfg.llm_model = str(os.getenv("READING_LLM_MODEL") or os.getenv("OPENAI_MODEL") or cfg.llm_model)
+    return cfg
+
+
+def _load_intent_prompt() -> Dict[str, str]:
+    defaults = {
+        "system": "Parse reading query into structured intent JSON.",
+        "user_template": "User query: {query}. Return strict JSON with keys intent,constraints,preferred_genres,scenario_hint,response_style.",
+    }
+    if not tomllib or not PROMPTS_PATH.exists():
+        return defaults
+    try:
+        data = tomllib.loads(PROMPTS_PATH.read_text(encoding="utf-8"))
+        section = data.get("intent_parsing") if isinstance(data, dict) else {}
+        if isinstance(section, dict):
+            defaults["system"] = str(section.get("system") or defaults["system"])
+            defaults["user_template"] = str(section.get("user_template") or defaults["user_template"])
+    except Exception as exc:
+        logger.warning("event=prompts_parse_failed error=%s", exc)
+    return defaults
+
+
+RUNTIME = _load_runtime_config()
+INTENT_PROMPT = _load_intent_prompt()
+SESSION_STORE = SessionStore(RUNTIME.redis_url)
+
 app = FastAPI(
     title="Reading Concierge",
-    description="Coordinator that orchestrates profile, content, and ranking agents.",
+    description="Leader coordinator for GroupMgmt broadcast, arbitration routing, and response assembly.",
 )
-
-_ACS_JSON_PATH = str(Path(_CURRENT_DIR) / "reading_concierge.json")
 register_acs_route(
     app,
-    _ACS_JSON_PATH,
+    str(ACS_PATH),
     endpoint_override_url=f"{READING_CONCIERGE_BASE_URL}/user_api",
 )
-
-
-def _selected_adp_mode() -> str:
-    mode = ADP_RUNTIME_MODE
-    if mode in {"a", "mode_a", "adp"}:
-        return "Mode A"
-    return "Mode B"
-
-
-def _adp_discovery_enabled() -> bool:
-    return bool(str(DISCOVERY_BASE_URL or "").strip())
-
-
-@app.on_event("startup")
-async def _startup_runtime_diagnostics() -> None:
-    retrieval_info = get_active_retrieval_corpus_info()
-    logger.info(
-        "event=retrieval_corpus_active path=%s exists=%s selection_source=%s",
-        retrieval_info.get("path"),
-        retrieval_info.get("exists"),
-        retrieval_info.get("selection_source"),
-    )
-    logger.info(
-        "event=adp_mode_selected mode=%s discovery_enabled=%s partner_mode=%s",
-        _selected_adp_mode(),
-        _adp_discovery_enabled(),
-        PARTNER_MODE,
-    )
-
-MAX_SESSIONS = int(os.getenv("READING_CONCIERGE_MAX_SESSIONS", "200"))
-sessions: OrderedDict[str, Dict[str, Any]] = OrderedDict()
-_CONTRACT_VALIDATORS: Dict[str, Draft202012Validator] = {}
-
-
-def _get_contract_validator(schema_name: str) -> Optional[Draft202012Validator]:
-    existing = _CONTRACT_VALIDATORS.get(schema_name)
-    if existing is not None:
-        return existing
-    schema_path = _CONTRACT_SCHEMA_DIR / schema_name
-    if not schema_path.exists():
-        logger.warning("event=contract_schema_missing schema=%s", schema_name)
-        return None
-    try:
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        validator = Draft202012Validator(schema)
-    except Exception as exc:
-        logger.warning("event=contract_schema_load_failed schema=%s error=%s", schema_name, exc)
-        return None
-    _CONTRACT_VALIDATORS[schema_name] = validator
-    return validator
-
-
-def _validate_contract_payload(schema_name: str, payload: Dict[str, Any]) -> Tuple[bool, str]:
-    validator = _get_contract_validator(schema_name)
-    if validator is None:
-        return False, f"schema_unavailable:{schema_name}"
-    errors = sorted(validator.iter_errors(payload), key=lambda err: list(err.path))
-    if errors:
-        return False, "; ".join(error.message for error in errors[:3])
-    return True, "ok"
-
-
-def _lru_session_get(session_id: str) -> Dict[str, Any]:
-    """Return an existing session (moving it to most-recent) or create a new one.
-
-    When the cache exceeds *MAX_SESSIONS* entries the oldest session is evicted.
-    """
-    if session_id in sessions:
-        sessions.move_to_end(session_id)
-        return sessions[session_id]
-    # Evict oldest if at capacity
-    while len(sessions) >= MAX_SESSIONS:
-        sessions.popitem(last=False)
-    new_session: Dict[str, Any] = {
-        "messages": [],
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "last_partner_results": {},
-    }
-    sessions[session_id] = new_session
-    return new_session
 
 
 class UserRequest(BaseModel):
@@ -174,174 +139,14 @@ class UserRequest(BaseModel):
     constraints: Dict[str, Any] = Field(default_factory=dict)
 
 
-def _evaluation_from_response(req: UserRequest, ranking_outputs: Dict[str, Any]) -> Dict[str, Any]:
-    recommendations = _normalize_api_recommendations(ranking_outputs.get("ranking") or [])
-    metric_snapshot = ranking_outputs.get("metric_snapshot") or {}
-    constraints = req.constraints or {}
-
-    def _num(value: Any) -> float:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return 0.0
-
-    ground_truth_ids = constraints.get("ground_truth_ids") or []
-    if not isinstance(ground_truth_ids, list):
-        ground_truth_ids = []
-
-    if ground_truth_ids:
-        eval_metrics = compute_recommendation_metrics(
-            recommendations=recommendations,
-            ground_truth_ids=ground_truth_ids,
-            k=int(constraints.get("top_k") or len(recommendations) or 1),
-            avg_diversity=metric_snapshot.get("avg_diversity", 0.0),
-            avg_novelty=metric_snapshot.get("avg_novelty", 0.0),
-        )
-    else:
-        eval_metrics = {
-            "precision_at_k": None,
-            "recall_at_k": None,
-            "ndcg_at_k": None,
-            "diversity": round(_num(metric_snapshot.get("avg_diversity", 0.0)), 4),
-            "novelty": round(_num(metric_snapshot.get("avg_novelty", 0.0)), 4),
-        }
-
-    report = {"metrics": eval_metrics}
-    if constraints.get("ablation") is True:
-        report["ablation"] = build_ablation_report(
-            recommendations=recommendations,
-            scoring_weights=ranking_outputs.get("scoring_weights") or {},
-        )
-    return report
-
-
-def _extract_jsonrpc_endpoint(agent_info: Dict[str, Any]) -> Optional[str]:
-    endpoints = (
-        agent_info.get("endPoints")
-        or agent_info.get("endpoints")
-        or agent_info.get("endpoint")
-        or []
-    )
-    if isinstance(endpoints, dict):
-        endpoints = list(endpoints.values())
-    if not isinstance(endpoints, list):
-        return None
-
-    for ep in endpoints:
-        if not isinstance(ep, dict):
-            continue
-        transport = str(ep.get("transport", "")).upper()
-        if transport == "JSONRPC":
-            return ep.get("url") or ep.get("URI") or ep.get("endpoint")
-    return None
-
-
-async def _discover_partner_endpoint(partner_key: str) -> Optional[str]:
-    if not DISCOVERY_BASE_URL:
-        return None
-    query = _DISCOVERY_QUERY.get(partner_key)
-    if not query:
-        return None
-
-    url = DISCOVERY_BASE_URL.rstrip("/") + "/api/discovery/"
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(url, json={"query": query, "limit": 1})
-            resp.raise_for_status()
-            payload = resp.json()
-    except Exception as exc:
-        logger.warning(
-            "event=partner_discovery_failed partner=%s error=%s",
-            partner_key,
-            exc,
-        )
-        return None
-
-    agents = payload.get("agents") if isinstance(payload, dict) else None
-    if not agents:
-        return None
-    first = agents[0]
-    if not isinstance(first, dict):
-        return None
-    acs = first.get("acs") if "acs" in first else first
-    if isinstance(acs, str):
-        try:
-            acs = json.loads(acs)
-        except json.JSONDecodeError:
-            return None
-    if not isinstance(acs, dict):
-        return None
-    return _extract_jsonrpc_endpoint(acs)
-
-
-async def _resolve_partner_from_registry(partner_key: str) -> Optional[str]:
-    if not REGISTRY_BASE_URL:
-        return None
-    url = REGISTRY_BASE_URL.rstrip("/") + "/api/registry/resolve"
-    payload = {
-        "partner": partner_key,
-        "skills": _PARTNER_SKILL_HINTS.get(partner_key, []),
+def _resolve_partner(partner_key: str) -> Dict[str, Any]:
+    remote_env = {
+        "profile": "READER_PROFILE_RPC_URL",
+        "content": "BOOK_CONTENT_RPC_URL",
+        "rda": "RECOMMENDATION_DECISION_RPC_URL",
+        "engine": "RECOMMENDATION_ENGINE_RPC_URL",
     }
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            body = response.json()
-    except Exception as exc:
-        logger.warning(
-            "event=registry_resolution_failed partner=%s error=%s",
-            partner_key,
-            exc,
-        )
-        return None
-
-    if not isinstance(body, dict):
-        return None
-    endpoint = body.get("rpc_url") or body.get("endpoint")
-    if endpoint:
-        return str(endpoint)
-    agent_info = body.get("agent") or {}
-    if isinstance(agent_info, dict):
-        return _extract_jsonrpc_endpoint(agent_info)
-    return None
-
-
-async def _resolve_remote_partner_url(partner_key: str) -> Optional[str]:
-    remote_env_url = os.getenv(_REMOTE_ENDPOINT_ENV[partner_key])
-    discovered_url = await _discover_partner_endpoint(partner_key) if PARTNER_MODE in {"auto", "remote"} else None
-    registry_url = await _resolve_partner_from_registry(partner_key) if PARTNER_MODE in {"auto", "remote"} else None
-    return remote_env_url or discovered_url or registry_url
-
-
-def _validate_partner_outputs(partner_key: str, state: str, result: Dict[str, Any]) -> Tuple[bool, str]:
-    if state != "completed":
-        return False, f"state_not_completed:{state}"
-
-    if partner_key == "profile":
-        vector = result.get("preference_vector") if isinstance(result, dict) else None
-        if not isinstance(vector, dict) or not vector:
-            return False, "missing_preference_vector"
-        return True, "ok"
-
-    if partner_key == "content":
-        outputs = result.get("outputs") if isinstance(result, dict) else None
-        vectors = outputs.get("content_vectors") if isinstance(outputs, dict) else None
-        if not isinstance(vectors, list) or not vectors:
-            return False, "missing_content_vectors"
-        return True, "ok"
-
-    if partner_key == "ranking":
-        outputs = result.get("outputs") if isinstance(result, dict) else None
-        ranking = outputs.get("ranking") if isinstance(outputs, dict) else None
-        if not isinstance(ranking, list):
-            return False, "missing_ranking"
-        return True, "ok"
-
-    return True, "ok"
-
-
-def _resolve_local_partner(partner_key: str) -> Dict[str, Any]:
-    mapping = {
+    local_map = {
         "profile": {
             "agent_id": reader_profile.AGENT_ID,
             "app": reader_profile.app,
@@ -352,21 +157,107 @@ def _resolve_local_partner(partner_key: str) -> Dict[str, Any]:
             "app": book_content.app,
             "endpoint": "/book-content/rpc",
         },
-        "ranking": {
-            "agent_id": rec_ranking.AGENT_ID,
-            "app": rec_ranking.app,
-            "endpoint": "/rec-ranking/rpc",
+        "rda": {
+            "agent_id": recommendation_decision.AGENT_ID,
+            "app": recommendation_decision.app,
+            "endpoint": "/recommendation-decision/rpc",
+        },
+        "engine": {
+            "agent_id": recommendation_engine.AGENT_ID,
+            "app": recommendation_engine.app,
+            "endpoint": "/recommendation-engine/rpc",
         },
     }
-    return mapping[partner_key]
+    item = dict(local_map[partner_key])
+    discovered_remote = _discover_partner_rpc_url(partner_key)
+    env_remote = str(os.getenv(remote_env[partner_key]) or "").strip() or None
+    item["remote_url"] = discovered_remote or env_remote
+    item["discovery"] = "adp" if discovered_remote else ("env" if env_remote else "local")
+    return item
+
+
+def _search_discovery(query: str) -> List[Dict[str, Any]]:
+    if not DISCOVERY_ENABLED:
+        return []
+    cache_key = f"q:{query}"
+    now = time.time()
+    cached = _DISCOVERY_CACHE.get(cache_key)
+    if cached and (now - float(cached.get("ts", 0))) < _DISCOVERY_CACHE_TTL_SEC:
+        return list(cached.get("results") or [])
+
+    try:
+        payload = {"query": query, "top_k": 20}
+        with httpx.Client(timeout=DISCOVERY_TIMEOUT) as client:
+            resp = client.post(f"{DISCOVERY_BASE_URL}/api/discovery/search", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        if isinstance(data, dict):
+            results = data.get("results")
+            if not isinstance(results, list):
+                results = data.get("data")
+            if isinstance(results, list):
+                _DISCOVERY_CACHE[cache_key] = {"ts": now, "results": results}
+                return results
+    except Exception as exc:
+        logger.warning("event=adp_search_failed query=%s error=%s", query, exc)
+    return []
+
+
+def _item_skill_ids(item: Dict[str, Any]) -> List[str]:
+    raw_skills = item.get("skills")
+    if not isinstance(raw_skills, list):
+        card = item.get("agent_card")
+        if isinstance(card, dict):
+            raw_skills = card.get("skills")
+    if not isinstance(raw_skills, list):
+        return []
+    ids: List[str] = []
+    for sk in raw_skills:
+        if isinstance(sk, dict):
+            sid = sk.get("id")
+            if sid:
+                ids.append(str(sid))
+        elif isinstance(sk, str):
+            ids.append(sk)
+    return ids
+
+
+def _item_endpoints(item: Dict[str, Any]) -> List[str]:
+    endpoints = item.get("endPoints")
+    if not isinstance(endpoints, list):
+        card = item.get("agent_card")
+        if isinstance(card, dict):
+            endpoints = card.get("endPoints")
+    urls: List[str] = []
+    if not isinstance(endpoints, list):
+        return urls
+    for ep in endpoints:
+        if isinstance(ep, dict) and ep.get("url"):
+            urls.append(str(ep["url"]))
+    return urls
+
+
+def _discover_partner_rpc_url(partner_key: str) -> Optional[str]:
+    skill_id = PARTNER_SKILL_MAP.get(partner_key)
+    if not skill_id:
+        return None
+    for item in _search_discovery(skill_id):
+        if not isinstance(item, dict):
+            continue
+        skills = _item_skill_ids(item)
+        if skill_id not in skills:
+            continue
+        urls = _item_endpoints(item)
+        if urls:
+            return urls[0]
+    return None
 
 
 def _mk_rpc_payload(task_id: str, payload: Dict[str, Any], command: str = "start") -> Dict[str, Any]:
-    sent_at = datetime.now(timezone.utc).isoformat()
     message = {
         "type": "message",
         "id": str(uuid.uuid4()),
-        "sentAt": sent_at,
+        "sentAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
         "senderRole": "leader",
         "senderId": LEADER_ID,
         "command": command,
@@ -383,1101 +274,262 @@ def _mk_rpc_payload(task_id: str, payload: Dict[str, Any], command: str = "start
     }
 
 
-async def _invoke_agent_rpc(
-    agent_app: FastAPI,
-    endpoint: str,
-    payload: Dict[str, Any],
-    task_id: Optional[str] = None,
-) -> Dict[str, Any]:
-    task_id = task_id or f"task-{uuid.uuid4()}"
-    rpc_body = _mk_rpc_payload(task_id, payload)
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=agent_app),
-        base_url="http://agent",
-        timeout=30,
-    ) as client:
-        response = await client.post(endpoint, json=rpc_body)
-    response.raise_for_status()
-    return response.json()
+async def _invoke_local(app_obj: FastAPI, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    rpc = _mk_rpc_payload(f"task-{uuid.uuid4()}", payload)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app_obj), base_url="http://agent", timeout=30) as client:
+        resp = await client.post(endpoint, json=rpc)
+    resp.raise_for_status()
+    return resp.json()
 
 
-async def _invoke_remote_rpc(
-    rpc_url: str,
-    payload: Dict[str, Any],
-    task_id: Optional[str] = None,
-) -> Dict[str, Any]:
-    task_id = task_id or f"task-{uuid.uuid4()}"
-    rpc_body = _mk_rpc_payload(task_id, payload)
+async def _invoke_remote(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    rpc = _mk_rpc_payload(f"task-{uuid.uuid4()}", payload)
     async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.post(rpc_url, json=rpc_body)
-    response.raise_for_status()
-    return response.json()
+        resp = await client.post(url, json=rpc)
+    resp.raise_for_status()
+    return resp.json()
 
 
-def _mk_failed_rpc_response(reason: str) -> Dict[str, Any]:
-    return {
-        "jsonrpc": "2.0",
-        "result": {
-            "status": {
-                "state": "failed",
-                "reason": reason,
-            },
-            "products": [],
-        },
-    }
-
-
-async def _invoke_partner_with_fallback(
-    partner_key: str,
-    payload: Dict[str, Any],
-    strict_remote_validation: bool = False,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    local = _resolve_local_partner(partner_key)
-    remote_url = await _resolve_remote_partner_url(partner_key)
-
-    if PARTNER_MODE in {"auto", "remote"} and remote_url:
-        try:
-            response = await _invoke_remote_rpc(remote_url, payload)
-            return response, {
-                "route": "remote",
-                "rpc_url": remote_url,
-                "fallback": False,
-                "remote_attempted": True,
-                "route_outcome": "remote_success",
-            }
-        except Exception as exc:
-            logger.warning(
-                "event=partner_remote_failed partner=%s rpc_url=%s error=%s",
-                partner_key,
-                remote_url,
-                exc,
-            )
-            if strict_remote_validation:
-                return _mk_failed_rpc_response("remote_failure_strict"), {
-                    "route": "remote",
-                    "rpc_url": remote_url,
-                    "fallback": False,
-                    "remote_attempted": True,
-                    "route_outcome": "remote_failed_strict",
-                }
-            if PARTNER_MODE == "remote":
-                # In strict remote mode, still provide local fallback as safety per policy requirement.
-                logger.info("event=partner_remote_fallback_local partner=%s", partner_key)
-
-    if strict_remote_validation and PARTNER_MODE in {"auto", "remote"} and not remote_url:
-        return _mk_failed_rpc_response("remote_unavailable_strict"), {
-            "route": "none",
-            "rpc_url": None,
-            "fallback": False,
-            "remote_attempted": False,
-            "route_outcome": "remote_unavailable_strict",
-        }
-
-    response = await _invoke_agent_rpc(local["app"], local["endpoint"], payload)
-    if remote_url:
-        return response, {
-            "route": "local",
-            "rpc_url": None,
-            "fallback": True,
-            "remote_attempted": True,
-            "route_outcome": "remote_failed_local_fallback",
-        }
-
-    return response, {
-        "route": "local",
-        "rpc_url": None,
-        "fallback": False,
-        "remote_attempted": False,
-        "route_outcome": "local_only",
-    }
-
-
-def _task_state(rpc_response: Dict[str, Any]) -> str:
-    return (
-        ((rpc_response or {}).get("result") or {})
-        .get("status", {})
-        .get("state", "unknown")
-    )
-
-
-def _extract_task_id(rpc_response: Dict[str, Any]) -> str:
-    return str(((rpc_response or {}).get("result") or {}).get("id") or "").strip()
-
-
-def _extract_structured_result(rpc_response: Dict[str, Any]) -> Dict[str, Any]:
-    products = ((rpc_response or {}).get("result") or {}).get("products") or []
+def _extract_result(rpc_resp: Dict[str, Any]) -> Dict[str, Any]:
+    products = ((rpc_resp or {}).get("result") or {}).get("products") or []
     if not products:
         return {}
-    data_items = products[0].get("dataItems") or []
-    for item in data_items:
+    items = products[0].get("dataItems") or []
+    for item in items:
         if item.get("type") == "data" and isinstance(item.get("data"), dict):
             return item["data"]
     return {}
 
 
-def _try_parse_json(value: str) -> Any:
-    text = str(value or "").strip()
+def _state(rpc_resp: Dict[str, Any]) -> str:
+    return str((((rpc_resp or {}).get("result") or {}).get("status") or {}).get("state") or "unknown")
+
+
+async def _invoke_partner(partner_key: str, payload: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    partner = _resolve_partner(partner_key)
+    remote_url = partner.get("remote_url")
+    if remote_url and PARTNER_MODE in {"auto", "remote"}:
+        try:
+            resp = await _invoke_remote(str(remote_url), payload)
+            return resp, {"route": "remote", "rpc_url": remote_url, "remote_source": partner.get("discovery")}
+        except Exception as exc:
+            logger.warning("event=partner_remote_failed partner=%s error=%s", partner_key, exc)
+            if PARTNER_MODE == "remote":
+                return {"jsonrpc": "2.0", "result": {"status": {"state": "failed"}, "products": []}}, {"route": "remote_failed"}
+
+    if partner.get("app") is None or not partner.get("endpoint"):
+        return {"jsonrpc": "2.0", "result": {"status": {"state": "failed"}, "products": []}}, {"route": "local_unavailable"}
+
+    resp = await _invoke_local(partner["app"], partner["endpoint"], payload)
+    return resp, {"route": "local"}
+
+
+def _safe_json_object(raw: str) -> Dict[str, Any]:
+    text = str(raw or "").strip()
     if not text:
-        return None
+        return {}
     try:
-        return json.loads(text)
+        obj = json.loads(text)
+        return obj if isinstance(obj, dict) else {}
     except Exception:
         pass
-
-    fenced = re.search(r"```(?:json)?\s*(.*?)\s*```", text, flags=re.DOTALL | re.IGNORECASE)
-    if fenced:
+    left = text.find("{")
+    right = text.rfind("}")
+    if left >= 0 and right > left:
         try:
-            return json.loads(fenced.group(1).strip())
+            obj = json.loads(text[left : right + 1])
+            return obj if isinstance(obj, dict) else {}
         except Exception:
-            return None
-    return None
+            return {}
+    return {}
 
 
-async def _llm_select_book_ids(query: str, candidate_pool: List[Dict[str, Any]], top_k: int) -> List[str]:
-    if not candidate_pool:
-        return []
+async def _parse_intent(query: str) -> Dict[str, Any]:
+    template = INTENT_PROMPT["user_template"]
+    user_prompt = template.format(query=query)
+    if not str(os.getenv("OPENAI_API_KEY") or "").strip():
+        return {"intent": "recommend_books", "constraints": {}, "preferred_genres": [], "scenario_hint": "auto", "response_style": "concise"}
 
-    candidate_lines: List[str] = []
-    for row in candidate_pool:
-        bid = str(row.get("book_id") or "")
-        title = str(row.get("title") or "")
-        author = str(row.get("author") or "")
-        genres = ", ".join(str(g) for g in (row.get("genres") or []))
-        desc = str(row.get("description") or "")[:220]
-        candidate_lines.append(
-            f"- book_id={bid}; title={title}; author={author}; genres={genres}; description={desc}"
-        )
-
-    prompt = (
-        "You are a book recommendation selector.\n"
-        f"User query: {query}\n"
-        f"Choose up to {top_k} best-matching book_ids ONLY from the candidate list below.\n"
-        "Return strict JSON object with this schema: "
-        '{"book_ids": ["id1", "id2", ...]} and do not include any extra text.\n\n'
-        "Candidates:\n"
-        + "\n".join(candidate_lines)
-    )
-    messages = [
-        {"role": "system", "content": "Return valid JSON only."},
-        {"role": "user", "content": prompt},
-    ]
     try:
         raw = await call_openai_chat(
-            messages,
-            model=OPENAI_MODEL,
-            temperature=0.2,
-            max_tokens=400,
+            [
+                {"role": "system", "content": INTENT_PROMPT["system"]},
+                {"role": "user", "content": user_prompt},
+            ],
+            model=RUNTIME.llm_model,
+            temperature=RUNTIME.llm_temperature,
+            max_tokens=RUNTIME.llm_max_tokens,
         )
-    except Exception:
-        return []
+        parsed = _safe_json_object(raw)
+        if parsed:
+            return parsed
+    except Exception as exc:
+        logger.warning("event=intent_parse_failed error=%s", exc)
 
-    parsed = _try_parse_json(raw)
-    if not isinstance(parsed, dict):
-        return []
-
-    raw_ids = parsed.get("book_ids")
-    if not isinstance(raw_ids, list):
-        return []
-
-    valid_ids = {str(row.get("book_id") or "") for row in candidate_pool}
-    selected: List[str] = []
-    seen: set[str] = set()
-    for item in raw_ids:
-        bid = str(item or "").strip()
-        if not bid or bid not in valid_ids or bid in seen:
-            continue
-        selected.append(bid)
-        seen.add(bid)
-        if len(selected) >= top_k:
-            break
-    return selected
+    return {"intent": "recommend_books", "constraints": {}, "preferred_genres": [], "scenario_hint": "auto", "response_style": "concise"}
 
 
-async def _derive_books_from_query(query: str, candidate_ids: List[str]) -> List[Dict[str, Any]]:
-    books = load_books()
-    if not books:
-        return []
+async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
+    session_id = req.session_id or f"session-{uuid.uuid4()}"
+    SESSION_STORE.append_message(session_id, "user", req.query)
 
-    if candidate_ids:
-        wanted = {str(cid) for cid in candidate_ids if str(cid).strip()}
-        return [row for row in books if str(row.get("book_id") or "") in wanted]
+    intent = await _parse_intent(req.query)
 
-    if not query.strip():
-        return []
-
-    pool_target = max(BOOK_RETRIEVAL_TOP_K, BOOK_RETRIEVAL_CANDIDATE_POOL)
-    retrieval_pool = min(len(books), max(pool_target, pool_target * 4))
-
-    lexical = retrieve_books_by_query(
-        query=query,
-        books=books,
-        top_k=retrieval_pool,
-    )
-    if not lexical:
-        return []
-
-    cf_vectors = load_cf_item_vectors()
-    if cf_vectors:
-        covered: List[Dict[str, Any]] = []
-        uncovered: List[Dict[str, Any]] = []
-        for row in lexical:
-            bid = str(row.get("book_id") or "")
-            if bid and bid in cf_vectors:
-                covered.append(row)
-            else:
-                uncovered.append(row)
-        candidate_pool = (covered + uncovered)[:pool_target]
-    else:
-        candidate_pool = lexical[:pool_target]
-
-    selected_ids = await _llm_select_book_ids(
-        query=query,
-        candidate_pool=candidate_pool,
-        top_k=BOOK_RETRIEVAL_TOP_K,
-    )
-
-    if not selected_ids:
-        return candidate_pool[:BOOK_RETRIEVAL_TOP_K]
-
-    by_id = {str(row.get("book_id") or ""): row for row in candidate_pool}
-    selected_books = [by_id[bid] for bid in selected_ids if bid in by_id]
-    return selected_books[:BOOK_RETRIEVAL_TOP_K]
-
-
-def _detect_scenario(req: UserRequest) -> str:
-    requested = str(req.constraints.get("scenario") or "").lower()
-    if requested in {"cold", "warm", "explore"}:
-        return requested
-    if req.constraints.get("explore") is True:
-        return "explore"
-    if not req.history and not req.reviews:
-        return "cold"
-    return "warm"
-
-
-def _debug_payload_override_enabled(req: UserRequest) -> bool:
-    return bool((req.constraints or {}).get("debug_payload_override", False))
-
-
-def _normalize_user_id(req: UserRequest, session_id: str, *, allow_anonymous: bool) -> str:
-    uid = str(req.user_id or "").strip()
-    if uid:
-        return uid
-    if allow_anonymous:
-        return f"anon-{session_id}"
-    return ""
-
-
-def _hydrate_request_context(req: UserRequest, session_id: str, *, allow_anonymous: bool) -> None:
-    req.user_id = _normalize_user_id(req, session_id, allow_anonymous=allow_anonymous)
-    if not req.user_id:
-        raise ValueError("user_id is required for production /user_api requests")
-    persisted = profile_store.get_user_context(req.user_id)
-
-    hydrated_profile = persisted.get("user_profile") or {}
-    hydrated_profile.setdefault("user_id", req.user_id)
-    hydrated_history = persisted.get("history") or []
-    hydrated_reviews = persisted.get("reviews") or []
-
-    if _debug_payload_override_enabled(req):
-        if req.user_profile:
-            hydrated_profile = {**hydrated_profile, **req.user_profile}
-        if req.history:
-            hydrated_history = req.history
-        if req.reviews:
-            hydrated_reviews = req.reviews
-
-    req.user_profile = hydrated_profile
-    req.history = hydrated_history
-    req.reviews = hydrated_reviews
-
-
-def _build_profile_snapshot(user_id: str, profile_result: Dict[str, Any], req: UserRequest) -> Dict[str, Any]:
-    snapshot_from_agent = profile_result.get("profile_snapshot") or {}
-    if isinstance(snapshot_from_agent, dict) and snapshot_from_agent:
-        snapshot = dict(snapshot_from_agent)
-        snapshot["user_id"] = user_id
-    else:
-        snapshot = {}
-
-    latest_snapshot = profile_store.get_latest_profile(user_id) if user_id else {}
-    latest_version = str((latest_snapshot or {}).get("profile_version") or "").strip()
-
-    def _parse_version(raw: str) -> Tuple[str, int]:
-        parts = raw.rsplit("-v", 1)
-        if len(parts) == 2 and parts[1].isdigit():
-            return parts[0], int(parts[1])
-        return raw, 0
-
-    requested_version = str(
-        snapshot.get("profile_version")
-        or profile_result.get("profile_version")
-        or profile_result.get("embedding_version")
-        or "reader_profile_v1"
-    )
-    req_base, req_idx = _parse_version(requested_version)
-    latest_base, latest_idx = _parse_version(latest_version)
-
-    if latest_idx > 0 and (latest_base == req_base or requested_version == "reader_profile_v1"):
-        profile_version = f"{latest_base}-v{latest_idx + 1}"
-    elif req_idx > 0:
-        profile_version = requested_version
-    else:
-        base = user_id.replace(" ", "_") if user_id else "profile"
-        profile_version = f"{base}-v1"
-
-    preference_vector = profile_result.get("preference_vector") or {}
-    sentiment_summary = profile_result.get("sentiment_summary") or {"label": "neutral", "score": 0.0}
-    intent_keywords = profile_result.get("intent_keywords") or {"keywords": [], "intent_summary": ""}
-    diagnostics = profile_result.get("diagnostics") or {}
-    generated_at = str(diagnostics.get("generated_at") or datetime.now(timezone.utc).isoformat())
-
-    fallback_snapshot = {
-        "user_id": user_id,
-        "profile_version": profile_version,
-        "generated_at": generated_at,
-        "source_event_window": {
-            "history_count": len(req.history or []),
-            "review_count": len(req.reviews or []),
-        },
-        "explicit_preferences": {
-            "genres": preference_vector.get("genres") or {},
-            "themes": preference_vector.get("themes") or {},
-            "formats": preference_vector.get("formats") or {},
-            "languages": preference_vector.get("languages") or {},
-        },
-        "implicit_preferences": {
-            "intent_keywords": intent_keywords,
-            "tones": preference_vector.get("tones") or {},
-            "pacing": preference_vector.get("pacing") or {},
-            "difficulty": preference_vector.get("difficulty") or {},
-        },
-        "sentiment_summary": sentiment_summary,
-        "feature_vector": preference_vector,
-        "cold_start_flag": _detect_scenario(req) == "cold",
-        "user_profile": {**(req.user_profile or {}), "user_id": user_id},
-    }
-
-    if snapshot:
-        merged = {**fallback_snapshot, **snapshot}
-        merged["profile_version"] = profile_version
-        merged["user_profile"] = {**(req.user_profile or {}), "user_id": user_id}
-        return merged
-    return fallback_snapshot
-
-
-def _build_candidate_provenance(req: UserRequest, books: List[Dict[str, Any]]) -> Dict[str, Any]:
-    retrieval_info = get_active_retrieval_corpus_info() or {}
-    candidate_ids = [str(row.get("book_id") or row.get("id") or "").strip() for row in books]
-    candidate_ids = [cid for cid in candidate_ids if cid]
-    ids_hash = hashlib.sha256("|".join(candidate_ids).encode("utf-8")).hexdigest() if candidate_ids else ""
-
-    if req.candidate_ids:
-        retrieval_rule = "explicit_candidate_ids"
-    elif req.books:
-        retrieval_rule = "explicit_books_payload"
-    else:
-        retrieval_rule = "leader_local_retrieval_pipeline"
-
-    dataset_version = str(
-        retrieval_info.get("dataset_version")
-        or retrieval_info.get("path")
-        or retrieval_info.get("selection_source")
-        or "unknown"
-    )
-
-    return {
-        "retrieval_rule": retrieval_rule,
-        "dataset_version": dataset_version,
-        "filter_parameters": {
-            "top_k": req.constraints.get("top_k", BOOK_RETRIEVAL_TOP_K),
-            "candidate_pool": BOOK_RETRIEVAL_CANDIDATE_POOL,
-            "scenario": req.constraints.get("scenario"),
-            "strict_remote_validation": bool(req.constraints.get("strict_remote_validation", False)),
-        },
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "candidate_ids": candidate_ids,
-        "candidate_ids_hash": ids_hash,
-    }
-
-
-def _build_candidate_book_set(req: UserRequest, books: List[Dict[str, Any]], provenance: Dict[str, Any]) -> Dict[str, Any]:
-    candidates: List[Dict[str, Any]] = []
-    for row in books:
-        if not isinstance(row, dict):
-            continue
-        bid = str(row.get("book_id") or row.get("id") or "").strip()
-        if not bid:
-            continue
-        candidates.append(
-            {
-                "book_id": bid,
-                "title": str(row.get("title") or ""),
-                "author": str(row.get("author") or ""),
-                "genres": row.get("genres") if isinstance(row.get("genres"), list) else [],
-                "description": str(row.get("description") or ""),
-            }
-        )
-
-    return {
+    # 1) Notify RDA to stand by.
+    rda_standby_payload = {
+        "action": "rda.standby",
+        "session_id": session_id,
         "user_id": req.user_id,
-        "query": req.query,
-        "candidates": candidates,
-        "provenance": {
-            "retrieval_rule": provenance.get("retrieval_rule") or "leader_local_retrieval_pipeline",
-            "dataset_version": provenance.get("dataset_version") or "unknown",
-            "filter_parameters": provenance.get("filter_parameters") or {},
-            "generated_at": provenance.get("generated_at") or datetime.now(timezone.utc).isoformat(),
-        },
     }
+    standby_resp, standby_route = await _invoke_partner("rda", rda_standby_payload)
 
-
-def _normalize_api_recommendations(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    normalized: List[Dict[str, Any]] = []
-    for idx, row in enumerate(rows or [], start=1):
-        if not isinstance(row, dict):
-            continue
-        item = dict(row)
-        rank = item.get("rank")
-        rank_position = item.get("rank_position")
-        if rank is None and rank_position is None:
-            rank = idx
-            rank_position = idx
-        elif rank is None:
-            rank = rank_position
-        elif rank_position is None:
-            rank_position = rank
-        try:
-            item["rank"] = int(rank)
-            item["rank_position"] = int(rank_position)
-        except Exception:
-            item["rank"] = idx
-            item["rank_position"] = idx
-
-        score_parts = item.get("score_parts") if isinstance(item.get("score_parts"), dict) else {}
-        if not score_parts:
-            score_parts = {
-                "collaborative": float(item.get("score_cf") or 0.0),
-                "semantic": float(item.get("score_content") or 0.0),
-                "knowledge": float(item.get("score_kg") or 0.0),
-                "diversity": float(item.get("score_diversity") or 0.0),
-            }
-        item["score_parts"] = score_parts
-        if item.get("composite_score") is None:
-            item["composite_score"] = float(item.get("score_total") or 0.0)
-        if item.get("score_total") is None:
-            item["score_total"] = float(item.get("composite_score") or 0.0)
-        normalized.append(item)
-    return normalized
-
-
-def _build_ranked_recommendation_contract(
-    ranking_outputs: Dict[str, Any],
-    *,
-    scenario_policy: str,
-) -> Dict[str, Any]:
-    ranking_rows = ranking_outputs.get("ranking") or []
-    explanations = ranking_outputs.get("explanations") or []
-    explanation_by_id = {
-        str(item.get("book_id") or ""): str(item.get("justification") or "").strip()
-        for item in explanations
-        if isinstance(item, dict)
-    }
-
-    def _f(value: Any) -> float:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return 0.0
-
-    normalized: List[Dict[str, Any]] = []
-    for idx, row in enumerate(ranking_rows, start=1):
-        if not isinstance(row, dict):
-            continue
-        book_id = str(row.get("book_id") or "").strip()
-        if not book_id:
-            continue
-        score_parts = row.get("score_parts") if isinstance(row.get("score_parts"), dict) else {}
-        explanation = explanation_by_id.get(book_id) or str(row.get("reason") or row.get("explanation") or "").strip()
-        if not explanation:
-            explanation = "Score-based recommendation from collaborative, semantic, knowledge, and diversity factors."
-        normalized.append(
-            {
-                "book_id": book_id,
-                "title": str(row.get("title") or ""),
-                "score_total": _f(row.get("composite_score") or row.get("score_total")),
-                "score_cf": _f(score_parts.get("collaborative") or row.get("score_cf")),
-                "score_content": _f(score_parts.get("semantic") or row.get("score_content")),
-                "score_kg": _f(score_parts.get("knowledge") or row.get("score_kg")),
-                "score_diversity": _f(score_parts.get("diversity") or row.get("score_diversity")),
-                "rank_position": int(row.get("rank") or row.get("rank_position") or idx),
-                "scenario_policy": scenario_policy,
-                "explanation": explanation,
-                "explanation_evidence_refs": [
-                    "score_parts.collaborative",
-                    "score_parts.semantic",
-                    "score_parts.knowledge",
-                    "score_parts.diversity",
-                ],
-            }
-        )
-
-    return {
-        "scenario_policy": scenario_policy,
-        "ranking": normalized,
-    }
-
-
-async def _seed_cold_start_history(req: UserRequest, books: Optional[List[Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
-    local_books = books if books is not None else (req.books or await _derive_books_from_query(req.query, req.candidate_ids))
-    if not local_books:
-        return []
-
-    seeded: List[Dict[str, Any]] = []
-    preferred_language = (req.user_profile or {}).get("preferred_language", "unknown")
-    for book in local_books[:2]:
-        seeded.append(
-            {
-                "title": str(book.get("title") or book.get("book_id") or "seed_book"),
-                "genres": book.get("genres") or [],
-                "rating": 3,
-                "format": "unknown",
-                "language": preferred_language,
-            }
-        )
-    return seeded
-
-
-def _scenario_policy(req: UserRequest) -> Dict[str, Any]:
-    scenario = _detect_scenario(req)
-
-    profile_user = req.user_profile or {}
-    profile_history = req.history
-    profile_reviews = req.reviews
-
-    if scenario == "cold":
-        if not profile_user:
-            profile_user = {"segment": "cold_start", "preferred_language": "unknown", "user_id": req.user_id}
-    profile_user["user_id"] = req.user_id
-    needs_cold_seed = scenario == "cold" and not profile_history and not profile_reviews
-
-    ranking_constraints = {
-        "top_k": req.constraints.get("top_k", 5),
-        "novelty_threshold": req.constraints.get("novelty_threshold", 0.45),
-        "min_new_items": req.constraints.get("min_new_items", 0),
-    }
-    ranking_weights = req.constraints.get("scoring_weights") or {
-        "collaborative": 0.25,
-        "semantic": 0.35,
-        "knowledge": 0.2,
-        "diversity": 0.2,
-    }
-
-    if scenario == "explore":
-        ranking_constraints["novelty_threshold"] = req.constraints.get("novelty_threshold", 0.5)
-        ranking_constraints["min_new_items"] = max(int(ranking_constraints["min_new_items"]), 1)
-        ranking_weights = {
-            "collaborative": 0.15,
-            "semantic": 0.25,
-            "knowledge": 0.2,
-            "diversity": 0.4,
-        }
-    elif scenario == "cold":
-        ranking_weights = {
-            "collaborative": 0.1,
-            "semantic": 0.45,
-            "knowledge": 0.25,
-            "diversity": 0.2,
-        }
-
-    return {
-        "scenario": scenario,
-        "profile": {
-            "user_profile": profile_user,
-            "history": profile_history,
-            "reviews": profile_reviews,
-        },
-        "needs_cold_seed": needs_cold_seed,
-        "ranking_constraints": ranking_constraints,
-        "ranking_weights": ranking_weights,
-    }
-
-
-def _build_ranking_candidates(content_outputs: Dict[str, Any], books: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    vectors = content_outputs.get("content_vectors") or []
-    tags = content_outputs.get("book_tags") or []
-    tags_by_id = {row.get("book_id"): row for row in tags if isinstance(row, dict)}
-    books_by_id = {
-        str(row.get("book_id") or row.get("id") or ""): row
-        for row in (books or [])
-        if isinstance(row, dict)
-    }
-
-    candidates: List[Dict[str, Any]] = []
-    for row in vectors:
-        if not isinstance(row, dict):
-            continue
-        bid = row.get("book_id")
-        tag = tags_by_id.get(bid) or {}
-        source_book = books_by_id.get(str(bid)) or {}
-        title = source_book.get("title") or row.get("title") or bid
-        diversity_signal = 0.2 + 0.2 * len(tag.get("diversity_indicators") or [])
-        novelty_signal = 0.3 + 0.1 * len(tag.get("topics") or [])
-        candidates.append(
-            {
-                "book_id": bid,
-                "title": title,
-                "author": source_book.get("author") or "",
-                "description": source_book.get("description") or row.get("description") or "",
-                "genres": source_book.get("genres") or row.get("genres") or [],
-                "topics": tag.get("topics") or [],
-                "vector": row.get("vector") or [],
-                "kg_signal": min(
-                    1.0,
-                    max(
-                        0.0,
-                        float(row["kg_signal"]) if "kg_signal" in row else 0.2,
-                    ),
-                ),
-                "novelty_score": min(1.0, novelty_signal),
-                "diversity_score": min(1.0, diversity_signal),
-            }
-        )
-    return candidates
-
-
-async def _orchestrate_reading_flow(req: UserRequest) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    partner_tasks: Dict[str, Any] = {}
-    partner_results: Dict[str, Any] = {}
-    policy = _scenario_policy(req)
-    scenario = policy["scenario"]
-    strict_remote_validation = bool(req.constraints.get("strict_remote_validation", False))
-    books = req.books or await _derive_books_from_query(req.query, req.candidate_ids)
-    candidate_provenance = _build_candidate_provenance(req, books)
-    candidate_book_set = _build_candidate_book_set(req, books, candidate_provenance)
-    candidate_valid, candidate_reason = _validate_contract_payload(
-        "candidate_book_set.schema.json", candidate_book_set
-    )
-
-    if policy.get("needs_cold_seed") and not policy["profile"]["history"]:
-        policy["profile"]["history"] = await _seed_cold_start_history(req, books)
-
+    # 2) GroupMgmt broadcast to RPA + BCA in parallel.
     profile_payload = {
+        "action": "uma.build_profile",
         "user_id": req.user_id,
-        "user_profile": policy["profile"]["user_profile"],
-        "history": policy["profile"]["history"],
-        "reviews": policy["profile"]["reviews"],
         "query": req.query,
-        "scenario": scenario,
+        "user_profile": req.user_profile,
+        "history": req.history,
+        "reviews": req.reviews,
     }
     content_payload = {
-        "books": books,
+        "action": "bca.build_content_proposal",
+        "user_id": req.user_id,
+        "query": req.query,
+        "books": req.books,
         "candidate_ids": req.candidate_ids,
-        "query": req.query,
-        "kg_mode": req.constraints.get("kg_mode", "local"),
-        "use_remote_kg": req.constraints.get("use_remote_kg", False),
-        "kg_endpoint": req.constraints.get("kg_endpoint"),
+        "declared_genres": intent.get("preferred_genres") or [],
     }
 
-    profile_task = _invoke_partner_with_fallback(
-        "profile",
-        profile_payload,
-        strict_remote_validation=strict_remote_validation,
+    (profile_resp, profile_route), (content_resp, content_route) = await __import__("asyncio").gather(
+        _invoke_partner("profile", profile_payload),
+        _invoke_partner("content", content_payload),
     )
-    content_task = _invoke_partner_with_fallback(
-        "content",
-        content_payload,
-        strict_remote_validation=strict_remote_validation,
-    )
-    (profile_resp, profile_route), (content_resp, content_route) = await asyncio.gather(profile_task, content_task)
 
-    profile_state = _task_state(profile_resp)
-    profile_data = _extract_structured_result(profile_resp)
-    profile_ok, profile_reason = _validate_partner_outputs("profile", profile_state, profile_data)
+    profile_data = _extract_result(profile_resp)
+    content_data = _extract_result(content_resp)
+    profile_state = _state(profile_resp)
+    content_state = _state(content_resp)
 
-    partner_tasks[reader_profile.AGENT_ID] = {
-        "state": profile_state,
-        "acceptance": {"passed": profile_ok, "reason": profile_reason},
-        **profile_route,
-    }
-    partner_results[reader_profile.AGENT_ID] = {
-        "state": profile_state,
-        "task_id": _extract_task_id(profile_resp),
-        "result": profile_data,
-    }
-
-    content_state = _task_state(content_resp)
-    content_data = _extract_structured_result(content_resp)
-    content_ok, content_reason = _validate_partner_outputs("content", content_state, content_data)
-
-    partner_tasks[book_content.AGENT_ID] = {
-        "state": content_state,
-        "acceptance": {"passed": content_ok, "reason": content_reason},
-        **content_route,
-    }
-    partner_results[book_content.AGENT_ID] = {
-        "state": content_state,
-        "task_id": _extract_task_id(content_resp),
-        "result": content_data,
-    }
-
-    partner_results["_candidate_set"] = candidate_book_set
-    partner_results["_candidate_provenance"] = candidate_provenance
-
-    content_outputs = content_data.get("outputs") or {}
-    if content_ok:
-        book_feature_map_contract = {
-            "embedding_version": str(
-                content_data.get("embedding_version")
-                or ((content_outputs.get("features_metadata") or {}).get("embedding_version") or "")
-            ),
-            "content_vectors": content_outputs.get("content_vectors") or [],
-            "book_tags": content_outputs.get("book_tags") or [],
-            "features_metadata": content_outputs.get("features_metadata") or {},
-        }
-        feature_valid, feature_reason = _validate_contract_payload(
-            "book_feature_map.schema.json", book_feature_map_contract
-        )
-    else:
-        book_feature_map_contract = {}
-        feature_valid, feature_reason = True, f"skipped_due_partner_state:{content_state}"
-
-    partner_results["_book_feature_map"] = book_feature_map_contract
-    partner_results["_contract_validation"] = {
-        "candidate_book_set": {"passed": candidate_valid, "reason": candidate_reason},
-        "book_feature_map": {"passed": feature_valid, "reason": feature_reason},
-    }
-
-    if not profile_ok or not content_ok:
-        return partner_tasks, partner_results
-
-    ranking_payload = {
-        "query": req.query,
-        "scenario_policy": scenario,
-        "profile_vector": profile_data.get("preference_vector") or {},
-        "candidates": _build_ranking_candidates(content_outputs, books),
-        "history": policy["profile"]["history"],
-        "constraints": policy["ranking_constraints"],
-        "scoring_weights": policy["ranking_weights"],
-    }
-    ranking_resp, ranking_route = await _invoke_partner_with_fallback(
-        "ranking",
-        ranking_payload,
-        strict_remote_validation=strict_remote_validation,
-    )
-    ranking_state = _task_state(ranking_resp)
-    ranking_data = _extract_structured_result(ranking_resp)
-    ranking_ok, ranking_reason = _validate_partner_outputs("ranking", ranking_state, ranking_data)
-    partner_tasks[rec_ranking.AGENT_ID] = {
-        "state": ranking_state,
-        "acceptance": {"passed": ranking_ok, "reason": ranking_reason},
-        **ranking_route,
-    }
-    partner_results[rec_ranking.AGENT_ID] = {
-        "state": ranking_state,
-        "task_id": _extract_task_id(ranking_resp),
-        "result": ranking_data,
-    }
-
-    partner_results["_policy"] = {
-        "scenario": scenario,
-        "ranking_constraints": policy["ranking_constraints"],
-        "ranking_weights": policy["ranking_weights"],
-        "strict_remote_validation": strict_remote_validation,
-    }
-
-    return partner_tasks, partner_results
-
-
-@app.get("/", response_class=HTMLResponse)
-async def demo_root() -> HTMLResponse:
-    if _DEMO_HTML_PATH.exists():
-        return HTMLResponse(_DEMO_HTML_PATH.read_text(encoding="utf-8"))
-    return HTMLResponse("<h3>Demo page not found. Expected: web_demo/index.html</h3>", status_code=404)
-
-
-@app.get("/demo", response_class=HTMLResponse)
-async def demo_page() -> HTMLResponse:
-    if _DEMO_HTML_PATH.exists():
-        return HTMLResponse(_DEMO_HTML_PATH.read_text(encoding="utf-8"))
-    return HTMLResponse("<h3>Demo page not found. Expected: web_demo/index.html</h3>", status_code=404)
-
-
-@app.get("/demo/benchmark-summary")
-async def demo_benchmark_summary() -> JSONResponse:
-    if not _BENCHMARK_SUMMARY_PATH.exists():
-        return JSONResponse(
-            {
-                "available": False,
-                "message": "Benchmark summary not found. Run scripts/phase4_benchmark_compare.py first.",
-                "expected_path": str(_BENCHMARK_SUMMARY_PATH),
-            }
-        )
-
-    try:
-        payload = json.loads(_BENCHMARK_SUMMARY_PATH.read_text(encoding="utf-8"))
-    except Exception as exc:
-        return JSONResponse(
-            {
-                "available": False,
-                "message": "Failed to parse benchmark summary file.",
-                "error": str(exc),
-            },
-            status_code=500,
-        )
-
-    return JSONResponse({"available": True, "summary": payload})
-
-
-@app.get("/demo/status")
-async def demo_status() -> Dict[str, Any]:
-    retrieval_info = get_active_retrieval_corpus_info()
-    return {
-        "service": "reading_concierge",
-        "leader_id": LEADER_ID,
-        "partner_mode": PARTNER_MODE,
-        "adp_mode": _selected_adp_mode(),
-        "adp_discovery_enabled": _adp_discovery_enabled(),
-        "demo_page_available": _DEMO_HTML_PATH.exists(),
-        "benchmark_summary_available": _BENCHMARK_SUMMARY_PATH.exists(),
-        "retrieval_corpus": retrieval_info,
-    }
-
-
-@app.get("/demo/retrieval-corpus")
-async def demo_retrieval_corpus() -> Dict[str, Any]:
-    return get_active_retrieval_corpus_info()
-
-
-@app.get("/demo/audit/runs")
-async def demo_audit_runs(user_id: Optional[str] = None, limit: int = 20) -> Dict[str, Any]:
-    runs = profile_store.list_recommendation_runs(user_id=user_id, limit=limit)
-    return {
-        "count": len(runs),
-        "runs": runs,
-    }
-
-
-@app.get("/demo/audit/runs/{run_id}")
-async def demo_audit_run_detail(run_id: str) -> Dict[str, Any]:
-    payload = profile_store.get_recommendation_run(run_id)
-    if not payload:
-        raise HTTPException(status_code=404, detail="run_id not found")
-    return payload
-
-
-@app.post("/demo/retention/prune")
-async def demo_retention_prune(
-    keep_latest_runs_per_user: int = 100,
-    keep_latest_logs_per_task: int = 200,
-) -> Dict[str, Any]:
-    summary = profile_store.prune_retention(
-        keep_latest_runs_per_user=keep_latest_runs_per_user,
-        keep_latest_logs_per_task=keep_latest_logs_per_task,
-    )
-    return {
-        "status": "ok",
-        "pruned": summary,
-        "keep_latest_runs_per_user": max(1, int(keep_latest_runs_per_user)),
-        "keep_latest_logs_per_task": max(1, int(keep_latest_logs_per_task)),
-    }
-
-
-async def _handle_user_api(req: UserRequest, *, allow_anonymous: bool) -> Dict[str, Any]:
-    session_id = req.session_id or f"session-{uuid.uuid4()}"
-    if not str(req.query or "").strip():
-        raise HTTPException(status_code=422, detail="query is required")
-
-    raw_user_profile = dict(req.user_profile or {})
-    raw_history = list(req.history or [])
-    raw_reviews = list(req.reviews or [])
-
-    _hydrate_request_context(req, session_id, allow_anonymous=allow_anonymous)
-
-    # WS-A ingestion adapters: persist raw event sources so future user_id-only calls can rebuild context.
-    if raw_user_profile:
-        profile_store.ingest_user_basic_info(req.user_id, raw_user_profile)
-    if raw_history:
-        profile_store.ingest_history_events(req.user_id, raw_history)
-    if raw_reviews:
-        profile_store.ingest_review_events(req.user_id, raw_reviews)
-
-    session = _lru_session_get(session_id)
-    session["messages"].append({"role": "user", "content": req.query})
-
-    profile_store.append_event(
-        req.user_id,
-        "query",
-        {
-            "query": req.query,
-            "constraints": req.constraints,
-            "debug_payload_override": _debug_payload_override_enabled(req),
+    # 3) Forward proposals to RDA arbitration.
+    content_outputs = content_data.get("outputs") if isinstance(content_data.get("outputs"), dict) else {}
+    rda_payload = {
+        "action": "rda.arbitrate",
+        "session_id": session_id,
+        "profile_proposal": {
+            "profile_vector": profile_data.get("profile_vector") or profile_data.get("preference_vector") or [],
+            "confidence": profile_data.get("confidence", 0.2),
+            "behavior_genres": profile_data.get("behavior_genres") or [],
+            "strategy_suggestion": profile_data.get("strategy_suggestion") or "balanced",
         },
-    )
-
-    partner_tasks, partner_results = await _orchestrate_reading_flow(req)
-
-    session["last_partner_results"] = partner_results
-
-    for receiver_id, task_meta in partner_tasks.items():
-        if not isinstance(task_meta, dict):
-            continue
-        task_payload = dict(task_meta)
-        task_id = str((partner_results.get(receiver_id) or {}).get("task_id") or "").strip()
-        if not task_id:
-            task_id = f"{session_id}:{receiver_id}"
-        profile_store.append_agent_task_log(
-            task_id=task_id,
-            session_id=session_id,
-            sender_id=LEADER_ID,
-            receiver_id=receiver_id,
-            state_transition=str(task_meta.get("state") or "unknown"),
-            payload=task_payload,
-        )
-
-    ranking_result = (partner_results.get(rec_ranking.AGENT_ID) or {}).get("result") or {}
-    ranking_outputs = ranking_result.get("outputs") or {}
-    recommendations = _normalize_api_recommendations(ranking_outputs.get("ranking") or [])
-    policy_data = partner_results.get("_policy") or {}
-    scenario_policy = str(policy_data.get("scenario") or _detect_scenario(req))
-    ranked_contract = _build_ranked_recommendation_contract(
-        ranking_outputs,
-        scenario_policy=scenario_policy,
-    )
-    ranked_valid, ranked_reason = _validate_contract_payload(
-        "ranked_recommendation_list.schema.json", ranked_contract
-    )
-
-    contract_validation = dict(partner_results.get("_contract_validation") or {})
-    contract_validation["ranked_recommendation_list"] = {
-        "passed": ranked_valid,
-        "reason": ranked_reason,
+        "content_proposal": {
+            "divergence_score": content_outputs.get("divergence_score", content_data.get("divergence_score", 0.5)),
+            "alignment_status": content_outputs.get("alignment_status", content_data.get("alignment_status")),
+            "weight_suggestion": content_outputs.get("weight_suggestion"),
+            "coverage_report": content_outputs.get("coverage_report"),
+            "counter_proposal": content_outputs.get("counter_proposal"),
+        },
+        "counter_proposal_received": bool(content_outputs.get("counter_proposal")),
     }
-    partner_results["_contract_validation"] = contract_validation
+    rda_resp, rda_route = await _invoke_partner("rda", rda_payload)
+    rda_data = _extract_result(rda_resp)
+    rda_state = _state(rda_resp)
 
-    strict_contract_validation = bool(
-        (req.constraints or {}).get("strict_contract_validation", True)
-    )
-    failed_contracts = {
-        name: details
-        for name, details in contract_validation.items()
-        if isinstance(details, dict) and details.get("passed") is False
+    # 4) Compose dispatch and send to Engine.
+    engine_payload = {
+        "action": "engine.dispatch",
+        "session_id": session_id,
+        "user_id": req.user_id,
+        "query": req.query,
+        "intent": intent,
+        "profile_vector": (rda_payload.get("profile_proposal") or {}).get("profile_vector") or [],
+        "ann_weight": rda_data.get("final_weights", {}).get("ann_weight", 0.6),
+        "cf_weight": rda_data.get("final_weights", {}).get("cf_weight", 0.4),
+        "score_weights": rda_data.get("score_weights") or {},
+        "mmr_lambda": rda_data.get("mmr_lambda", 0.5),
+        "strategy": rda_data.get("strategy", "balanced"),
+        "candidates": content_outputs.get("content_vectors") or [],
     }
-    if strict_contract_validation and failed_contracts:
-        logger.error(
-            "event=contract_validation_failed user_id=%s failed=%s",
-            req.user_id,
-            failed_contracts,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "contract_validation_failed",
-                "failed_contracts": failed_contracts,
-            },
-        )
+    engine_resp, engine_route = await _invoke_partner("engine", engine_payload)
+    engine_data = _extract_result(engine_resp)
+    engine_state = _state(engine_resp)
 
-    evaluation = _evaluation_from_response(req, ranking_outputs)
+    recommendations = engine_data.get("recommendations") if isinstance(engine_data.get("recommendations"), list) else []
+    explanations = engine_data.get("explanations") if isinstance(engine_data.get("explanations"), list) else []
 
-    final_state = "completed" if recommendations else "needs_input"
     response = {
         "session_id": session_id,
         "user_id": req.user_id,
         "leader_id": LEADER_ID,
-        "state": final_state,
-        "scenario": scenario_policy,
-        "partner_tasks": partner_tasks,
-        "partner_results": partner_results,
-        "recommendations": recommendations,
-        "explanations": ranking_outputs.get("explanations") or [],
-        "metric_snapshot": ranking_outputs.get("metric_snapshot") or {},
-        "evaluation": evaluation,
-        "contract_artifacts": {
-            "candidate_book_set": partner_results.get("_candidate_set") or {},
-            "book_feature_map": partner_results.get("_book_feature_map") or {},
-            "ranked_recommendation_list": ranked_contract,
+        "intent": intent,
+        "state": "completed" if recommendations else "needs_input",
+        "partner_tasks": {
+            "rda_standby": {"state": _state(standby_resp), **standby_route},
+            "rpa": {"state": profile_state, **profile_route},
+            "bca": {"state": content_state, **content_route},
+            "rda": {"state": rda_state, **rda_route},
+            "engine": {"state": engine_state, **engine_route},
         },
-        "contract_validation": contract_validation,
+        "partner_results": {
+            "rpa": profile_data,
+            "bca": content_data,
+            "rda": rda_data,
+            "engine": engine_data,
+        },
+        "recommendations": recommendations,
+        "explanations": explanations,
     }
 
-    profile_result = (partner_results.get(reader_profile.AGENT_ID) or {}).get("result") or {}
-    persisted_snapshot: Optional[Dict[str, Any]] = None
-    if profile_result:
-        persisted_snapshot = _build_profile_snapshot(req.user_id, profile_result, req)
-        profile_store.save_profile_snapshot(req.user_id, persisted_snapshot)
-
-    recommendations = response.get("recommendations") or []
-    candidate_provenance = partner_results.get("_candidate_provenance") or {}
-    if recommendations:
-        run_id = profile_store.record_recommendation_run(
-            user_id=req.user_id,
-            query=req.query,
-            profile_version=str((persisted_snapshot or {}).get("profile_version") or "reader_profile_v1"),
-            candidate_set_version_or_hash=str(
-                req.constraints.get("candidate_set_version")
-                or candidate_provenance.get("candidate_ids_hash")
-                or "local-retrieval"
-            ),
-            book_feature_version_or_hash=str(req.constraints.get("book_feature_version") or "book_content_v1"),
-            ranking_policy_version=str(req.constraints.get("ranking_policy_version") or "rec_ranking_v1"),
-            weights_or_policy_snapshot=policy_data.get("ranking_weights") or req.constraints.get("scoring_weights") or {},
-            candidate_provenance=candidate_provenance,
-        )
-        if run_id:
-            profile_store.record_recommendation_items(
-                run_id=run_id,
-                recommendations=recommendations,
-                scenario_policy=scenario_policy,
-            )
-
-    session["messages"].append({"role": "assistant", "content": "orchestration_completed"})
-    logger.info(
-        "event=reading_orchestration_complete session_id=%s state=%s recommendation_count=%s",
-        session_id,
-        final_state,
-        len(recommendations),
-    )
+    SESSION_STORE.update_fields(session_id, {"last_response": response, "intent": intent})
+    SESSION_STORE.append_message(session_id, "assistant", "orchestration_completed")
     return response
+
+
+@app.get("/", response_class=HTMLResponse)
+async def demo_root() -> HTMLResponse:
+    if DEMO_HTML_PATH.exists():
+        return HTMLResponse(DEMO_HTML_PATH.read_text(encoding="utf-8"))
+    return HTMLResponse("<h3>Demo page not found.</h3>", status_code=404)
+
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_page() -> HTMLResponse:
+    return await demo_root()
+
+
+@app.get("/demo/status")
+async def demo_status() -> Dict[str, Any]:
+    return {
+        "service": "reading_concierge",
+        "leader_id": LEADER_ID,
+        "partner_mode": PARTNER_MODE,
+        "redis_url": RUNTIME.redis_url,
+        "llm_model": RUNTIME.llm_model,
+        "demo_page_available": DEMO_HTML_PATH.exists(),
+    }
 
 
 @app.post("/user_api")
 async def user_api(req: UserRequest):
     if not str(req.user_id or "").strip():
         raise HTTPException(status_code=422, detail="user_id is required for /user_api")
-    return await _handle_user_api(req, allow_anonymous=False)
+    if not str(req.query or "").strip():
+        raise HTTPException(status_code=422, detail="query is required")
+    return await _orchestrate(req)
 
 
 @app.post("/user_api_debug")
 async def user_api_debug(req: UserRequest):
-    return await _handle_user_api(req, allow_anonymous=True)
+    if not str(req.query or "").strip():
+        raise HTTPException(status_code=422, detail="query is required")
+    if not str(req.user_id or "").strip():
+        req.user_id = f"anon-{uuid.uuid4()}"
+    return await _orchestrate(req)
 
 
 if __name__ == "__main__":
     import uvicorn
-    from acps_aip.mtls_config import (
-        load_mtls_context,
-        build_uvicorn_ssl_kwargs,
-        validate_startup_identity,
-    )
 
     host = os.getenv("READING_CONCIERGE_HOST", "0.0.0.0")
-    port = int(os.getenv("READING_CONCIERGE_PORT", "8100"))
-    config_path = os.getenv("READING_CONCIERGE_MTLS_CONFIG_PATH", _ACS_JSON_PATH)
-    cert_dir = os.getenv("AGENT_MTLS_CERT_DIR")
-
-    validate_startup_identity(
-        config_path,
-        expected_aic=LEADER_ID,
-        expected_endpoint_path="/user_api",
-        cert_dir=cert_dir,
-    )
-
-    ssl_context = load_mtls_context(config_path, purpose="server", cert_dir=cert_dir)
-    ssl_kwargs = build_uvicorn_ssl_kwargs(config_path, cert_dir=cert_dir) if ssl_context else {}
-
-    uvicorn.run(
-        "reading_concierge.reading_concierge:app",
-        host=host,
-        port=port,
-        **ssl_kwargs,
-    )
+    port = int(os.getenv("READING_CONCIERGE_PORT", str(RUNTIME.port)))
+    uvicorn.run("reading_concierge.reading_concierge:app", host=host, port=port)

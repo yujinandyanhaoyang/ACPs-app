@@ -1,36 +1,34 @@
 {
-  "aic": "1.2.156.3088.0001.00001.BPRK2Q.JLWHSY.1.06P9",
-  "x_ioa_pub_aic_status": "DONE (local)",
+  "aic": "1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST",
+
   "active": true,
   "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
-  "name": "Book Content Agent",
-  "description": "面向候选图书内容分析与特征补全的智能体。对已给定的候选图书进行校验、元数据规范化，并生成用于下游排序的结构化内容特征，包括语义表示、知识图谱上下文以及主题、风格、难度、适读人群等标签。适用于候选书单已经确定、需要补充内容侧特征的场景。不负责生成最终推荐列表，除已声明的规范化或过滤规则外，不主动扩展候选集合。",  "version": "1.0.0",
-  "iconUrl": "https://example.com/icons/book-content-agent.png",
-  "documentationUrl": "https://example.com/docs/book-content-agent",
-  "webAppUrl": "https://example.com/demo/book-content-agent",
+  "name": "书目内容分析智能体",
+  "description": "个性化图书推荐系统中的提案方 B，代表推荐多样性目标参与多智能体协商。使用 sentence-transformers（all-MiniLM-L6-v2）将书目编码为 384 维语义向量，经 256×384 投影矩阵映射至用户空间后，计算用户声明偏好与行为流派分布之间的 JS 散度并生成对齐报告。当 JS 散度超过 0.4 时，主动向 Recommendation Decision Agent 发送反提案，建议采用探索策略以打破信息茧房。可响应 Recommendation Decision Agent 的证据请求，补充回退策略与探索预算。本 Agent 全程不调用 LLM，仅依赖数学向量运算，不负责用户画像建模、书目排序或推荐理由生成",
+  "version": "1.0.0",
   "provider": {
     "countryCode": "CN",
-    "organization": "Beijing University of Posts and Telecommunications",
-    "department": "School of Artificial Intelligence",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
     "url": "http://ai.bupt.edu.cn",
-    "license": "TO_BE_FILLED",
-    "name": "TO_BE_FILLED",
-    "email": "TO_BE_FILLED"
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
   },
   "securitySchemes": {
     "mtls": {
       "type": "mutualTLS",
       "description": "mTLS for inter-agent communication",
-      "x-caChallengeBaseUrl": "http://8.147.68.14:8004/acps-atr-v2/",
-      "x_ioa_pub_cert_status": "PARTIAL_LOCAL_PLACEHOLDER"
+      "x-caChallengeBaseUrl": "http://8.146.235.243:8004/acps-atr-v2/"
+
     }
   },
   "endPoints": [
     {
-      "url": "http://8.147.68.14:8212/book-content/rpc",
+      "url": "http://8.146.235.243:8212/book-content/rpc",
       "transport": "JSONRPC",
-      "x_ioa_pub_endpoint_status": "PARTIAL_LOCAL_PLACEHOLDER",
+
       "security": [
         {
           "mtls": []
@@ -53,67 +51,70 @@
   ],
   "skills": [
     {
-      "id": "book.vectorize",
-      "name": "book.vectorize",
-      "description": "Generate deterministic embedding-compatible vectors",
-      "version": "1.0.0",
+      "id": "bca.build_content_proposal",
+      "name": "bca.build_content_proposal",
+      "description": "Encode books to 384-d vectors, project to user space, and produce alignment-aware content proposal.",
+      "version": "2.0.0",
       "tags": [
-        "book",
+        "content",
         "embedding",
-        "vector"
+        "alignment",
+        "proposal"
       ],
       "examples": [
-        "Generate feature vectors for candidate books."
+        "Produce AlignmentReport and weight_suggestion for RDA input."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ]
     },
     {
-      "id": "kg.enrich",
-      "name": "kg.enrich",
-      "description": "Enrich candidates with knowledge-graph context and provenance",
-      "version": "1.0.0",
+      "id": "bca.counter_proposal",
+      "name": "bca.counter_proposal",
+      "description": "Proactively emit counter proposal when divergence exceeds mismatch threshold.",
+      "version": "2.0.0",
       "tags": [
-        "knowledge-graph",
-        "enrichment"
+        "counter-proposal",
+        "divergence",
+        "negotiation"
       ],
       "examples": [
-        "Attach KG features and provenance to candidate books."
+        "Return explore-oriented strategy when divergence > 0.4."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ]
     },
     {
-      "id": "tag.extract",
-      "name": "tag.extract",
-      "description": "Extract multidimensional tags for ranking evidence",
-      "version": "1.0.0",
+      "id": "bca.supplement_proposal",
+      "name": "bca.supplement_proposal",
+      "description": "Respond to Evidence Request with fallback_strategy and exploration_budget.",
+      "version": "2.0.0",
       "tags": [
-        "tags",
-        "content-analysis"
+        "evidence-request",
+        "supplement",
+        "fallback"
       ],
       "examples": [
-        "Extract theme/style/difficulty tags from book metadata."
+        "Provide fallback strategy when RDA requests supplementary evidence."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ]
     }
   ],

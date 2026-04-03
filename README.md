@@ -21,8 +21,7 @@ Both scripts generate certificates under `certs/` by default:
 - `reading_concierge_001.crt/.key`
 - `reader_profile_agent_001.crt/.key`
 - `book_content_agent_001.crt/.key`
-- `rec_ranking_agent_001.crt/.key`
-- plus `reader_profile`, `book_content`, `rec_ranking` cert pairs for existing example config files.
+- plus `reader_profile`, `book_content` cert pairs for existing example config files.
 
 ### 2) Enable mTLS startup
 
@@ -37,7 +36,6 @@ Optional per-service config path overrides:
 - `READING_CONCIERGE_MTLS_CONFIG_PATH`
 - `READER_PROFILE_MTLS_CONFIG_PATH`
 - `BOOK_CONTENT_MTLS_CONFIG_PATH`
-- `REC_RANKING_MTLS_CONFIG_PATH`
 
 ### 3) Run services directly (uvicorn from module `__main__`)
 
@@ -45,8 +43,9 @@ Optional per-service config path overrides:
 python -m reading_concierge.reading_concierge
 python -m agents.reader_profile_agent.profile_agent
 python -m agents.book_content_agent.book_content_agent
-python -m agents.rec_ranking_agent.rec_ranking_agent
 ```
+
+`agents.rec_ranking_agent` is a legacy path and should not be included in new startup workflows.
 
 When `AGENT_MTLS_ENABLED=true`, services start with TLS and require client certs.
 

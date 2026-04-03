@@ -1,36 +1,34 @@
 {
   "aic": "1.2.156.3088.0001.00001.BPRK2Q.JLWHSY.1.06P9",
-  "x_ioa_pub_aic_status": "DONE (local)",
+
   "active": true,
   "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
   "name": "Book Content Agent",
   "description": "面向候选图书内容分析与特征补全的智能体。对已给定的候选图书进行校验、元数据规范化，并生成用于下游排序的结构化内容特征，包括语义表示、知识图谱上下文以及主题、风格、难度、适读人群等标签。适用于候选书单已经确定、需要补充内容侧特征的场景。不负责生成最终推荐列表，除已声明的规范化或过滤规则外，不主动扩展候选集合。",  "version": "1.0.0",
-  "iconUrl": "https://example.com/icons/book-content-agent.png",
-  "documentationUrl": "https://example.com/docs/book-content-agent",
-  "webAppUrl": "https://example.com/demo/book-content-agent",
+
   "provider": {
     "countryCode": "CN",
-    "organization": "Beijing University of Posts and Telecommunications",
-    "department": "School of Artificial Intelligence",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
     "url": "http://ai.bupt.edu.cn",
-    "license": "TO_BE_FILLED",
-    "name": "TO_BE_FILLED",
-    "email": "TO_BE_FILLED"
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
   },
   "securitySchemes": {
     "mtls": {
       "type": "mutualTLS",
       "description": "mTLS for inter-agent communication",
       "x-caChallengeBaseUrl": "http://8.147.68.14:8004/acps-atr-v2/",
-      "x_ioa_pub_cert_status": "PARTIAL_LOCAL_PLACEHOLDER"
+
     }
   },
   "endPoints": [
     {
       "url": "http://8.147.68.14:8212/book-content/rpc",
       "transport": "JSONRPC",
-      "x_ioa_pub_endpoint_status": "PARTIAL_LOCAL_PLACEHOLDER",
+
       "security": [
         {
           "mtls": []

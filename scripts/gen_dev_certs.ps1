@@ -68,11 +68,9 @@ $caCrt = Join-Path $certPath "ca.crt"
 New-DevCertificate -Name "reading_concierge_001" -TargetDir $certPath -ValidDays $Days
 New-DevCertificate -Name "reader_profile_agent_001" -TargetDir $certPath -ValidDays $Days
 New-DevCertificate -Name "book_content_agent_001" -TargetDir $certPath -ValidDays $Days
-New-DevCertificate -Name "rec_ranking_agent_001" -TargetDir $certPath -ValidDays $Days
 
 # Explicit mtls-path names used in config.example.json
 New-DevCertificate -Name "reader_profile" -TargetDir $certPath -ValidDays $Days
 New-DevCertificate -Name "book_content" -TargetDir $certPath -ValidDays $Days
-New-DevCertificate -Name "rec_ranking" -TargetDir $certPath -ValidDays $Days
 
 Write-Host "[mTLS] done. certs generated in $certPath"

@@ -2,18 +2,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 from scipy.sparse import csr_matrix
 from sklearn.decomposition import TruncatedSVD
+from sklearn.neighbors import NearestNeighbors
 
 from services.data_paths import get_processed_data_path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INTERACTIONS_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 DEFAULT_OUT_DIR = get_processed_data_path()
+DEFAULT_ALS_MODEL_PATH = PROJECT_ROOT / "data" / "als_model.npz"
+DEFAULT_USER_SIM_PATH = PROJECT_ROOT / "data" / "user_sim.bin"
 
 
 def _iter_jsonl(path: Path) -> Iterable[Dict[str, object]]:
@@ -56,17 +60,89 @@ def _build_indices(path: Path) -> Tuple[Dict[str, int], Dict[str, int], List[Tup
     return user_to_idx, book_to_idx, triples
 
 
+def _build_indices_from_user_behavior_events(runtime_db: Path) -> Tuple[Dict[str, int], Dict[str, int], List[Tuple[int, int, float]]]:
+    if not runtime_db.exists():
+        return {}, {}, []
+    conn = sqlite3.connect(str(runtime_db))
+    conn.row_factory = sqlite3.Row
+    try:
+        try:
+            rows = conn.execute(
+                """
+                SELECT user_id, book_id, weight, rating
+                FROM user_behavior_events
+                """
+            ).fetchall()
+        except sqlite3.OperationalError:
+            return {}, {}, []
+    finally:
+        conn.close()
+
+    user_to_idx: Dict[str, int] = {}
+    book_to_idx: Dict[str, int] = {}
+    triples: List[Tuple[int, int, float]] = []
+    for row in rows:
+        user_id = str(row["user_id"] or "").strip()
+        book_id = str(row["book_id"] or "").strip()
+        if not user_id or not book_id:
+            continue
+        rating_raw = row["rating"]
+        weight_raw = row["weight"]
+        score = float(rating_raw) if rating_raw is not None else float(weight_raw or 0.0)
+        if score <= 0:
+            continue
+        if user_id not in user_to_idx:
+            user_to_idx[user_id] = len(user_to_idx)
+        if book_id not in book_to_idx:
+            book_to_idx[book_id] = len(book_to_idx)
+        triples.append((user_to_idx[user_id], book_to_idx[book_id], score))
+    return user_to_idx, book_to_idx, triples
+
+
+def _save_user_similarity_index(user_factors: np.ndarray, out_path: Path) -> str:
+    """Persist user similarity index; use hnswlib when available, sklearn fallback otherwise."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        import hnswlib  # type: ignore
+
+        dim = int(user_factors.shape[1])
+        index = hnswlib.Index(space="cosine", dim=dim)
+        index.init_index(max_elements=int(user_factors.shape[0]), ef_construction=200, M=16)
+        index.add_items(user_factors, ids=np.arange(user_factors.shape[0], dtype=np.int32))
+        index.set_ef(100)
+        index.save_index(str(out_path))
+        return "hnswlib"
+    except Exception:
+        nbrs = NearestNeighbors(metric="cosine", algorithm="brute")
+        nbrs.fit(user_factors)
+        with out_path.open("wb") as f:
+            np.savez(
+                f,
+                backend="sklearn_fallback",
+                vectors=user_factors.astype(np.float32),
+            )
+        return "sklearn_fallback"
+
+
 def build_cf_model(
     interactions_path: Path = DEFAULT_INTERACTIONS_PATH,
     out_dir: Path = DEFAULT_OUT_DIR,
+    als_model_path: Path = DEFAULT_ALS_MODEL_PATH,
+    user_sim_path: Path = DEFAULT_USER_SIM_PATH,
+    runtime_db_path: Path = PROJECT_ROOT / "data" / "recommendation_runtime.db",
     n_components: int = 50,
 ) -> Dict[str, object]:
-    if not interactions_path.exists():
-        raise FileNotFoundError(f"interactions file not found: {interactions_path}")
-
-    user_to_idx, book_to_idx, triples = _build_indices(interactions_path)
+    if interactions_path.exists():
+        user_to_idx, book_to_idx, triples = _build_indices(interactions_path)
+        source = f"jsonl:{interactions_path}"
+    else:
+        user_to_idx, book_to_idx, triples = _build_indices_from_user_behavior_events(runtime_db_path)
+        source = f"sqlite:{runtime_db_path}"
     if not triples:
-        raise RuntimeError("No valid user-book-rating rows found in interactions file")
+        raise RuntimeError(
+            "No valid user-book-rating rows found. "
+            f"Checked interactions file ({interactions_path}) and fallback DB ({runtime_db_path})."
+        )
 
     user_count = len(user_to_idx)
     book_count = len(book_to_idx)
@@ -93,6 +169,15 @@ def build_cf_model(
 
     np.save(user_factors_path, user_factors)
     np.save(item_factors_path, item_factors)
+    als_model_path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(
+        als_model_path,
+        algorithm="truncated_svd",
+        user_factors=user_factors,
+        item_factors=item_factors,
+        n_components=max_components,
+    )
+    user_sim_backend = _save_user_similarity_index(user_factors, user_sim_path)
 
     with book_index_path.open("w", encoding="utf-8") as f:
         json.dump(book_to_idx, f, ensure_ascii=False)
@@ -102,6 +187,7 @@ def build_cf_model(
 
     return {
         "interactions_path": str(interactions_path),
+        "source": source,
         "user_count": user_count,
         "book_count": book_count,
         "interaction_count": len(triples),
@@ -112,6 +198,9 @@ def build_cf_model(
             "cf_item_factors": str(item_factors_path),
             "cf_book_id_index": str(book_index_path),
             "cf_user_id_index": str(user_index_path),
+            "als_model": str(als_model_path),
+            "user_similarity_index": str(user_sim_path),
+            "user_similarity_backend": user_sim_backend,
         },
     }
 
@@ -131,6 +220,24 @@ def _parse_args() -> argparse.Namespace:
         help="Directory to write CF artifacts",
     )
     parser.add_argument(
+        "--als-model",
+        type=Path,
+        default=DEFAULT_ALS_MODEL_PATH,
+        help="Path to write ALS/SVD bundle (.npz) expected by Phase 1 docs",
+    )
+    parser.add_argument(
+        "--user-sim-index",
+        type=Path,
+        default=DEFAULT_USER_SIM_PATH,
+        help="Path to write user similarity index (hnswlib or fallback bundle)",
+    )
+    parser.add_argument(
+        "--runtime-db",
+        type=Path,
+        default=PROJECT_ROOT / "data" / "recommendation_runtime.db",
+        help="SQLite runtime DB used as fallback interaction source",
+    )
+    parser.add_argument(
         "--components",
         type=int,
         default=50,
@@ -141,5 +248,12 @@ def _parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     args = _parse_args()
-    summary = build_cf_model(args.interactions, args.out_dir, args.components)
+    summary = build_cf_model(
+        interactions_path=args.interactions,
+        out_dir=args.out_dir,
+        als_model_path=args.als_model,
+        user_sim_path=args.user_sim_index,
+        runtime_db_path=args.runtime_db,
+        n_components=args.components,
+    )
     print(json.dumps(summary, indent=2, ensure_ascii=False))

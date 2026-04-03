@@ -1,36 +1,34 @@
 {
-  "aic": "1.2.156.3088.0001.00001.U3IBA8.JI874M.1.03Y1",
-  "x_ioa_pub_aic_status": "DONE (local)",
+  "aic": "1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W",
+
   "active": true,
   "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
-  "name": "Reading Concierge Coordinator",
-  "description": "面向个性化阅读推荐场景的协调智能体。接收用户ID和阅读需求，负责联动读者画像、候选图书获取、内容分析和排序服务，输出带可追踪解释的推荐结果。适用于需要端到端完成图书个性化推荐的场景。自身不直接进行读者画像建模、图书内容特征提取或最终打分计算，且生产路径不依赖手工输入用户画像或历史数据。",  "version": "1.0.0",
-  "iconUrl": "https://example.com/icons/reading-concierge.png",
-  "documentationUrl": "https://example.com/docs/reading-concierge",
-  "webAppUrl": "https://example.com/demo/reading-concierge",
+  "name": "图书推荐协调智能体",
+  "description": "个性化图书推荐系统的协调中枢，负责解析用户自然语言请求、编排多智能体协商流程并汇总推荐结果。接收用户输入后通过 LLM 提取结构化任务参数，以 GroupMgmt 广播方式并行调度 Reader Profile Agent 和 Book Content Agent，汇聚两份提案后转发 Recommendation Decision Agent 进行仲裁，再将仲裁结果下发 Recommendation Engine Agent 执行，最终组装 Top-20 书目及个性化推荐理由返回用户。本 Agent 是系统唯一的 Leader，不参与仲裁、不访问用户画像数据库、不生成推荐权重，仅负责流程协调与消息路由。",
+  "version": "1.0.0",
   "provider": {
     "countryCode": "CN",
-    "organization": "Beijing University of Posts and Telecommunications",
-    "department": "School of Artificial Intelligence",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
     "url": "http://ai.bupt.edu.cn",
-    "license": "TO_BE_FILLED",
-    "name": "TO_BE_FILLED",
-    "email": "TO_BE_FILLED"
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
   },
   "securitySchemes": {
     "mtls": {
       "type": "mutualTLS",
       "description": "mTLS for inter-agent communication",
-      "x-caChallengeBaseUrl": "http://8.147.68.14:8004/acps-atr-v2/",
-      "x_ioa_pub_cert_status": "PARTIAL_LOCAL_PLACEHOLDER"
+      "x-caChallengeBaseUrl": "http://8.146.235.243:8004/acps-atr-v2/"
+
     }
   },
   "endPoints": [
     {
-      "url": "http://8.147.68.14:8100/user_api",
+      "url": "http://8.146.235.243:8210/user_api",
       "transport": "JSONRPC",
-      "x_ioa_pub_endpoint_status": "PARTIAL_LOCAL_PLACEHOLDER",
+
       "security": [
         {
           "mtls": []
@@ -55,25 +53,46 @@
     {
       "id": "reading.orchestrate",
       "name": "reading.orchestrate",
-      "description": "Orchestrate profile/content/ranking agents into unified recommendation flow",
-      "version": "1.0.0",
+      "description": "Coordinate RPA/BCA broadcast, RDA arbitration routing, and Engine dispatch orchestration.",
+      "version": "2.0.0",
       "tags": [
-        "reading",
+        "leader",
         "orchestration",
-        "multi-agent",
-        "recommendation"
+        "groupmgmt",
+        "routing"
       ],
       "examples": [
-        "Recommend personalized books for a warm-start reader.",
-        "Run profile/content/ranking workflow for user_id + query."
+        "RC -> (RPA+BCA) -> RDA -> Engine -> User response assembly."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
+      ]
+    },
+    {
+      "id": "rc.route_dispatch",
+      "name": "rc.route_dispatch",
+      "description": "Route Arbitration Result into execution dispatch payload for Recommendation Engine Agent.",
+      "version": "2.0.0",
+      "tags": [
+        "dispatch",
+        "routing",
+        "execution-layer"
+      ],
+      "examples": [
+        "Build dispatch with final_weights, mmr_lambda, and required evidence constraints."
+      ],
+      "inputModes": [
+        "application/json",
+        "text/plain"
+      ],
+      "outputModes": [
+        "application/json",
+        "text/plain"
       ]
     }
   ],

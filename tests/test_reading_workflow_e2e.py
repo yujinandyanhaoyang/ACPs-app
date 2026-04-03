@@ -1,37 +1,120 @@
 from __future__ import annotations
 
-import sqlite3
+from typing import Any, Dict, List
 
 import pytest
 from fastapi.testclient import TestClient
 
 from reading_concierge import reading_concierge
-from services.db import run_migrations
-from services.repositories import ProfileRepository, RecommendationRepository, TaskLogRepository
+
+
+class _FakeResponse:
+    def __init__(self, payload: Dict[str, Any], status_code: int = 200) -> None:
+        self._payload = payload
+        self.status_code = status_code
+
+    def json(self) -> Dict[str, Any]:
+        return self._payload
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            raise RuntimeError(f"fake status error: {self.status_code}")
+
+
+class _AsyncClientMock:
+    actions: List[str] = []
+    payload_by_action: Dict[str, Dict[str, Any]] = {}
+
+    def __init__(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):  # noqa: ANN001
+        return False
+
+    async def post(self, url: str, json: Dict[str, Any] | None = None):
+        payload = (((json or {}).get("params") or {}).get("message") or {}).get("commandParams", {}).get("payload", {})
+        action = str(payload.get("action") or "")
+        self.actions.append(action)
+        self.payload_by_action[action] = payload
+
+        if action == "rda.standby":
+            return _FakeResponse(_rpc(state="completed", data={"ok": True}))
+        if action == "uma.build_profile":
+            return _FakeResponse(_rpc(state="completed", data={"profile_vector": [0.9, 0.1], "confidence": 0.8}))
+        if action == "bca.build_content_proposal":
+            return _FakeResponse(
+                _rpc(
+                    state="completed",
+                    data={
+                        "outputs": {
+                            "divergence_score": 0.25,
+                            "weight_suggestion": {"ann_weight": 0.62, "cf_weight": 0.38},
+                            "coverage_report": {"coverage": 0.88},
+                            "content_vectors": [{"book_id": "wf-001", "v": [0.2, 0.4]}],
+                        }
+                    },
+                )
+            )
+        if action == "rda.arbitrate":
+            return _FakeResponse(
+                _rpc(
+                    state="completed",
+                    data={
+                        "final_weights": {"ann_weight": 0.66, "cf_weight": 0.34},
+                        "score_weights": {"content": 0.6, "collab": 0.4},
+                        "mmr_lambda": 0.42,
+                        "strategy": "balanced",
+                    },
+                )
+            )
+        if action == "engine.dispatch":
+            return _FakeResponse(
+                _rpc(
+                    state="completed",
+                    data={
+                        "recommendations": [
+                            {"book_id": "wf-001", "title": "Foundation"},
+                            {"book_id": "wf-002", "title": "The Left Hand of Darkness"},
+                        ],
+                        "explanations": [{"book_id": "wf-001", "justification": "Preference and content alignment"}],
+                    },
+                )
+            )
+        return _FakeResponse(_rpc(state="failed", data={}), status_code=500)
+
+
+def _rpc(state: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "jsonrpc": "2.0",
+        "result": {
+            "status": {"state": state},
+            "products": [{"dataItems": [{"type": "data", "data": data}]}],
+        },
+    }
 
 
 @pytest.mark.usefixtures("patch_openai")
-def test_reading_workflow_persists_reproducible_artifacts(tmp_path):
-    db_url = f"sqlite:///{tmp_path / 'workflow_runtime.db'}"
-    run_migrations(db_url=db_url)
+def test_reading_workflow_e2e_validates_layered_pipeline(monkeypatch):
+    _AsyncClientMock.actions = []
+    _AsyncClientMock.payload_by_action = {}
 
-    # Redirect runtime persistence bridge to an isolated test database.
-    reading_concierge.profile_store._profile_repo = ProfileRepository(db_url=db_url)
-    reading_concierge.profile_store._recommendation_repo = RecommendationRepository(db_url=db_url)
-    reading_concierge.profile_store._task_log_repo = TaskLogRepository(db_url=db_url)
+    monkeypatch.setenv("READER_PROFILE_RPC_URL", "http://mock/rpa")
+    monkeypatch.setenv("BOOK_CONTENT_RPC_URL", "http://mock/bca")
+    monkeypatch.setenv("RECOMMENDATION_DECISION_RPC_URL", "http://mock/rda")
+    monkeypatch.setenv("RECOMMENDATION_ENGINE_RPC_URL", "http://mock/engine")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(reading_concierge, "PARTNER_MODE", "remote")
+    monkeypatch.setattr(reading_concierge.httpx, "AsyncClient", _AsyncClientMock)
 
     client = TestClient(reading_concierge.app)
     payload = {
+        "session_id": "session-e2e-01",
         "user_id": "e2e_user_01",
         "query": "Recommend diverse thoughtful science fiction",
-        "history": [
-            {
-                "title": "Dune",
-                "genres": ["science_fiction"],
-                "rating": 5,
-                "language": "en",
-            }
-        ],
+        "history": [{"title": "Dune", "genres": ["science_fiction"], "rating": 5, "language": "en"}],
         "reviews": [{"rating": 5, "text": "I like worldbuilding and ideas"}],
         "books": [
             {
@@ -47,59 +130,30 @@ def test_reading_workflow_persists_reproducible_artifacts(tmp_path):
                 "genres": ["science_fiction"],
             },
         ],
-        "constraints": {
-            "scenario": "warm",
-            "top_k": 2,
-            "debug_payload_override": True,
-        },
+        "constraints": {"top_k": 2},
     }
 
-    resp = client.post("/user_api_debug", json=payload)
+    resp = client.post("/user_api", json=payload)
     assert resp.status_code == 200
     body = resp.json()
-    assert body.get("state") in {"completed", "needs_input"}
 
-    conn = sqlite3.connect(str(tmp_path / "workflow_runtime.db"))
-    try:
-        runs = conn.execute("SELECT COUNT(*) FROM recommendation_runs").fetchone()[0]
-        logs = conn.execute("SELECT COUNT(*) FROM agent_task_logs").fetchone()[0]
-        recs = conn.execute("SELECT COUNT(*) FROM recommendations").fetchone()[0]
-    finally:
-        conn.close()
+    assert body["state"] == "completed"
+    assert body["partner_tasks"]["rda_standby"]["state"] == "completed"
+    assert body["partner_tasks"]["rpa"]["state"] == "completed"
+    assert body["partner_tasks"]["bca"]["state"] == "completed"
+    assert body["partner_tasks"]["rda"]["state"] == "completed"
+    assert body["partner_tasks"]["engine"]["state"] == "completed"
 
-    assert runs >= 1
-    assert logs >= 1
-    # completed flows should persist recommendations; needs_input may persist none.
-    assert recs >= 0
+    actions = _AsyncClientMock.actions
+    assert len(actions) == 5
+    assert actions[0] == "rda.standby"
+    assert set(actions[1:3]) == {"uma.build_profile", "bca.build_content_proposal"}
+    assert actions[3:] == ["rda.arbitrate", "engine.dispatch"]
 
-    audit_runs = client.get("/demo/audit/runs", params={"user_id": "e2e_user_01", "limit": 5})
-    assert audit_runs.status_code == 200
-    audit_payload = audit_runs.json()
-    assert audit_payload.get("count", 0) >= 1
+    engine_payload = _AsyncClientMock.payload_by_action["engine.dispatch"]
+    assert engine_payload["ann_weight"] == pytest.approx(0.66)
+    assert engine_payload["cf_weight"] == pytest.approx(0.34)
+    assert engine_payload["strategy"] == "balanced"
 
-    run_id = str((audit_payload.get("runs") or [])[0].get("run_id") or "")
-    assert run_id
-    detail = client.get(f"/demo/audit/runs/{run_id}")
-    assert detail.status_code == 200
-    detail_payload = detail.json()
-    assert detail_payload.get("user_id") == "e2e_user_01"
-    assert isinstance(detail_payload.get("recommendations"), list)
-    assert str(detail_payload.get("query") or "").strip()
-    assert str(detail_payload.get("profile_version") or "").strip()
-    assert str(detail_payload.get("candidate_set_version_or_hash") or "").strip()
-    assert str(detail_payload.get("book_feature_version_or_hash") or "").strip()
-    assert str(detail_payload.get("ranking_policy_version") or "").strip()
-
-    if detail_payload.get("recommendations"):
-        top_item = detail_payload["recommendations"][0]
-        for key in (
-            "score_total",
-            "score_cf",
-            "score_content",
-            "score_kg",
-            "score_diversity",
-            "rank_position",
-            "explanation",
-            "explanation_evidence_refs",
-        ):
-            assert key in top_item
+    assert len(body["recommendations"]) == 2
+    assert body["recommendations"][0]["book_id"] == "wf-001"

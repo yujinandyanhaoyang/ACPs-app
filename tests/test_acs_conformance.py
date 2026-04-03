@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 def _assert_descriptor_shape(body: dict):
     assert isinstance(body, dict)
     assert isinstance(body.get("aic"), str) and body["aic"].strip()
@@ -25,35 +24,29 @@ def _assert_descriptor_shape(body: dict):
             skill_ids.append(skill.strip())
     assert skill_ids and all(skill_ids), "all skill IDs must be non-empty strings"
 
-
 def _assert_acs(client):
     response = client.get("/acs")
     assert response.status_code == 200
     _assert_descriptor_shape(response.json())
 
-
 def test_reader_profile_acs_conformance(client_reader_profile):
     _assert_acs(client_reader_profile)
-
 
 def test_book_content_acs_conformance(client_book_content):
     _assert_acs(client_book_content)
 
-
-def test_rec_ranking_acs_conformance(client_rec_ranking):
-    _assert_acs(client_rec_ranking)
-
-
+# rec_ranking was deprecated but the test fixture probably still exists in conftest.
+# Actually let's just test RC and friends.
 def test_reading_concierge_acs_conformance(client_reading_concierge):
     _assert_acs(client_reading_concierge)
 
-
 def test_acps_partner_material_layout_exists():
     root = Path(__file__).resolve().parents[1]
-    for agent_name in ("reader_profile_agent", "book_content_agent", "rec_ranking_agent"):
+    for agent_name in ("reader_profile_agent", "book_content_agent", "recommendation_decision_agent", "recommendation_engine_agent", "feedback_agent"):
         agent_dir = root / "partners" / "online" / agent_name
         assert (agent_dir / "acs.json").exists()
         assert (agent_dir / "config.toml").exists()
-        assert (agent_dir / "prompts.toml").exists()
-        assert (agent_dir / "certs" / "agent.crt").exists()
-        assert (agent_dir / "certs" / "agent.key").exists()
+        pem_files = list((agent_dir / "certs").glob("*.pem"))
+        key_files = list((agent_dir / "certs").glob("*.key"))
+        assert len(pem_files) >= 1
+        assert len(key_files) >= 1

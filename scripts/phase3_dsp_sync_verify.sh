@@ -2,10 +2,12 @@
 set -euo pipefail
 
 # Phase 3 DSP synchronization and ADP discovery verification helper.
+# 6.3 goal: verify DSP registration and skill-level ADP discoverability.
 
 DISCOVERY_BASE_URL="${DISCOVERY_BASE_URL:-http://127.0.0.1:8005}"
 QUERY="${QUERY:-personalized reading recommendation agent}"
-TOP_K="${TOP_K:-5}"
+TOP_K="${TOP_K:-20}"
+EXPECTED_AGENTS="${EXPECTED_AGENTS:-6}"
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ARTIFACT_DIR="$PROJECT_ROOT/artifacts/phase3"
@@ -17,15 +19,17 @@ SEARCH_OUT="$ARTIFACT_DIR/adp-search-$TIMESTAMP.json"
 SUMMARY_OUT="$ARTIFACT_DIR/dsp-adp-summary-$TIMESTAMP.json"
 
 echo "[phase3] trigger DSP sync: $DISCOVERY_BASE_URL/admin/drc/sync"
-curl -fsS -X POST "$DISCOVERY_BASE_URL/admin/drc/sync" \
-  -H "Content-Type: application/json" \
-  -o "$SYNC_OUT"
+env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+  curl --noproxy '*' -fsS -X POST "$DISCOVERY_BASE_URL/admin/drc/sync" \
+    -H "Content-Type: application/json" \
+    -o "$SYNC_OUT"
 
 echo "[phase3] verify ADP search: $DISCOVERY_BASE_URL/api/discovery/search"
-curl -fsS -X POST "$DISCOVERY_BASE_URL/api/discovery/search" \
-  -H "Content-Type: application/json" \
-  -d "{\"query\":\"$QUERY\",\"top_k\":$TOP_K}" \
-  -o "$SEARCH_OUT"
+env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+  curl --noproxy '*' -fsS -X POST "$DISCOVERY_BASE_URL/api/discovery/search" \
+    -H "Content-Type: application/json" \
+    -d "{\"query\":\"$QUERY\",\"top_k\":$TOP_K}" \
+    -o "$SEARCH_OUT"
 
 python3 - <<PY
 import json
@@ -44,18 +48,57 @@ def load(path: Path):
 sync_data = load(sync_path)
 search_data = load(search_path)
 
-result_count = 0
-if isinstance(search_data, dict):
-    if isinstance(search_data.get("results"), list):
-        result_count = len(search_data["results"])
-    elif isinstance(search_data.get("data"), list):
-        result_count = len(search_data["data"])
+def get_results(payload):
+    if isinstance(payload, dict):
+        if isinstance(payload.get("results"), list):
+            return payload["results"]
+        if isinstance(payload.get("data"), list):
+            return payload["data"]
+    return []
+
+def skill_ids(item):
+    if not isinstance(item, dict):
+        return []
+    skills = item.get("skills")
+    if not isinstance(skills, list):
+        card = item.get("agent_card")
+        if isinstance(card, dict):
+            skills = card.get("skills")
+    ids = []
+    if isinstance(skills, list):
+        for sk in skills:
+            if isinstance(sk, dict) and sk.get("id"):
+                ids.append(str(sk["id"]))
+            elif isinstance(sk, str):
+                ids.append(sk)
+    return ids
+
+results = get_results(search_data)
+result_count = len(results)
+
+expected_skill_ids = {
+    "reading.orchestrate",
+    "uma.build_profile",
+    "bca.build_content_proposal",
+    "rda.arbitrate",
+    "engine.dispatch",
+    "fa.process_event",
+}
+found_skill_ids = set()
+for item in results:
+    found_skill_ids.update(skill_ids(item))
+
+missing_skill_ids = sorted(expected_skill_ids - found_skill_ids)
+status = "PASS" if (result_count >= int("$EXPECTED_AGENTS") and not missing_skill_ids) else "PARTIAL"
 
 summary = {
-    "status": "DONE (local)",
+    "status": status,
     "dsp_sync_output": str(sync_path),
     "adp_search_output": str(search_path),
     "discovery_result_count": result_count,
+    "expected_agents": int("$EXPECTED_AGENTS"),
+    "missing_skill_ids": missing_skill_ids,
+    "found_skill_ids": sorted(found_skill_ids),
 }
 summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 print(json.dumps(summary, ensure_ascii=False, indent=2))

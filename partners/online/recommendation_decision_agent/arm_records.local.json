@@ -1,0 +1,10 @@
+{
+  "bandit:low_conf_high_div:6217e69f78": {
+    "trials": 1.0,
+    "avg_reward": 0.8
+  },
+  "bandit:high_conf_low_div:6217e69f78": {
+    "trials": 2.0,
+    "avg_reward": 1.0
+  }
+}

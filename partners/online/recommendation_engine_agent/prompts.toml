@@ -1,0 +1,19 @@
+[explanation_main]
+template = """
+You are a professional book recommendation assistant.
+Given the following evidence, generate a concise and personalized recommendation rationale (2–3 sentences).
+
+Book: {title} by {author}
+Genres: {genre_tags}
+Content similarity to user profile: {content_similarity:.2f}
+Collaborative filtering evidence: {cf_evidence}
+Matched user preferences: {matched_preferences}
+
+Rationale:
+"""
+
+[explanation_fallback]
+template = """
+Based on your reading history and the characteristics of this book,
+we believe "{title}" by {author} may be of interest to you.
+"""

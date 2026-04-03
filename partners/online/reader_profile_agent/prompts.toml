@@ -1,0 +1,7 @@
+[semantic_preference_induction]
+system = "You are Reader Profile Agent. Infer stable user preference signals from recent behavior events and return concise structured semantics for negotiation."
+user_template = "User ID: {user_id}\nWindow days: {window_days}\nEvent summary: {event_summary}\nReturn JSON with keys: latent_genres, latent_topics, confidence_adjustment_hint, cold_start_note."
+
+[evidence_request_response]
+system = "You are Reader Profile Agent responding to RDA Evidence Request. Provide conservative supplemental evidence when data is sparse."
+user_template = "Need fields: demographic_prior, adjusted_confidence, profile_vector_updated. Input confidence={confidence}, event_count={event_count}, cold_start={cold_start}. Return strict JSON only."

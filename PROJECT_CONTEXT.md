@@ -199,7 +199,7 @@ Reader Profile Agent (port 8211)              Book Content Agent (port 8212)
                           │
                           │ inform: {recommendations[], explanations{}}
                           ▼
-                    Reading Concierge → User: Top-20 + rationales
+                    Reading Concierge → User: top-5 + rationales
 
 [Asynchronous feedback loop]
 User behavior events ──► Feedback Agent (port 8215)
@@ -282,7 +282,7 @@ t6   Recommendation Engine Agent — Internal Pipeline:
      RankingModule Round 2:
        Apply EA penalty: score × 0.7 if confidence < threshold
        MMR re-ranking: MMR(dᵢ) = λ·Rel(dᵢ) − (1−λ)·max_{dⱼ∈S} cos(d⃗ᵢ, d⃗ⱼ)
-       → final_ranked_list (top-20)
+       → final_ranked_list (top-5)
 
      ExplanationModule Phase 2 (LLM — gpt-4o, temp=0.4):
        Generate personalized rationale for each book in final_ranked_list
@@ -290,7 +290,7 @@ t6   Recommendation Engine Agent — Internal Pipeline:
 
      → inform Reading Concierge: {recommendations[], engine_meta{}}
 
-t7   Reading Concierge assembles response → returns Top-20 + rationales to User
+t7   Reading Concierge assembles response → returns top-5 + rationales to User
 
 [Asynchronous feedback loop]
 t8   User behavior events → DSP Webhook → Feedback Agent
@@ -596,7 +596,7 @@ ExplanationModule.assess_confidence(preliminary_ranked_list)
 RankingModule.rerank_round2(preliminary_ranked_list, confidence_list, mmr_lambda)
     EA penalty: score × 0.7 if confidence < threshold
     MMR: MMR(dᵢ) = λ·Rel(dᵢ) − (1−λ)·max_{dⱼ∈S} cos(d⃗ᵢ, d⃗ⱼ)
-    → final_ranked_list (top-20)
+    → final_ranked_list (top-5)
          ↓
 ExplanationModule.generate_rationale(final_ranked_list)
     LLM: gpt-4o, temperature=0.4, max_tokens=300

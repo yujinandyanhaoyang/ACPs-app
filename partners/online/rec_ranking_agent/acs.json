@@ -1,37 +1,34 @@
 {
   "aic": "1.2.156.3088.0001.00001.09RLA8.91R7Z2.1.01CM",
-  "x_ioa_pub_aic_status": "DONE (local)",
+
   "active": true,
   "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
   "name": "Recommendation Ranking Agent",
   "description": "面向个性化推荐排序与解释生成的智能体。基于已校验的读者画像和图书特征，综合用户偏好信号、内容特征、知识图谱信号、多样性约束及场景化排序策略，对候选图书进行打分排序，并输出包含总分、分项得分、排序位置和证据化解释的推荐结果。适用于上游已完成画像构建和图书特征准备的场景。不负责扩展候选集合，也不修改上游提供的源画像数据。",
   "version": "1.0.0",
-  "iconUrl": "https://example.com/icons/rec-ranking-agent.png",
-  "documentationUrl": "https://example.com/docs/rec-ranking-agent",
-  "webAppUrl": "https://example.com/demo/rec-ranking-agent",
   "provider": {
     "countryCode": "CN",
-    "organization": "Beijing University of Posts and Telecommunications",
-    "department": "School of Artificial Intelligence",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
     "url": "http://ai.bupt.edu.cn",
-    "license": "TO_BE_FILLED",
-    "name": "TO_BE_FILLED",
-    "email": "TO_BE_FILLED"
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
   },
   "securitySchemes": {
     "mtls": {
       "type": "mutualTLS",
       "description": "mTLS for inter-agent communication",
-      "x-caChallengeBaseUrl": "http://8.147.68.14:8004/acps-atr-v2/",
-      "x_ioa_pub_cert_status": "PARTIAL_LOCAL_PLACEHOLDER"
+      "x-caChallengeBaseUrl": "http://8.147.68.14:8004/acps-atr-v2/"
+
     }
   },
   "endPoints": [
     {
       "url": "http://8.147.68.14:8213/rec-ranking/rpc",
       "transport": "JSONRPC",
-      "x_ioa_pub_endpoint_status": "PARTIAL_LOCAL_PLACEHOLDER",
+
       "security": [
         {
           "mtls": []

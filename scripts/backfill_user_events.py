@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from services.repositories import ProfileRepository, RecommendationRepository
+from services.db import transaction, utc_now
 
 
 def _iter_rows(conn: sqlite3.Connection, sql: str, params: tuple = ()):  # noqa: ANN001
@@ -30,6 +31,7 @@ def main() -> int:
     conn = sqlite3.connect(str(legacy_path))
     try:
         users = set()
+        behavior_rows = 0
 
         for row in _iter_rows(conn, "SELECT user_id, event_type, payload_json, created_at FROM user_events ORDER BY id ASC"):
             user_id = str(row["user_id"] or "").strip()
@@ -41,6 +43,45 @@ def main() -> int:
             except Exception:
                 payload = {}
             profile_repo.append_event(user_id, str(row["event_type"] or "unknown"), payload, created_at=row["created_at"])
+            event_type = str(row["event_type"] or "unknown")
+            rating = payload.get("rating")
+            try:
+                rating_num = float(rating) if rating is not None else None
+            except Exception:
+                rating_num = None
+            weight = rating_num if rating_num is not None else 1.0
+            duration = payload.get("duration_sec")
+            try:
+                duration_sec = int(duration) if duration is not None else None
+            except Exception:
+                duration_sec = None
+            book_id = str(
+                payload.get("book_id")
+                or payload.get("item_id")
+                or payload.get("title")
+                or "unknown_book"
+            ).strip()[:64]
+            if not book_id:
+                book_id = "unknown_book"
+
+            with transaction() as runtime_conn:
+                runtime_conn.execute(
+                    """
+                    INSERT INTO user_behavior_events (
+                        user_id, book_id, event_type, weight, rating, duration_sec, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        user_id,
+                        book_id,
+                        event_type[:16],
+                        float(weight),
+                        int(rating_num) if rating_num is not None else None,
+                        duration_sec,
+                        str(row["created_at"] or utc_now()),
+                    ),
+                )
+            behavior_rows += 1
 
         for row in _iter_rows(
             conn,
@@ -107,7 +148,32 @@ def main() -> int:
                 run_timestamp=str(row["created_at"] or ""),
             )
 
-        print(f"Backfill complete. Users touched: {len(users)}")
+        with transaction() as runtime_conn:
+            for user_id in users:
+                row = runtime_conn.execute(
+                    """
+                    SELECT COUNT(*) AS c
+                    FROM user_behavior_events
+                    WHERE user_id = ?
+                    """,
+                    (user_id,),
+                ).fetchone()
+                event_count = int(row["c"] or 0) if row else 0
+                cold_start = 1 if event_count < 5 else 0
+                confidence = 0.2 if cold_start else 0.5
+                runtime_conn.execute(
+                    """
+                    UPDATE user_profiles
+                    SET confidence = ?,
+                        event_count = ?,
+                        cold_start = ?,
+                        updated_at = ?
+                    WHERE user_id = ?
+                    """,
+                    (confidence, event_count, cold_start, utc_now(), user_id),
+                )
+
+        print(f"Backfill complete. Users touched: {len(users)}; behavior rows inserted: {behavior_rows}")
     finally:
         conn.close()
 

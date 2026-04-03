@@ -1,36 +1,34 @@
 {
-  "aic": "1.2.156.3088.0001.00001.FRMFWE.LBOY6M.1.1EGZ",
-  "x_ioa_pub_aic_status": "DONE (local)",
+  "aic": "1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP",
+
   "active": true,
   "lastModifiedTime": "2026-03-27T10:00:00+08:00",
   "protocolVersion": "02.00",
-  "name": "Reader Profile Agent",
-  "description": "面向读者画像构建与更新的智能体。基于持久化的评分、浏览、评论文本及可用用户信息，提取显式偏好、隐式偏好、情感倾向和特征向量，输出供下游排序使用的读者画像结果。适用于需要从历史交互中恢复或刷新用户阅读偏好的场景。不负责检索图书或生成最终推荐结果；在冷启动场景下，画像效果依赖可获得的用户行为数据或预设初始化策略。",  "version": "1.0.0",
-  "iconUrl": "https://example.com/icons/reader-profile-agent.png",
-  "documentationUrl": "https://example.com/docs/reader-profile-agent",
-  "webAppUrl": "https://example.com/demo/reader-profile-agent",
+  "name": "读者画像智能体",
+  "description": "个性化图书推荐系统中的提案方 A，代表推荐精准度目标参与多智能体协商。从 PostgreSQL 读取用户近 90 天行为序列，经衰减加权编码（λ=0.05）后通过 LLM 语义归纳生成 256 维画像向量及置信度分值，并提交画像提案至 Recommendation Decision Agent。冷启动用户（行为事件少于 5 条）将被自动识别并强制压低置信度上限（≤0.25）。可响应 Recommendation Decision Agent 的证据请求，补充人口统计先验或修正后置信度。接收 Feedback Agent 的增量更新触发，持续维护用户画像的时效性。不参与书目召回、排序或解释生成，仅负责用户偏好建模与提案提交。",
+  "version": "1.0.0",
   "provider": {
     "countryCode": "CN",
-    "organization": "Beijing University of Posts and Telecommunications",
-    "department": "School of Artificial Intelligence",
+    "organization": "北京邮电大学",
+    "department": "人工智能学院",
     "url": "http://ai.bupt.edu.cn",
-    "license": "TO_BE_FILLED",
-    "name": "TO_BE_FILLED",
-    "email": "TO_BE_FILLED"
+    "license": "京ICP备14033833号-1",
+    "name": "艾恩",
+    "email": "2022211868@bupt.cn"
   },
   "securitySchemes": {
     "mtls": {
       "type": "mutualTLS",
       "description": "mTLS for inter-agent communication",
-      "x-caChallengeBaseUrl": "http://8.147.68.14:8004/acps-atr-v2/",
-      "x_ioa_pub_cert_status": "PARTIAL_LOCAL_PLACEHOLDER"
+      "x-caChallengeBaseUrl": "http://8.146.235.243:8004/acps-atr-v2/"
+
     }
   },
   "endPoints": [
     {
-      "url": "http://8.147.68.14:8211/reader-profile/rpc",
+      "url": "http://8.146.235.243:8211/reader-profile/rpc",
       "transport": "JSONRPC",
-      "x_ioa_pub_endpoint_status": "PARTIAL_LOCAL_PLACEHOLDER",
+
       "security": [
         {
           "mtls": []
@@ -53,67 +51,69 @@
   ],
   "skills": [
     {
-      "id": "profile.extract",
-      "name": "profile.extract",
-      "description": "Extract explicit and implicit profile features from user context",
-      "version": "1.0.0",
+      "id": "uma.build_profile",
+      "name": "uma.build_profile",
+      "description": "Build a decay-weighted 256-d user profile proposal from 90-day behavior events.",
+      "version": "2.0.0",
       "tags": [
+        "negotiation",
         "profile",
-        "features",
-        "reader-model"
+        "proposal"
       ],
       "examples": [
-        "Build profile from user_id and historical interactions."
+        "Generate profile_vector and confidence for RDA arbitration input."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ]
     },
     {
-      "id": "preference.embedding",
-      "name": "preference.embedding",
-      "description": "Build profile vectors for downstream ranking",
-      "version": "1.0.0",
+      "id": "uma.validate_consistency",
+      "name": "uma.validate_consistency",
+      "description": "Validate profile proposal consistency under cold-start and sparse-signal conditions.",
+      "version": "2.0.0",
       "tags": [
-        "embedding",
-        "profile-vector"
+        "negotiation",
+        "validation",
+        "cold-start"
       ],
       "examples": [
-        "Generate a profile vector for ranking partner input."
+        "Return consistency status and fallback strategy suggestion."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ]
     },
     {
-      "id": "sentiment.analysis",
-      "name": "sentiment.analysis",
-      "description": "Summarize review sentiment and intent signals",
-      "version": "1.0.0",
+      "id": "uma.update_profile",
+      "name": "uma.update_profile",
+      "description": "Incrementally update profile using Feedback Agent triggers and fresh behavior events.",
+      "version": "2.0.0",
       "tags": [
-        "sentiment",
-        "review-analysis"
+        "feedback",
+        "incremental-update",
+        "profile"
       ],
       "examples": [
-        "Summarize reader sentiment from review text."
+        "Apply feedback trigger and return profile_vector_updated."
       ],
       "inputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ],
       "outputModes": [
-        "text/plain",
-        "application/json"
+        "application/json",
+        "text/plain"
       ]
     }
   ],

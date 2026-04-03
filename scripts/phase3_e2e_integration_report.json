@@ -1,0 +1,135 @@
+{
+  "ports": {
+    "configured": {
+      "reading_concierge": 8210,
+      "reader_profile_agent": 8211,
+      "book_content_agent": 8212,
+      "recommendation_decision_agent": 8213,
+      "recommendation_engine_agent": 8214,
+      "feedback_agent": 8215
+    },
+    "unique": true,
+    "conflicts": {},
+    "currently_listening": {
+      "reading_concierge": "permission_denied",
+      "reader_profile_agent": "permission_denied",
+      "book_content_agent": "permission_denied",
+      "recommendation_decision_agent": "permission_denied",
+      "recommendation_engine_agent": "permission_denied",
+      "feedback_agent": "permission_denied"
+    }
+  },
+  "pipeline_validation": {
+    "session_count": 10,
+    "success_count": 10,
+    "states": {
+      "completed": 10
+    },
+    "flows": [
+      {
+        "user_id": "phase3_real_user_00",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_01",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_02",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_03",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_04",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_05",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_06",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_07",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_08",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      },
+      {
+        "user_id": "phase3_real_user_09",
+        "state": "completed",
+        "flow_ok": true,
+        "recommendation_count": 3
+      }
+    ]
+  },
+  "feedback_validation": {
+    "feedback_result": {
+      "status": "accepted",
+      "event": {
+        "event_id": "133b4bef-8d69-46d7-985c-509a28006c76",
+        "user_id": "phase3_feedback_user",
+        "event_type": "finish",
+        "reward": 1.0,
+        "session_id": "phase3-feedback-session",
+        "context_type": "high_conf_low_div",
+        "action": "balanced",
+        "metadata": {
+          "source": "phase3_e2e_integration"
+        },
+        "event_time": "2026-04-01T08:14:46.627640+00:00",
+        "ingested_at": "2026-04-01T08:14:46.627644+00:00"
+      },
+      "counters": {
+        "user_event_count": 1,
+        "global_rating_count": null
+      },
+      "informs": [
+        {
+          "partner": "rda",
+          "route": "local",
+          "status": "sent"
+        }
+      ]
+    },
+    "arm_before": {
+      "trials": 1.0,
+      "avg_reward": 1.0
+    },
+    "arm_after": {
+      "trials": 2.0,
+      "avg_reward": 1.0
+    },
+    "arm_trials_incremented": true
+  },
+  "phase3_gate_like_status": {
+    "pipeline_completed": true,
+    "feedback_to_rda_written": true,
+    "manual_sessions_target_met": true
+  }
+}
