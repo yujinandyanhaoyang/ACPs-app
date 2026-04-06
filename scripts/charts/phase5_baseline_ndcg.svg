@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+<rect width="1200" height="700" fill="#ffffff"/>
+<text x="600.0" y="44" text-anchor="middle" font-size="28" font-family="Arial">Baseline Comparison - NDCG@10</text>
+<line x1="120" y1="550" x2="1140" y2="550" stroke="#222"/>
+<line x1="120" y1="90" x2="120" y2="550" stroke="#222"/>
+<rect x="120.00" y="90.00" width="159.00" height="460.00" fill="#2563eb"/>
+<text x="199.50" y="82.00" text-anchor="middle" font-size="12" font-family="Arial">0.9300</text>
+<text x="199.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 199.50,578.00)">acps_multi_agent</text>
+<rect x="407.00" y="123.19" width="159.00" height="426.81" fill="#2563eb"/>
+<text x="486.50" y="115.19" text-anchor="middle" font-size="12" font-family="Arial">0.8629</text>
+<text x="486.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 486.50,578.00)">traditional_hybrid_cf_cb</text>
+<rect x="694.00" y="135.01" width="159.00" height="414.99" fill="#2563eb"/>
+<text x="773.50" y="127.01" text-anchor="middle" font-size="12" font-family="Arial">0.8390</text>
+<text x="773.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 773.50,578.00)">macrec</text>
+<rect x="981.00" y="276.18" width="159.00" height="273.82" fill="#2563eb"/>
+<text x="1060.50" y="268.18" text-anchor="middle" font-size="12" font-family="Arial">0.5536</text>
+<text x="1060.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 1060.50,578.00)">arag</text>
+</svg>

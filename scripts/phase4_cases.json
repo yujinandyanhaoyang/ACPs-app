@@ -1,249 +1,3414 @@
 [
   {
-    "case_id": "warm_sf",
-    "query": "Recommend sci-fi books with social themes.",
-    "user_profile": {"preferred_language": "en"},
+    "case_id": "case_001",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [
       {
-        "title": "Dune",
-        "genres": ["science_fiction", "classic"],
-        "themes": ["politics", "ecology"],
-        "rating": 5,
+        "title": "A Brief History of Time",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
         "language": "en"
-      }
-    ],
-    "books": [
-      {
-        "book_id": "b1",
-        "title": "Foundation",
-        "description": "Civilization-scale science fiction.",
-        "genres": ["science_fiction"]
       },
       {
-        "book_id": "b2",
-        "title": "Hyperion",
-        "description": "Layered narrative with diverse voices.",
-        "genres": ["science_fiction"]
-      }
-    ],
-    "constraints": {
-      "scenario": "warm",
-      "top_k": 2,
-      "ground_truth_ids": ["b1"]
-    }
-  },
-  {
-    "case_id": "explore_diverse",
-    "query": "Find novel and diverse books for me.",
-    "user_profile": {"preferred_language": "en"},
-    "history": [
-      {
-        "title": "Sapiens",
-        "genres": ["history"],
-        "themes": ["society"],
+        "title": "The Lean Startup",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
         "rating": 4,
         "language": "en"
       }
     ],
     "books": [
       {
-        "book_id": "b3",
-        "title": "The Left Hand of Darkness",
-        "description": "Culture and identity in speculative setting.",
-        "genres": ["science_fiction"]
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "b4",
-        "title": "Homegoing",
-        "description": "Multigenerational and multicultural narrative.",
-        "genres": ["fiction"]
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
       }
+    ],
+    "candidate_ids": [
+      "Dune",
+      "The Left Hand of Darkness",
+      "A",
+      "Designing Data-Intensive Applications",
+      "A Brief History of Time",
+      "The Lean Startup"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ],
+      "remote_stress": true,
+      "strict_remote_validation": true
+    }
+  },
+  {
+    "case_id": "case_002",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Designing Data-Intensive Applications",
+      "Book A",
+      "Clean Code",
+      "A",
+      "The Left Hand of Darkness",
+      "Dune"
     ],
     "constraints": {
       "scenario": "explore",
-      "top_k": 2,
-      "ground_truth_ids": ["b3", "b4"]
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
     }
   },
   {
-    "case_id": "cold_start",
-    "query": "I am new and want beginner recommendations.",
-    "user_profile": {},
+    "case_id": "case_003",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [],
-    "reviews": [],
-    "candidate_ids": ["c1", "c2", "c3"],
+    "books": [
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Lean Startup",
+      "The Left Hand of Darkness",
+      "A",
+      "History of the World",
+      "Dune",
+      "A Brief History of Time"
+    ],
     "constraints": {
       "scenario": "cold",
-      "top_k": 3,
-      "ground_truth_ids": ["c1"]
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
     }
   },
   {
-    "case_id": "warm_nonfiction",
-    "query": "Recommend practical nonfiction books on technology and business.",
-    "user_profile": {"preferred_language": "en"},
+    "case_id": "case_004",
+    "query": "Recommend books similar to A Brief History of Time with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [
       {
+        "title": "Sapiens",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Clean Architecture",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "The Lean Startup",
         "title": "The Lean Startup",
-        "genres": ["business", "nonfiction"],
-        "themes": ["innovation", "product"],
-        "rating": 5,
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Lean Startup",
+      "History of the World",
+      "The Left Hand of Darkness",
+      "Clean Architecture",
+      "A Brief History of Time",
+      "Sapiens"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "A Brief History of Time"
+      ]
+    }
+  },
+  {
+    "case_id": "case_005",
+    "query": "Recommend diverse books expanding from Book A.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A Brief History of Time",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "History of the World",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Architecture",
+      "A Brief History of Time",
+      "Dune",
+      "History of the World",
+      "Book A",
+      "The Lean Startup"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Book A"
+      ]
+    }
+  },
+  {
+    "case_id": "case_006",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Architecture",
+      "The Lean Startup",
+      "Sapiens",
+      "A Brief History of Time",
+      "Designing Data-Intensive Applications",
+      "Clean Code"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Sapiens"
+      ]
+    }
+  },
+  {
+    "case_id": "case_007",
+    "query": "Recommend books similar to Clean Architecture with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Sapiens",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Code",
+      "Sapiens",
+      "Designing Data-Intensive Applications",
+      "Clean Architecture",
+      "Dune",
+      "History of the World"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Clean Architecture"
+      ]
+    }
+  },
+  {
+    "case_id": "case_008",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Designing Data-Intensive Applications",
+      "A",
+      "Sapiens",
+      "Clean Code",
+      "Dune",
+      "History of the World"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_009",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "A",
+      "Dune",
+      "The Lean Startup",
+      "Book A",
+      "The Left Hand of Darkness",
+      "Clean Code"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "A"
+      ]
+    }
+  },
+  {
+    "case_id": "case_010",
+    "query": "Recommend books similar to History of the World with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
         "language": "en"
       },
       {
         "title": "Clean Code",
-        "genres": ["technology", "nonfiction"],
-        "themes": ["engineering"],
+        "genres": [
+          "general"
+        ],
+        "themes": [],
         "rating": 4,
         "language": "en"
       }
     ],
     "books": [
       {
-        "book_id": "b5",
-        "title": "Inspired",
-        "description": "Practical product management and technology leadership.",
-        "genres": ["business", "technology"]
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "b6",
-        "title": "Zero to One",
-        "description": "Startup thinking with business strategy.",
-        "genres": ["business"]
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "b7",
+        "book_id": "Designing Data-Intensive Applications",
         "title": "Designing Data-Intensive Applications",
-        "description": "Engineering systems and reliability patterns.",
-        "genres": ["technology", "nonfiction"]
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
       }
+    ],
+    "candidate_ids": [
+      "Clean Code",
+      "Clean Architecture",
+      "Designing Data-Intensive Applications",
+      "Dune",
+      "A Brief History of Time",
+      "History of the World"
     ],
     "constraints": {
       "scenario": "warm",
-      "top_k": 3,
-      "ground_truth_ids": ["b5", "b7"]
+      "top_k": 10,
+      "ground_truth_ids": [
+        "History of the World"
+      ]
     }
   },
   {
-    "case_id": "explore_cross_domain",
-    "query": "Explore books across history, culture, and speculative fiction.",
-    "user_profile": {"preferred_language": "en"},
+    "case_id": "case_011",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [
       {
-        "title": "Sapiens",
-        "genres": ["history", "nonfiction"],
-        "themes": ["society"],
+        "title": "The Lean Startup",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Book A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
         "rating": 4,
         "language": "en"
       }
     ],
     "books": [
       {
-        "book_id": "b8",
-        "title": "Kindred",
-        "description": "Speculative fiction connected to history and identity.",
-        "genres": ["fiction", "history", "science_fiction"]
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "b9",
-        "title": "The Silk Roads",
-        "description": "Global history and cross-cultural development.",
-        "genres": ["history", "nonfiction"]
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "b10",
-        "title": "Babel",
-        "description": "Language, empire, and culture in speculative context.",
-        "genres": ["fiction", "fantasy"]
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
       }
+    ],
+    "candidate_ids": [
+      "Book A",
+      "Sapiens",
+      "Designing Data-Intensive Applications",
+      "The Left Hand of Darkness",
+      "The Lean Startup",
+      "Dune"
     ],
     "constraints": {
       "scenario": "explore",
-      "top_k": 3,
-      "ground_truth_ids": ["b8", "b9"]
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ],
+      "remote_stress": true
     }
   },
   {
-    "case_id": "remote_stress_warm",
-    "query": "Recommend data and engineering nonfiction with stable quality.",
-    "user_profile": {"preferred_language": "en"},
+    "case_id": "case_012",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Code",
+      "Clean Architecture",
+      "Book A",
+      "History of the World",
+      "Dune",
+      "Sapiens"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_013",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [
       {
-        "title": "Designing Data-Intensive Applications",
-        "genres": ["technology", "nonfiction"],
-        "themes": ["systems", "engineering"],
-        "rating": 5,
+        "title": "A Brief History of Time",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
         "language": "en"
       }
     ],
     "books": [
       {
-        "book_id": "rs1",
-        "title": "Accelerate",
-        "description": "Engineering performance and delivery outcomes.",
-        "genres": ["technology", "business"]
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "rs2",
-        "title": "The Phoenix Project",
-        "description": "IT operations and systems thinking through narrative.",
-        "genres": ["technology", "fiction"]
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
       }
+    ],
+    "candidate_ids": [
+      "A Brief History of Time",
+      "Clean Code",
+      "Dune",
+      "The Left Hand of Darkness",
+      "The Lean Startup",
+      "A"
     ],
     "constraints": {
       "scenario": "warm",
-      "top_k": 2,
-      "ground_truth_ids": ["rs1"],
-      "remote_stress": true
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
     }
   },
   {
-    "case_id": "remote_stress_cold",
-    "query": "I am new, recommend beginner books on innovation and product thinking.",
-    "user_profile": {},
+    "case_id": "case_014",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "The Lean Startup",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Clean Architecture",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Dune",
+      "History of the World",
+      "The Lean Startup",
+      "A Brief History of Time",
+      "Clean Code",
+      "Clean Architecture"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_015",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [],
-    "reviews": [],
-    "candidate_ids": ["rsc1", "rsc2", "rsc3"],
+    "books": [
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Designing Data-Intensive Applications",
+      "Sapiens",
+      "Dune",
+      "Clean Code",
+      "History of the World",
+      "A Brief History of Time"
+    ],
     "constraints": {
       "scenario": "cold",
-      "top_k": 3,
-      "ground_truth_ids": ["rsc1"],
-      "remote_stress": true
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
     }
   },
   {
-    "case_id": "remote_strict_warm",
-    "query": "Recommend robust software architecture books.",
-    "user_profile": {"preferred_language": "en"},
+    "case_id": "case_016",
+    "query": "Recommend books similar to History of the World with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Book A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Dune",
+      "Clean Architecture",
+      "Clean Code",
+      "Book A",
+      "History of the World",
+      "Sapiens"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "History of the World"
+      ]
+    }
+  },
+  {
+    "case_id": "case_017",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "The Lean Startup",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Architecture",
+      "The Left Hand of Darkness",
+      "The Lean Startup",
+      "Dune",
+      "Sapiens",
+      "A"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_018",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Book A",
+      "Dune",
+      "A",
+      "Clean Architecture",
+      "Sapiens",
+      "Designing Data-Intensive Applications"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_019",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
     "history": [
       {
         "title": "Clean Architecture",
-        "genres": ["technology", "nonfiction"],
-        "themes": ["architecture", "design"],
-        "rating": 5,
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "History of the World",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
         "language": "en"
       }
     ],
     "books": [
       {
-        "book_id": "rss1",
-        "title": "Building Microservices",
-        "description": "Service architecture and distributed systems trade-offs.",
-        "genres": ["technology", "nonfiction"]
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
       },
       {
-        "book_id": "rss2",
-        "title": "Software Architecture: The Hard Parts",
-        "description": "Architecture decisions and modern engineering patterns.",
-        "genres": ["technology", "nonfiction"]
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
       }
+    ],
+    "candidate_ids": [
+      "History of the World",
+      "Dune",
+      "Clean Architecture",
+      "The Left Hand of Darkness",
+      "Designing Data-Intensive Applications",
+      "A"
     ],
     "constraints": {
       "scenario": "warm",
-      "top_k": 2,
-      "ground_truth_ids": ["rss1"],
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_020",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Architecture",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Lean Startup",
+      "Dune",
+      "Designing Data-Intensive Applications",
+      "A",
+      "Clean Architecture",
+      "History of the World"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_021",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Architecture",
+      "The Left Hand of Darkness",
+      "Clean Code",
+      "Dune",
+      "The Lean Startup",
+      "Sapiens"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Clean Architecture"
+      ],
       "remote_stress": true,
       "strict_remote_validation": true
+    }
+  },
+  {
+    "case_id": "case_022",
+    "query": "Recommend books similar to History of the World with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Book A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Left Hand of Darkness",
+      "Book A",
+      "History of the World",
+      "The Lean Startup",
+      "A",
+      "Designing Data-Intensive Applications"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "History of the World"
+      ]
+    }
+  },
+  {
+    "case_id": "case_023",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Book A",
+      "Designing Data-Intensive Applications",
+      "Dune",
+      "Clean Code",
+      "A",
+      "The Left Hand of Darkness"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_024",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "History of the World",
+      "Clean Code",
+      "A Brief History of Time",
+      "Dune",
+      "Designing Data-Intensive Applications",
+      "A"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_025",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Sapiens",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Designing Data-Intensive Applications",
+      "Dune",
+      "Book A",
+      "Clean Architecture",
+      "Sapiens",
+      "Clean Code"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_026",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Code",
+      "The Lean Startup",
+      "Dune",
+      "Clean Architecture",
+      "A",
+      "A Brief History of Time"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_027",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "History of the World",
+      "Sapiens",
+      "The Left Hand of Darkness",
+      "Book A",
+      "Dune",
+      "A"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "History of the World"
+      ]
+    }
+  },
+  {
+    "case_id": "case_028",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "History of the World",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Architecture",
+      "Clean Code",
+      "History of the World",
+      "A",
+      "Sapiens",
+      "Dune"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_029",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Left Hand of Darkness",
+      "Clean Architecture",
+      "Dune",
+      "History of the World",
+      "Designing Data-Intensive Applications",
+      "A Brief History of Time"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_030",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Sapiens",
+      "Clean Code",
+      "Dune",
+      "A Brief History of Time",
+      "The Lean Startup",
+      "History of the World"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_031",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Architecture",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Lean Startup",
+      "Book A",
+      "The Left Hand of Darkness",
+      "Dune",
+      "Clean Architecture",
+      "Designing Data-Intensive Applications"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ],
+      "remote_stress": true
+    }
+  },
+  {
+    "case_id": "case_032",
+    "query": "Recommend diverse books expanding from History of the World.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "A Brief History of Time",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "Dune",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Dune",
+      "History of the World",
+      "Sapiens",
+      "Clean Architecture",
+      "A",
+      "A Brief History of Time"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "History of the World"
+      ]
+    }
+  },
+  {
+    "case_id": "case_033",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Lean Startup",
+      "The Left Hand of Darkness",
+      "Clean Code",
+      "A",
+      "Dune",
+      "Book A"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_034",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "A Brief History of Time",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "History of the World",
+      "Designing Data-Intensive Applications",
+      "A Brief History of Time",
+      "A",
+      "Dune",
+      "Clean Code"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_035",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Book A",
+        "title": "Book A",
+        "description": "Auto-generated bootstrap record for Book A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Dune",
+      "Book A",
+      "The Left Hand of Darkness",
+      "Clean Code",
+      "Sapiens",
+      "History of the World"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_036",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Lean Startup",
+      "Clean Code",
+      "History of the World",
+      "A Brief History of Time",
+      "Clean Architecture",
+      "Dune"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "A Brief History of Time"
+      ]
+    }
+  },
+  {
+    "case_id": "case_037",
+    "query": "Recommend books similar to Sapiens with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Dune",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "History of the World",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A",
+        "title": "A",
+        "description": "Auto-generated bootstrap record for A",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "The Left Hand of Darkness",
+      "Dune",
+      "A",
+      "Designing Data-Intensive Applications",
+      "Sapiens",
+      "History of the World"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Sapiens"
+      ]
+    }
+  },
+  {
+    "case_id": "case_038",
+    "query": "Recommend diverse books expanding from Dune.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "Clean Code",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "History of the World",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Dune",
+      "History of the World",
+      "A Brief History of Time",
+      "The Left Hand of Darkness",
+      "Clean Code",
+      "Designing Data-Intensive Applications"
+    ],
+    "constraints": {
+      "scenario": "explore",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_039",
+    "query": "I am a new reader. Recommend good starting books.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [],
+    "books": [
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "History of the World",
+        "title": "History of the World",
+        "description": "Auto-generated bootstrap record for History of the World",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Designing Data-Intensive Applications",
+        "title": "Designing Data-Intensive Applications",
+        "description": "Auto-generated bootstrap record for Designing Data-Intensive Applications",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Lean Startup",
+        "title": "The Lean Startup",
+        "description": "Auto-generated bootstrap record for The Lean Startup",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Clean Architecture",
+      "History of the World",
+      "Designing Data-Intensive Applications",
+      "Dune",
+      "Clean Code",
+      "The Lean Startup"
+    ],
+    "constraints": {
+      "scenario": "cold",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
+    }
+  },
+  {
+    "case_id": "case_040",
+    "query": "Recommend books similar to Dune with strong relevance.",
+    "user_profile": {
+      "preferred_language": "en"
+    },
+    "history": [
+      {
+        "title": "The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      },
+      {
+        "title": "A Brief History of Time",
+        "genres": [
+          "general"
+        ],
+        "themes": [],
+        "rating": 4,
+        "language": "en"
+      }
+    ],
+    "books": [
+      {
+        "book_id": "Sapiens",
+        "title": "Sapiens",
+        "description": "Auto-generated bootstrap record for Sapiens",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "A Brief History of Time",
+        "title": "A Brief History of Time",
+        "description": "Auto-generated bootstrap record for A Brief History of Time",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Dune",
+        "title": "Dune",
+        "description": "Auto-generated bootstrap record for Dune",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "The Left Hand of Darkness",
+        "title": "The Left Hand of Darkness",
+        "description": "Auto-generated bootstrap record for The Left Hand of Darkness",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Code",
+        "title": "Clean Code",
+        "description": "Auto-generated bootstrap record for Clean Code",
+        "genres": [
+          "general"
+        ]
+      },
+      {
+        "book_id": "Clean Architecture",
+        "title": "Clean Architecture",
+        "description": "Auto-generated bootstrap record for Clean Architecture",
+        "genres": [
+          "general"
+        ]
+      }
+    ],
+    "candidate_ids": [
+      "Sapiens",
+      "A Brief History of Time",
+      "Dune",
+      "The Left Hand of Darkness",
+      "Clean Code",
+      "Clean Architecture"
+    ],
+    "constraints": {
+      "scenario": "warm",
+      "top_k": 10,
+      "ground_truth_ids": [
+        "Dune"
+      ]
     }
   }
 ]

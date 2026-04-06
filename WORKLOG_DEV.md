@@ -125,3 +125,72 @@ Legacy planning/design documents have been retired from active use.
 ### Outcome
 - System operates stably on merged multi-source corpus with improved retrieval defaults, persistence foundation, and stronger ACPs trust/compliance posture.
 - Remaining externally blocked protocol evidence tasks are ready to execute immediately after official service recovery.
+
+## 2026-04 (Phase 5 Experiment Repair + Session Handover)
+
+### Current Issues To Resolve
+- Pytest failure risk:
+  - `tests/test_book_retrieval.py` requires raw JSONL fixture path `data/raw/books_min_sample.jsonl`.
+  - Need either:
+    - ensure that file exists in test environment, or
+    - correctly mock filesystem/data-path lookup in test suite.
+- Phase 5 acceptance issue:
+  - Need algorithmic tuning in Recommendation Engine Agent / Decision Agent to satisfy acceptance gate target:
+    - `precision@10 >= 0.4`
+    - `ndcg@10 >= 0.6`
+  - Tuning space includes:
+    - MMR lambda and diversity penalty behavior
+    - score weight fusion (`content/cf/novelty/recency`)
+    - prompt and explanation confidence weighting
+    - arbitration weight strategy in RC/RDA path
+
+### Session Restore Prompt (Paste Into New Window)
+```text
+You are continuing the ACPs-app upgrade work in /root/WORK/ACPs-app.
+
+Primary guidance docs:
+1) PROJECT_CONTEXT.md
+2) UPGRADE_PLAN.md
+3) ACPsProtocolGuide.md
+
+Current phase focus:
+- UPGRADE_PLAN Phase 5 (Sections 7.2, 7.3, 7.4) quality repair and verification hardening.
+
+Must-fix items now:
+1) Fix pytest failure for test_book_retrieval:
+   - Ensure data/raw/books_min_sample.jsonl exists OR
+   - Update tests to properly mock file/data-path resolution.
+   - Required result: pytest for test_book_retrieval passes reliably.
+
+2) Improve MAS experiment performance to pass acceptance gate:
+   - Target thresholds:
+     - precision@10 >= 0.4
+     - ndcg@10 >= 0.6
+     - (and keep diversity/novelty checks green where applicable)
+   - Tune engine/decision logic in:
+     - partners/online/recommendation_engine_agent/
+     - partners/online/recommendation_decision_agent/
+     - reading_concierge/reading_concierge.py
+   - Allowed levers:
+     - score weight fusion
+     - MMR lambda and rerank behavior
+     - confidence penalty logic
+     - arbitration weight behavior
+
+3) Re-run and verify:
+   - python scripts/phase4_benchmark_compare.py --pretty
+   - python scripts/run_ablation.py --users 50 --pretty
+   - python scripts/phase5_online_learning_validation.py --cycles 5000 --pretty
+   - python scripts/phase5_generate_charts.py --pretty
+
+4) Output requirements:
+   - Confirm winner is acps_multi_agent and acceptance gate is passed.
+   - Confirm ablation groups show meaningful deltas.
+   - Confirm charts are generated in scripts/charts and thesis-ready.
+   - Summarize changed files and exact metric values.
+
+Important repo context:
+- Workspace may be dirty; do not revert unrelated user changes.
+- Prefer deterministic/offline benchmark paths during testing.
+- Keep edits minimal, test-backed, and aligned with UPGRADE_PLAN.
+```

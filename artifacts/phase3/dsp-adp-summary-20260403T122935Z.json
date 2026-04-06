@@ -1,0 +1,21 @@
+{
+  "status": "PARTIAL",
+  "dsp_sync_output": "/root/WORK/ACPs-app/artifacts/phase3/dsp-sync-20260403T122935Z.json",
+  "adp_search_output": "/root/WORK/ACPs-app/artifacts/phase3/adp-search-20260403T122935Z.json",
+  "adp_search_path_used": "/acps-adp-v2/discover",
+  "discovery_result_count": 1,
+  "expected_agents": 6,
+  "missing_skill_ids": [
+    "bca.build_content_proposal",
+    "engine.dispatch",
+    "fa.process_event",
+    "rda.arbitrate",
+    "reading.orchestrate",
+    "uma.build_profile"
+  ],
+  "found_skill_ids": [
+    "preference.embedding",
+    "profile.extract",
+    "sentiment.analysis"
+  ]
+}

@@ -701,7 +701,7 @@ RDA_AIC    = "<AIC-RDA>"
 | ACPs Layer | Requirement | Satisfaction Method |
 |---|---|---|
 | **AIA** (Identity Authentication) | Each Agent holds ATR-issued CAI certificate; all communication uses mTLS mutual authentication | 6 Agents each hold independent AIC + CAI certificate; `verify_client = true` |
-| **ADP** (Discovery Protocol) | Agents discover each other via DSP; no hardcoded endpoints | Each Agent registers its endpoint and skills in DSP on startup; RC discovers Partners by skill name |
+| **ADP** (Discovery Protocol) | Agents discover each other via DSP; no hardcoded endpoints | Each Agent registers its endpoint and skills in DSP on startup; RC performs DSP discovery then applies local pre-configured AIC pinning to ensure stable routing in mixed public index results |
 | **AIP** (Interaction Protocol) | Messages carry `performative` semantics; multi-round negotiation tracked by `conversation_id` | All messages contain `from`, `to`, `performative`, `conversation_id` |
 
 ### 5.2 AIP Message Semantics Table (v2)
@@ -741,7 +741,7 @@ partners/online/<agent_name>/
 
 1. **Identity layer**: Every message is preceded by a mTLS handshake with ATR-issued certificates. A function call has no concept of caller identity verification.
 
-2. **Discovery layer**: RC does not know the address of RPA at design time. It discovers the endpoint at runtime via DSP by querying `skill="uma.build_profile"`. This location transparency is architecturally impossible with function calls.
+2. **Discovery layer**: RC uses DSP for runtime discovery and synchronization, then applies local AIC pinning for the six in-system agents to avoid nondeterministic same-type hits in the public index. This protocol-level location resolution remains architecturally impossible with pure function calls.
 
 3. **Semantics layer**: Messages carry `performative` values: `propose`, `reject-proposal`, `request (supplement_proposal)`. These semantics — proposal, veto, evidence request — cannot be expressed in a function's input-output model.
 

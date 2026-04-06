@@ -1,65 +1,64 @@
 # Phase IV Benchmark Report (Compact)
 
 ## Run Summary
-- Generated at: 2026-03-25T13:53:43Z
-- Case count: 8
+- Generated at: 2026-04-06T04:02:45Z
+- Case count: 40
 - Winner method: acps_multi_agent
-- Winner objective score: 0.6574
+- Winner objective score: 0.6445
 - Method count: 4
-- NDCG@k range across methods: 0.2500 ~ 0.7891 (span=0.5391)
+- NDCG@k range across methods: 0.5536 ~ 0.8629 (span=0.3093)
 
 ## ACPs Quality
-- Precision@k: 0.5000
-- Recall@k: 0.8750
-- NDCG@k: 0.7727
+- Precision@k: 0.1667
+- Recall@k: 1.0000
+- NDCG@k: 0.5795
+- Explain coverage: 1.0000
+- Intra-list diversity: 0.0000
 
 ## P2 Acceptance Gate
-- Overall passed: True
-- Precision@k: actual=0.5000, target=0.4000
-- Recall@k: actual=0.8750, target=0.6000
-- NDCG@k: actual=0.7727, target=0.6000
-- Diversity: actual=0.4340, target=0.3500
-- Novelty: actual=0.4354, target=0.3500
+- Overall passed: False
+- Precision@k: actual=0.1667, target=0.4000
+- Recall@k: actual=1.0000, target=0.6000
+- NDCG@k: actual=0.5795, target=0.6000
+- Diversity: actual=1.0000, target=0.3500
+- Novelty: actual=1.0000, target=0.3500
 
 ## ACPs Efficiency
-- Latency mean (ms): 106398.1120
+- Latency mean (ms): 245.1429
 
 ## ACPs Reliability Dashboard
 ### Strict Mode
-- Case count: 1
-- Failure case count: 1
-- Failure rate: 1.0000
+- Case count: 2
+- Failure case count: 0
+- Failure rate: 0.0000
 
 ### Fallback Mode
-- Case count: 7
-- Fallback observed case count: 2
-- Fallback observed rate: 0.2857
+- Case count: 38
+- Fallback observed case count: 0
+- Fallback observed rate: 0.0000
 
 ### Overall
-- Remote attempt rate: 0.3750
-- Fallback rate: 0.2500
-- Remote success rate: 0.1250
-- Strict failure rate: 0.1250
+- Remote attempt rate: 0.0000
+- Fallback rate: 0.0000
+- Remote success rate: 0.0000
+- Strict failure rate: 0.0000
 
 ## Findings & Recommendations
 ### Findings
-- Ranking quality is acceptable but improvable (NDCG@k=0.7727).
-- Average latency is high (mean=106398.1120 ms).
-- Fallback dependency is elevated (fallback_rate=0.2500).
-- Strict-mode failures are notable (strict_failure_rate=0.1250).
-- Remote success signal is limited (remote_success_rate=0.1250).
+- Ranking quality is below target (NDCG@k=0.5795).
+- Latency is within current threshold (mean=245.1429 ms).
+- Fallback dependency remains controlled (fallback_rate=0.0000).
+- Strict-mode failure rate is low (strict_failure_rate=0.0000).
+- Remote success signal is limited (remote_success_rate=0.0000).
 
 ### Recommendations
-- Tune semantic/collaborative weights for marginal quality gains.
-- Reduce model/runtime overhead or increase async parallelism to lower latency.
-- Improve remote endpoint stability and discovery quality to reduce fallback frequency.
-- Harden remote infra path (timeout/retry/availability checks) before strict-mode rollout.
+- Prioritize scoring and candidate-quality optimization before deployment.
 - Add more remote-healthy scenarios to validate non-fallback execution confidence.
 
 ## Method Comparison
 | Method | Objective | NDCG@k | Precision@k | Recall@k | Latency mean (ms) |
 |---|---:|---:|---:|---:|---:|
-| acps_multi_agent | 0.6574 | 0.7727 | 0.5000 | 0.8750 | 106398.1120 |
-| multi_agent_proxy | 0.6168 | 0.7891 | 0.5625 | 1.0000 | 146213.1353 |
-| traditional_hybrid | 0.2125 | 0.2500 | 0.0833 | 0.2500 | 33096.3607 |
-| llm_only | 0.2083 | 0.2500 | 0.0833 | 0.2500 | 33058.9575 |
+| acps_multi_agent | 0.6445 | 0.5795 | 0.1667 | 1.0000 | 245.1429 |
+| traditional_hybrid_cf_cb | 0.6109 | 0.8629 | 0.1667 | 1.0000 | 8611.5728 |
+| macrec | 0.5353 | 0.8390 | 0.1667 | 1.0000 | 101.0508 |
+| arag | 0.4854 | 0.5536 | 0.1667 | 1.0000 | 8097.5371 |

@@ -190,6 +190,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
     threshold = _safe_float(payload.get("confidence_penalty_threshold"), CFG.confidence_penalty_threshold)
     min_coverage = _safe_float(payload.get("min_coverage"), CFG.default_min_coverage)
     required_evidence_types = _extract_required_evidence_types(payload)
+    top_k = max(1, int(payload.get("top_k") or 10))
 
     recall_cfg = {
         "faiss_index_path": CFG.faiss_index_path,
@@ -202,7 +203,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
     recalled, recall_meta = recall_candidates(payload, recall_cfg)
 
-    preliminary, round1_meta = score_round1(recalled, score_weights=score_weights, top_k=50)
+    preliminary, round1_meta = score_round1(recalled, score_weights=score_weights, top_k=max(20, top_k * 10))
     confidence_list = assess_confidence(preliminary)
 
     final_ranked, round2_meta = rerank_round2(
@@ -211,7 +212,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
         mmr_lambda=mmr_lambda,
         confidence_penalty_threshold=threshold,
         penalty_multiplier=CFG.penalty_multiplier,
-        top_k=5,
+        top_k=top_k,
     )
 
     explanations = await generate_rationale(
@@ -230,6 +231,9 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
             "rank": int(row.get("rank") or 0),
             "book_id": book_id,
             "title": row.get("title"),
+            "genres": row.get("genres") if isinstance(row.get("genres"), list) else [],
+            "novelty_score": _safe_float(row.get("novelty_score"), 0.0),
+            "diversity_score": _safe_float(row.get("diversity_score"), 0.0),
             "score_total": _safe_float(row.get("score_total"), 0.0),
             "recall_source": row.get("recall_source"),
             "score_parts": row.get("score_parts") or {},

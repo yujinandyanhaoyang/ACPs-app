@@ -59,22 +59,50 @@ def _recency_score(row: Dict[str, Any]) -> float:
 def score_round1(candidates: List[Dict[str, Any]], score_weights: Dict[str, Any], top_k: int = 50) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     weights = _normalize_weights(score_weights or {})
     scored: List[Dict[str, Any]] = []
+    genre_freq: Dict[str, int] = {}
+    for row in candidates:
+        raw = row.get("genres")
+        if not isinstance(raw, list):
+            continue
+        for g in raw:
+            token = str(g).strip().lower()
+            if token:
+                genre_freq[token] = genre_freq.get(token, 0) + 1
 
     for row in candidates:
         content = _safe_float(row.get("content_sim"), 0.0)
         cf = _safe_float(row.get("cf_score"), 0.0)
         novelty = _safe_float(row.get("novelty_score"), max(0.0, 1.0 - content))
+        raw_genres = row.get("genres")
+        genres = raw_genres if isinstance(raw_genres, list) else []
+        if genres:
+            rarity = []
+            for g in genres:
+                token = str(g).strip().lower()
+                if token:
+                    rarity.append(1.0 / max(1.0, float(genre_freq.get(token, 1))))
+            diversity = max(0.0, min(1.0, sum(rarity) / max(1, len(rarity)))) if rarity else novelty
+        else:
+            diversity = novelty
         recency = _recency_score(row)
 
-        s = (weights["content"] * content) + (weights["cf"] * cf) + (weights["novelty"] * novelty) + (weights["recency"] * recency)
+        s = (
+            (weights["content"] * content)
+            + (weights["cf"] * cf)
+            + (weights["novelty"] * ((novelty + diversity) / 2.0))
+            + (weights["recency"] * recency)
+        )
 
         item = dict(row)
         item["score_parts"] = {
             "content": round(content, 6),
             "cf": round(cf, 6),
             "novelty": round(novelty, 6),
+            "diversity": round(diversity, 6),
             "recency": round(recency, 6),
         }
+        item["novelty_score"] = round(novelty, 6)
+        item["diversity_score"] = round(diversity, 6)
         item["score_round1"] = round(s, 6)
         item["_vector"] = _extract_vector(item)
         scored.append(item)

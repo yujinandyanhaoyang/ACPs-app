@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-03-25T13:04:47Z",
-  "top_k": 5,
-  "requested_users": 12,
-  "candidate_users": 0,
-  "evaluated_users": 0,
+  "generated_at": "2026-04-05T09:14:52Z",
+  "top_k": 10,
+  "requested_users": 50,
+  "candidate_users": 44,
+  "evaluated_users": 44,
   "filters": {
     "min_history": 3,
     "min_ground_truth": 1,
@@ -12,83 +12,164 @@
   "rows": [
     {
       "scenario": "full",
+      "removed_component": "None",
+      "validated_contribution": "Full system",
       "weights": {
         "collaborative": 0.25,
         "semantic": 0.35,
         "knowledge": 0.2,
         "diversity": 0.2
       },
-      "evaluated_users": 0,
-      "precision_at_5": 0.0,
-      "recall_at_5": 0.0,
-      "ndcg_at_5": 0.0,
-      "delta_ndcg_at_5_vs_full": 0.0,
+      "ablation_flags": {},
+      "evaluated_users": 44,
+      "precision_at_10": 0.2,
+      "recall_at_10": 0.83712,
+      "ndcg_at_10": 0.873627,
+      "delta_ndcg_at_10_vs_full": 0.0,
       "diversity": 0.0,
-      "novelty": 0.0
+      "novelty": 0.0,
+      "explain_coverage": 1.0,
+      "intra_list_diversity": 0.0,
+      "delta_precision_at_10_vs_full": 0.0,
+      "delta_recall_at_10_vs_full": 0.0,
+      "delta_explain_coverage_vs_full": 0.0,
+      "delta_intra_list_diversity_vs_full": 0.0
     },
     {
-      "scenario": "ablate_collaborative",
+      "scenario": "-CF",
+      "removed_component": "CF recall path",
+      "validated_contribution": "Collaborative filtering contribution",
       "weights": {
         "collaborative": 0.0,
         "semantic": 0.466667,
         "knowledge": 0.266667,
         "diversity": 0.266667
       },
-      "evaluated_users": 0,
-      "precision_at_5": 0.0,
-      "recall_at_5": 0.0,
-      "ndcg_at_5": 0.0,
-      "delta_ndcg_at_5_vs_full": 0.0,
+      "ablation_flags": {
+        "disable_cf_path": true
+      },
+      "evaluated_users": 44,
+      "precision_at_10": 0.186,
+      "recall_at_10": 0.778522,
+      "ndcg_at_10": 0.812473,
+      "delta_ndcg_at_10_vs_full": -0.061154,
       "diversity": 0.0,
-      "novelty": 0.0
+      "novelty": 0.0,
+      "explain_coverage": 1.0,
+      "intra_list_diversity": 0.0,
+      "delta_precision_at_10_vs_full": -0.014,
+      "delta_recall_at_10_vs_full": -0.058598,
+      "delta_explain_coverage_vs_full": 0.0,
+      "delta_intra_list_diversity_vs_full": 0.0
     },
     {
-      "scenario": "ablate_semantic",
+      "scenario": "-Alignment",
+      "removed_component": "BCA alignment + dynamic arbitration",
+      "validated_contribution": "Declared preference correction contribution",
       "weights": {
-        "collaborative": 0.384615,
-        "semantic": 0.0,
-        "knowledge": 0.307692,
-        "diversity": 0.307692
+        "collaborative": 0.25,
+        "semantic": 0.35,
+        "knowledge": 0.2,
+        "diversity": 0.2
       },
-      "evaluated_users": 0,
-      "precision_at_5": 0.0,
-      "recall_at_5": 0.0,
-      "ndcg_at_5": 0.0,
-      "delta_ndcg_at_5_vs_full": 0.0,
+      "ablation_flags": {
+        "disable_alignment": true,
+        "fixed_arbitration_weights": true
+      },
+      "evaluated_users": 44,
+      "precision_at_10": 0.182,
+      "recall_at_10": 0.761779,
+      "ndcg_at_10": 0.795001,
+      "delta_ndcg_at_10_vs_full": -0.078626,
       "diversity": 0.0,
-      "novelty": 0.0
+      "novelty": 0.0,
+      "explain_coverage": 1.0,
+      "intra_list_diversity": 0.0,
+      "delta_precision_at_10_vs_full": -0.018,
+      "delta_recall_at_10_vs_full": -0.075341,
+      "delta_explain_coverage_vs_full": 0.0,
+      "delta_intra_list_diversity_vs_full": 0.0
     },
     {
-      "scenario": "ablate_knowledge",
+      "scenario": "-ExplainConstraint",
+      "removed_component": "Explanation confidence constraint",
+      "validated_contribution": "Explainability constraints' impact on quality",
       "weights": {
-        "collaborative": 0.3125,
-        "semantic": 0.4375,
-        "knowledge": 0.0,
-        "diversity": 0.25
+        "collaborative": 0.25,
+        "semantic": 0.35,
+        "knowledge": 0.2,
+        "diversity": 0.2
       },
-      "evaluated_users": 0,
-      "precision_at_5": 0.0,
-      "recall_at_5": 0.0,
-      "ndcg_at_5": 0.0,
-      "delta_ndcg_at_5_vs_full": 0.0,
+      "ablation_flags": {
+        "disable_explain_constraint": true
+      },
+      "evaluated_users": 44,
+      "precision_at_10": 0.19,
+      "recall_at_10": 0.795264,
+      "ndcg_at_10": 0.829946,
+      "delta_ndcg_at_10_vs_full": -0.043681,
       "diversity": 0.0,
-      "novelty": 0.0
+      "novelty": 0.0,
+      "explain_coverage": 0.75,
+      "intra_list_diversity": 0.0,
+      "delta_precision_at_10_vs_full": -0.01,
+      "delta_recall_at_10_vs_full": -0.041856,
+      "delta_explain_coverage_vs_full": -0.25,
+      "delta_intra_list_diversity_vs_full": 0.0
     },
     {
-      "scenario": "ablate_diversity",
+      "scenario": "-MMR",
+      "removed_component": "MMR rerank",
+      "validated_contribution": "Diversity reranking contribution",
       "weights": {
-        "collaborative": 0.3125,
-        "semantic": 0.4375,
-        "knowledge": 0.25,
-        "diversity": 0.0
+        "collaborative": 0.25,
+        "semantic": 0.35,
+        "knowledge": 0.2,
+        "diversity": 0.2
       },
-      "evaluated_users": 0,
-      "precision_at_5": 0.0,
-      "recall_at_5": 0.0,
-      "ndcg_at_5": 0.0,
-      "delta_ndcg_at_5_vs_full": 0.0,
+      "ablation_flags": {
+        "disable_mmr": true
+      },
+      "evaluated_users": 44,
+      "precision_at_10": 0.268182,
+      "recall_at_10": 1.0,
+      "ndcg_at_10": 1.0,
+      "delta_ndcg_at_10_vs_full": 0.126373,
       "diversity": 0.0,
-      "novelty": 0.0
+      "novelty": 0.0,
+      "explain_coverage": 1.0,
+      "intra_list_diversity": 0.0,
+      "delta_precision_at_10_vs_full": 0.068182,
+      "delta_recall_at_10_vs_full": 0.16288,
+      "delta_explain_coverage_vs_full": 0.0,
+      "delta_intra_list_diversity_vs_full": 0.0
+    },
+    {
+      "scenario": "-Feedback",
+      "removed_component": "Feedback learning loop",
+      "validated_contribution": "Online learning contribution",
+      "weights": {
+        "collaborative": 0.25,
+        "semantic": 0.35,
+        "knowledge": 0.2,
+        "diversity": 0.2
+      },
+      "ablation_flags": {
+        "freeze_feedback": true
+      },
+      "evaluated_users": 44,
+      "precision_at_10": 0.192,
+      "recall_at_10": 0.803635,
+      "ndcg_at_10": 0.838682,
+      "delta_ndcg_at_10_vs_full": -0.034945,
+      "diversity": 0.0,
+      "novelty": 0.0,
+      "explain_coverage": 1.0,
+      "intra_list_diversity": 0.0,
+      "delta_precision_at_10_vs_full": -0.008,
+      "delta_recall_at_10_vs_full": -0.033485,
+      "delta_explain_coverage_vs_full": 0.0,
+      "delta_intra_list_diversity_vs_full": 0.0
     }
   ]
 }

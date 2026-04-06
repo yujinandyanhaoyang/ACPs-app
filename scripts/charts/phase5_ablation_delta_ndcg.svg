@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+<rect width="1200" height="700" fill="#ffffff"/>
+<text x="600.0" y="44" text-anchor="middle" font-size="28" font-family="Arial">Ablation - Delta NDCG vs Full</text>
+<line x1="120" y1="550" x2="1140" y2="550" stroke="#222"/>
+<line x1="120" y1="90" x2="120" y2="550" stroke="#222"/>
+<rect x="120.00" y="772.60" width="127.00" height="-222.60" fill="#2563eb"/>
+<text x="183.50" y="764.60" text-anchor="middle" font-size="12" font-family="Arial">-0.0612</text>
+<text x="183.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 183.50,578.00)">-CF</text>
+<rect x="343.25" y="836.20" width="127.00" height="-286.20" fill="#2563eb"/>
+<text x="406.75" y="828.20" text-anchor="middle" font-size="12" font-family="Arial">-0.0786</text>
+<text x="406.75" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 406.75,578.00)">-Alignment</text>
+<rect x="566.50" y="709.00" width="127.00" height="-159.00" fill="#2563eb"/>
+<text x="630.00" y="701.00" text-anchor="middle" font-size="12" font-family="Arial">-0.0437</text>
+<text x="630.00" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 630.00,578.00)">-ExplainConstraint</text>
+<rect x="789.75" y="90.00" width="127.00" height="460.00" fill="#2563eb"/>
+<text x="853.25" y="82.00" text-anchor="middle" font-size="12" font-family="Arial">0.1264</text>
+<text x="853.25" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 853.25,578.00)">-MMR</text>
+<rect x="1013.00" y="677.20" width="127.00" height="-127.20" fill="#2563eb"/>
+<text x="1076.50" y="669.20" text-anchor="middle" font-size="12" font-family="Arial">-0.0349</text>
+<text x="1076.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 1076.50,578.00)">-Feedback</text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760">
+<rect width="1400" height="760" fill="#ffffff"/>
+<text x="700.0" y="44" text-anchor="middle" font-size="28" font-family="Arial">Baseline Comparison - Primary Metrics</text>
+<line x1="120" y1="590" x2="1320" y2="590" stroke="#111"/>
+<line x1="120" y1="90" x2="120" y2="590" stroke="#111"/>
+<line x1="120" y1="590.00" x2="1320" y2="590.00" stroke="#e5e7eb"/>
+<text x="108" y="594.00" text-anchor="end" font-size="12" font-family="Arial">0.00</text>
+<line x1="120" y1="490.00" x2="1320" y2="490.00" stroke="#e5e7eb"/>
+<text x="108" y="494.00" text-anchor="end" font-size="12" font-family="Arial">0.20</text>
+<line x1="120" y1="390.00" x2="1320" y2="390.00" stroke="#e5e7eb"/>
+<text x="108" y="394.00" text-anchor="end" font-size="12" font-family="Arial">0.40</text>
+<line x1="120" y1="290.00" x2="1320" y2="290.00" stroke="#e5e7eb"/>
+<text x="108" y="294.00" text-anchor="end" font-size="12" font-family="Arial">0.60</text>
+<line x1="120" y1="190.00" x2="1320" y2="190.00" stroke="#e5e7eb"/>
+<text x="108" y="194.00" text-anchor="end" font-size="12" font-family="Arial">0.80</text>
+<line x1="120" y1="90.00" x2="1320" y2="90.00" stroke="#e5e7eb"/>
+<text x="108" y="94.00" text-anchor="end" font-size="12" font-family="Arial">1.00</text>
+<rect x="140.45" y="360.00" width="68.18" height="230.00" fill="#2563eb"/>
+<rect x="208.64" y="115.00" width="68.18" height="475.00" fill="#16a34a"/>
+<rect x="276.82" y="125.00" width="68.18" height="465.00" fill="#dc2626"/>
+<text x="222.27" y="624.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 222.27,624.00)">acps_multi_agent</text>
+<rect x="440.45" y="506.65" width="68.18" height="83.35" fill="#2563eb"/>
+<rect x="508.64" y="90.00" width="68.18" height="500.00" fill="#16a34a"/>
+<rect x="576.82" y="158.55" width="68.18" height="431.45" fill="#dc2626"/>
+<text x="522.27" y="624.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 522.27,624.00)">traditional_hybrid_cf_cb</text>
+<rect x="740.45" y="506.65" width="68.18" height="83.35" fill="#2563eb"/>
+<rect x="808.64" y="90.00" width="68.18" height="500.00" fill="#16a34a"/>
+<rect x="876.82" y="170.50" width="68.18" height="419.50" fill="#dc2626"/>
+<text x="822.27" y="624.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 822.27,624.00)">macrec</text>
+<rect x="1040.45" y="506.65" width="68.18" height="83.35" fill="#2563eb"/>
+<rect x="1108.64" y="90.00" width="68.18" height="500.00" fill="#16a34a"/>
+<rect x="1176.82" y="313.20" width="68.18" height="276.80" fill="#dc2626"/>
+<text x="1122.27" y="624.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 1122.27,624.00)">arag</text>
+<rect x="1020" y="98" width="18" height="10" fill="#2563eb"/>
+<text x="1046" y="108" font-size="13" font-family="Arial">Precision@10</text>
+<rect x="1020" y="120" width="18" height="10" fill="#16a34a"/>
+<text x="1046" y="130" font-size="13" font-family="Arial">Recall@10</text>
+<rect x="1020" y="142" width="18" height="10" fill="#dc2626"/>
+<text x="1046" y="152" font-size="13" font-family="Arial">NDCG@10</text>
+</svg>

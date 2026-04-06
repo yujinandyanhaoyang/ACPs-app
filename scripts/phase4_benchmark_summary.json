@@ -1,32 +1,34 @@
 {
-  "generated_at": "2026-03-25T13:53:43Z",
-  "case_count": 8,
+  "generated_at": "2026-04-06T04:02:45Z",
+  "case_count": 40,
   "winner_method": "acps_multi_agent",
-  "winner_objective_score": 0.657385,
+  "winner_objective_score": 0.6445,
   "acps_quality": {
-    "precision_at_k": 0.5,
-    "recall_at_k": 0.875,
-    "ndcg_at_k": 0.7727
+    "precision_at_k": 0.1667,
+    "recall_at_k": 1.0,
+    "ndcg_at_k": 0.5795,
+    "explain_coverage": 1.0,
+    "intra_list_diversity": 0.0
   },
   "acps_efficiency": {
-    "latency_ms_mean": 106398.112
+    "latency_ms_mean": 245.1429
   },
   "acps_reliability": {
     "strict_mode": {
-      "case_count": 1,
-      "failure_case_count": 1,
-      "failure_rate": 1.0
+      "case_count": 2,
+      "failure_case_count": 0,
+      "failure_rate": 0.0
     },
     "fallback_mode": {
-      "case_count": 7,
-      "fallback_observed_case_count": 2,
-      "fallback_observed_rate": 0.2857
+      "case_count": 38,
+      "fallback_observed_case_count": 0,
+      "fallback_observed_rate": 0.0
     },
     "overall": {
-      "remote_attempt_rate": 0.375,
-      "fallback_rate": 0.25,
-      "remote_success_rate": 0.125,
-      "strict_failure_rate": 0.125
+      "remote_attempt_rate": 0.0,
+      "fallback_rate": 0.0,
+      "remote_success_rate": 0.0,
+      "strict_failure_rate": 0.0
     }
   },
   "acceptance_gate": {
@@ -39,31 +41,31 @@
     },
     "checks": {
       "precision_at_k": {
-        "actual": 0.5,
+        "actual": 0.1667,
         "target": 0.4,
-        "passed": true
+        "passed": false
       },
       "recall_at_k": {
-        "actual": 0.875,
+        "actual": 1.0,
         "target": 0.6,
         "passed": true
       },
       "ndcg_at_k": {
-        "actual": 0.7727,
+        "actual": 0.5795,
         "target": 0.6,
-        "passed": true
+        "passed": false
       },
       "diversity": {
-        "actual": 0.434,
+        "actual": 1.0,
         "target": 0.35,
         "passed": true
       },
       "novelty": {
-        "actual": 0.4354,
+        "actual": 1.0,
         "target": 0.35,
         "passed": true
       }
     },
-    "passed": true
+    "passed": false
   }
 }

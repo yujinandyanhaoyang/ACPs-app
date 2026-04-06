@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # Phase 3 DSP synchronization and ADP discovery verification helper.
-# 6.3 goal: verify DSP registration and skill-level ADP discoverability.
+# 6.3 goal: verify DSP registration and ADP discoverability.
+# Note: in official public DSP, same-type agents from other teams may be returned.
+# Final runtime should combine DSP availability checks with local AIC-pinned routing.
 
 DISCOVERY_BASE_URL="${DISCOVERY_BASE_URL:-http://127.0.0.1:8005}"
 QUERY="${QUERY:-personalized reading recommendation agent}"
@@ -25,11 +27,29 @@ env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
     -o "$SYNC_OUT"
 
 echo "[phase3] verify ADP search: $DISCOVERY_BASE_URL/api/discovery/search"
-env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
-  curl --noproxy '*' -fsS -X POST "$DISCOVERY_BASE_URL/api/discovery/search" \
-    -H "Content-Type: application/json" \
-    -d "{\"query\":\"$QUERY\",\"top_k\":$TOP_K}" \
-    -o "$SEARCH_OUT"
+SEARCH_PATHS=(
+  "/api/discovery/search"
+  "/acps-adp-v2/discover"
+  "/acps-adp-v2/discover/v1"
+)
+SEARCH_OK=0
+SEARCH_USED_PATH=""
+for path in "${SEARCH_PATHS[@]}"; do
+  if env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY \
+      curl --noproxy '*' -fsS -X POST "$DISCOVERY_BASE_URL$path" \
+        -H "Content-Type: application/json" \
+        -d "{\"query\":\"$QUERY\",\"top_k\":$TOP_K}" \
+        -o "$SEARCH_OUT"; then
+    SEARCH_OK=1
+    SEARCH_USED_PATH="$path"
+    break
+  fi
+done
+if [ "$SEARCH_OK" -ne 1 ]; then
+  echo "[phase3] ADP search failed on all known paths." >&2
+  exit 22
+fi
+echo "[phase3] ADP search path used: $SEARCH_USED_PATH"
 
 python3 - <<PY
 import json
@@ -54,6 +74,13 @@ def get_results(payload):
             return payload["results"]
         if isinstance(payload.get("data"), list):
             return payload["data"]
+        result = payload.get("result")
+        if isinstance(result, dict):
+            if isinstance(result.get("results"), list):
+                return result["results"]
+            acs_map = result.get("acsMap")
+            if isinstance(acs_map, dict):
+                return list(acs_map.values())
     return []
 
 def skill_ids(item):
@@ -95,6 +122,7 @@ summary = {
     "status": status,
     "dsp_sync_output": str(sync_path),
     "adp_search_output": str(search_path),
+    "adp_search_path_used": "$SEARCH_USED_PATH",
     "discovery_result_count": result_count,
     "expected_agents": int("$EXPECTED_AGENTS"),
     "missing_skill_ids": missing_skill_ids,

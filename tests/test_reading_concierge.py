@@ -200,3 +200,26 @@ def test_resolve_partner_prefers_adp_discovery_over_env(monkeypatch):
     partner = concierge._resolve_partner("profile")
     assert partner["remote_url"] == "http://adp/rpa"
     assert partner["discovery"] == "adp"
+
+
+def test_discover_partner_filters_by_expected_aic(monkeypatch):
+    monkeypatch.setattr(concierge.RUNTIME, "partner_aics", {"profile": "AIC-EXPECTED"})
+    monkeypatch.setattr(
+        concierge,
+        "_search_discovery",
+        lambda _q: [
+            {
+                "aic": "AIC-OTHER",
+                "skills": [{"id": "uma.build_profile"}],
+                "endPoints": [{"url": "http://wrong/rpc"}],
+            },
+            {
+                "aic": "AIC-EXPECTED",
+                "skills": [{"id": "uma.build_profile"}],
+                "endPoints": [{"url": "http://right/rpc"}],
+            },
+        ],
+    )
+
+    url = concierge._discover_partner_rpc_url("profile")
+    assert url == "http://right/rpc"

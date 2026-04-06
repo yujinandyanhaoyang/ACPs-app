@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+<rect width="1200" height="700" fill="#ffffff"/>
+<text x="600.0" y="44" text-anchor="middle" font-size="28" font-family="Arial">Ablation - Delta Precision@10 vs Full</text>
+<line x1="120" y1="550" x2="1140" y2="550" stroke="#222"/>
+<line x1="120" y1="90" x2="120" y2="550" stroke="#222"/>
+<rect x="120.00" y="644.45" width="127.00" height="-94.45" fill="#2563eb"/>
+<text x="183.50" y="636.45" text-anchor="middle" font-size="12" font-family="Arial">-0.0140</text>
+<text x="183.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 183.50,578.00)">-CF</text>
+<rect x="343.25" y="671.44" width="127.00" height="-121.44" fill="#2563eb"/>
+<text x="406.75" y="663.44" text-anchor="middle" font-size="12" font-family="Arial">-0.0180</text>
+<text x="406.75" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 406.75,578.00)">-Alignment</text>
+<rect x="566.50" y="617.47" width="127.00" height="-67.47" fill="#2563eb"/>
+<text x="630.00" y="609.47" text-anchor="middle" font-size="12" font-family="Arial">-0.0100</text>
+<text x="630.00" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 630.00,578.00)">-ExplainConstraint</text>
+<rect x="789.75" y="90.00" width="127.00" height="460.00" fill="#2563eb"/>
+<text x="853.25" y="82.00" text-anchor="middle" font-size="12" font-family="Arial">0.0682</text>
+<text x="853.25" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 853.25,578.00)">-MMR</text>
+<rect x="1013.00" y="603.97" width="127.00" height="-53.97" fill="#2563eb"/>
+<text x="1076.50" y="595.97" text-anchor="middle" font-size="12" font-family="Arial">-0.0080</text>
+<text x="1076.50" y="578.00" text-anchor="middle" font-size="13" font-family="Arial" transform="rotate(25 1076.50,578.00)">-Feedback</text>
+</svg>

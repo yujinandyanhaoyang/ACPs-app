@@ -65,6 +65,7 @@ class RuntimeConfig(BaseModel):
     llm_model: str = "qwen-flash-character"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 512
+    partner_aics: Dict[str, str] = Field(default_factory=dict)
 
 
 def _load_runtime_config() -> RuntimeConfig:
@@ -75,6 +76,7 @@ def _load_runtime_config() -> RuntimeConfig:
             server = data.get("server") if isinstance(data, dict) else {}
             redis_cfg = data.get("redis") if isinstance(data, dict) else {}
             llm = data.get("llm") if isinstance(data, dict) else {}
+            agents = data.get("agents") if isinstance(data, dict) else {}
 
             if isinstance(server, dict) and server.get("port") is not None:
                 cfg.port = int(server["port"])
@@ -87,6 +89,15 @@ def _load_runtime_config() -> RuntimeConfig:
                     cfg.llm_temperature = float(llm["temperature"])
                 if llm.get("max_tokens") is not None:
                     cfg.llm_max_tokens = int(llm["max_tokens"])
+            if isinstance(agents, dict):
+                mapping = {
+                    "profile": str(agents.get("RPA_AIC") or "").strip(),
+                    "content": str(agents.get("BCA_AIC") or "").strip(),
+                    "rda": str(agents.get("RDA_AIC") or "").strip(),
+                    "engine": str(agents.get("ENGINE_AIC") or "").strip(),
+                    "feedback": str(agents.get("FEEDBACK_AIC") or "").strip(),
+                }
+                cfg.partner_aics = {k: v for k, v in mapping.items() if v}
         except Exception as exc:
             logger.warning("event=config_parse_failed error=%s", exc)
 
@@ -187,14 +198,29 @@ def _search_discovery(query: str) -> List[Dict[str, Any]]:
 
     try:
         payload = {"query": query, "top_k": 20}
+        paths = ["/api/discovery/search", "/acps-adp-v2/discover", "/acps-adp-v2/discover/v1"]
+        data = None
         with httpx.Client(timeout=DISCOVERY_TIMEOUT) as client:
-            resp = client.post(f"{DISCOVERY_BASE_URL}/api/discovery/search", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+            for path in paths:
+                try:
+                    resp = client.post(f"{DISCOVERY_BASE_URL}{path}", json=payload)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    break
+                except Exception:
+                    continue
         if isinstance(data, dict):
             results = data.get("results")
             if not isinstance(results, list):
                 results = data.get("data")
+            if not isinstance(results, list):
+                result = data.get("result")
+                if isinstance(result, dict):
+                    results = result.get("results")
+                    if not isinstance(results, list):
+                        acs_map = result.get("acsMap")
+                        if isinstance(acs_map, dict):
+                            results = list(acs_map.values())
             if isinstance(results, list):
                 _DISCOVERY_CACHE[cache_key] = {"ts": now, "results": results}
                 return results
@@ -237,12 +263,25 @@ def _item_endpoints(item: Dict[str, Any]) -> List[str]:
     return urls
 
 
+def _item_aic(item: Dict[str, Any]) -> str:
+    aic = item.get("aic")
+    if aic:
+        return str(aic)
+    card = item.get("agent_card")
+    if isinstance(card, dict) and card.get("aic"):
+        return str(card.get("aic"))
+    return ""
+
+
 def _discover_partner_rpc_url(partner_key: str) -> Optional[str]:
     skill_id = PARTNER_SKILL_MAP.get(partner_key)
     if not skill_id:
         return None
+    expected_aic = str((RUNTIME.partner_aics or {}).get(partner_key) or "").strip()
     for item in _search_discovery(skill_id):
         if not isinstance(item, dict):
+            continue
+        if expected_aic and _item_aic(item) != expected_aic:
             continue
         skills = _item_skill_ids(item)
         if skill_id not in skills:
@@ -250,6 +289,8 @@ def _discover_partner_rpc_url(partner_key: str) -> Optional[str]:
         urls = _item_endpoints(item)
         if urls:
             return urls[0]
+    if expected_aic:
+        logger.warning("event=partner_discovery_miss partner=%s expected_aic=%s", partner_key, expected_aic)
     return None
 
 
@@ -375,8 +416,13 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
 
     intent = await _parse_intent(req.query)
 
+    constraints = req.constraints if isinstance(req.constraints, dict) else {}
+    ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}
+    scoring_weights = constraints.get("scoring_weights") if isinstance(constraints.get("scoring_weights"), dict) else {}
+
     # 1) Notify RDA to stand by.
     rda_standby_payload = {
+        "performative": "request",
         "action": "rda.standby",
         "session_id": session_id,
         "user_id": req.user_id,
@@ -385,6 +431,7 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
 
     # 2) GroupMgmt broadcast to RPA + BCA in parallel.
     profile_payload = {
+        "performative": "request",
         "action": "uma.build_profile",
         "user_id": req.user_id,
         "query": req.query,
@@ -393,6 +440,7 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
         "reviews": req.reviews,
     }
     content_payload = {
+        "performative": "request",
         "action": "bca.build_content_proposal",
         "user_id": req.user_id,
         "query": req.query,
@@ -400,6 +448,9 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
         "candidate_ids": req.candidate_ids,
         "declared_genres": intent.get("preferred_genres") or [],
     }
+    if ablation_flags.get("disable_alignment"):
+        # Alignment ablation: neutralize declared preference signals to BCA.
+        content_payload["declared_genres"] = []
 
     (profile_resp, profile_route), (content_resp, content_route) = await __import__("asyncio").gather(
         _invoke_partner("profile", profile_payload),
@@ -414,20 +465,24 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
     # 3) Forward proposals to RDA arbitration.
     content_outputs = content_data.get("outputs") if isinstance(content_data.get("outputs"), dict) else {}
     rda_payload = {
+        "performative": "request",
         "action": "rda.arbitrate",
         "session_id": session_id,
         "profile_proposal": {
+            "performative": "propose",
             "profile_vector": profile_data.get("profile_vector") or profile_data.get("preference_vector") or [],
             "confidence": profile_data.get("confidence", 0.2),
             "behavior_genres": profile_data.get("behavior_genres") or [],
             "strategy_suggestion": profile_data.get("strategy_suggestion") or "balanced",
         },
         "content_proposal": {
+            "performative": "propose",
             "divergence_score": content_outputs.get("divergence_score", content_data.get("divergence_score", 0.5)),
             "alignment_status": content_outputs.get("alignment_status", content_data.get("alignment_status")),
             "weight_suggestion": content_outputs.get("weight_suggestion"),
             "coverage_report": content_outputs.get("coverage_report"),
             "counter_proposal": content_outputs.get("counter_proposal"),
+            "counter_proposal_performative": "reject-proposal" if content_outputs.get("counter_proposal") else None,
         },
         "counter_proposal_received": bool(content_outputs.get("counter_proposal")),
     }
@@ -435,8 +490,27 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
     rda_data = _extract_result(rda_resp)
     rda_state = _state(rda_resp)
 
+    if ablation_flags.get("fixed_arbitration_weights") or ablation_flags.get("freeze_feedback"):
+        # Ablation mode: bypass learned/adaptive arbitration output with fixed weights.
+        cf_weight = float(scoring_weights.get("collaborative", 0.25) or 0.25)
+        ann_weight = max(0.0, 1.0 - cf_weight)
+        rda_data = {
+            **rda_data,
+            "final_weights": {"ann_weight": ann_weight, "cf_weight": cf_weight},
+            "score_weights": {
+                "content": float(scoring_weights.get("semantic", 0.35) or 0.35),
+                "cf": cf_weight,
+                "novelty": float(scoring_weights.get("diversity", 0.2) or 0.2),
+                "recency": float(scoring_weights.get("knowledge", 0.2) or 0.2),
+            },
+            "mmr_lambda": rda_data.get("mmr_lambda", 0.5),
+            "strategy": "fixed" if ablation_flags.get("fixed_arbitration_weights") else "frozen_feedback",
+            "ablation_override": True,
+        }
+
     # 4) Compose dispatch and send to Engine.
     engine_payload = {
+        "performative": "request",
         "action": "engine.dispatch",
         "session_id": session_id,
         "user_id": req.user_id,
@@ -449,7 +523,21 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
         "mmr_lambda": rda_data.get("mmr_lambda", 0.5),
         "strategy": rda_data.get("strategy", "balanced"),
         "candidates": content_outputs.get("content_vectors") or [],
+        "top_k": int((constraints or {}).get("top_k") or 10),
     }
+    if ablation_flags.get("disable_cf_path"):
+        engine_payload["cf_weight"] = 0.0
+        engine_payload["ann_weight"] = 1.0
+        sw = engine_payload.get("score_weights") if isinstance(engine_payload.get("score_weights"), dict) else {}
+        sw = {**sw, "cf": 0.0}
+        engine_payload["score_weights"] = sw
+    if ablation_flags.get("disable_mmr"):
+        engine_payload["mmr_lambda"] = 1.0
+    if ablation_flags.get("disable_explain_constraint"):
+        engine_payload["required_evidence_types"] = []
+        engine_payload["min_coverage"] = 0.0
+    if ablation_flags:
+        engine_payload["ablation_flags"] = ablation_flags
     engine_resp, engine_route = await _invoke_partner("engine", engine_payload)
     engine_data = _extract_result(engine_resp)
     engine_state = _state(engine_resp)
@@ -476,6 +564,7 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
             "rda": rda_data,
             "engine": engine_data,
         },
+        "ablation_flags": ablation_flags,
         "recommendations": recommendations,
         "explanations": explanations,
     }

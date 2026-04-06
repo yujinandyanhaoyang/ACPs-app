@@ -1,10 +1,26 @@
 {
   "bandit:low_conf_high_div:6217e69f78": {
-    "trials": 1.0,
-    "avg_reward": 0.8
+    "trials": 6.0,
+    "avg_reward": 0.7999999999999999
   },
   "bandit:high_conf_low_div:6217e69f78": {
     "trials": 2.0,
     "avg_reward": 1.0
+  },
+  "bandit:low_conf_high_div:42dc7e4f3f": {
+    "trials": 2863.0,
+    "avg_reward": 0.15218645220461433
+  },
+  "bandit:high_conf_high_div:42dc7e4f3f": {
+    "trials": 2013.0,
+    "avg_reward": 0.10314558533545846
+  },
+  "bandit:high_conf_low_div:42dc7e4f3f": {
+    "trials": 3903.0,
+    "avg_reward": 0.10711442503828564
+  },
+  "bandit:low_conf_low_div:42dc7e4f3f": {
+    "trials": 2221.0,
+    "avg_reward": 0.17060732067481987
   }
 }
