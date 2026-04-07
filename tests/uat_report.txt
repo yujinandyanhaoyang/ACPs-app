@@ -1,0 +1,19 @@
+===== ACPs Reading Concierge UAT Report =====
+时间: 2026-04-07T14:05:17+08:00
+场景 00 | 服务健康检查 | FAIL | 0.00s
+场景 01 | 热启动用户推荐 | SKIP | -
+场景 02 | 冷启动用户降级 | SKIP | -
+场景 03 | 多轮对话 session 复用 | SKIP | -
+场景 04 | 正向反馈画像更新 | SKIP | -
+场景 05 | 连续负向反馈 | SKIP | -
+场景 06 | 缺 session_id 返回 400 | SKIP | -
+场景 07 | 空 query 返回 400 | SKIP | -
+场景 08 | 不存在用户降级 | SKIP | -
+场景 09 | 超大 top_k 自动 clamp | SKIP | -
+场景 10 | 画像接口初始化检查 | SKIP | -
+场景 11 | 推荐词质量验证 | SKIP | -
+场景 12 | 延迟基准测量 | SKIP | -
+场景 13 | 完整闭环测试 | SKIP | -
+
+总计: 0 PASS | 1 FAIL | 0 WARN | 13 SKIP
+最高优先级问题: 场景 00 服务健康检查 - GET /demo/status failed: request failed after 0.00s: All connection attempts failed
