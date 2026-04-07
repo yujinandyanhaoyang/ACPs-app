@@ -3,6 +3,7 @@ import sys
 import uuid
 import pathlib
 import importlib
+import re
 import pytest
 from fastapi.testclient import TestClient
 from datetime import datetime, timezone
@@ -243,3 +244,15 @@ def patch_embeddings_384d(monkeypatch):
             "generate_text_embeddings_async",
             _fake_generate_text_embeddings_async,
         )
+
+
+def pytest_collection_modifyitems(items):
+    def _sort_key(item):
+        filename = pathlib.Path(str(getattr(item, "fspath", ""))).name
+        if filename == "test_uat_e2e.py":
+            match = re.search(r"test_scenario_(\d{2})_", item.name)
+            if match:
+                return (0, int(match.group(1)), item.name)
+        return (1, item.nodeid)
+
+    items.sort(key=_sort_key)

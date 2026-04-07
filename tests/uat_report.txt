@@ -1,19 +1,20 @@
 ===== ACPs Reading Concierge UAT Report =====
-时间: 2026-04-07T14:05:17+08:00
-场景 00 | 服务健康检查 | FAIL | 0.00s
-场景 01 | 热启动用户推荐 | SKIP | -
-场景 02 | 冷启动用户降级 | SKIP | -
-场景 03 | 多轮对话 session 复用 | SKIP | -
-场景 04 | 正向反馈画像更新 | SKIP | -
-场景 05 | 连续负向反馈 | SKIP | -
-场景 06 | 缺 session_id 返回 400 | SKIP | -
-场景 07 | 空 query 返回 400 | SKIP | -
-场景 08 | 不存在用户降级 | SKIP | -
-场景 09 | 超大 top_k 自动 clamp | SKIP | -
-场景 10 | 画像接口初始化检查 | SKIP | -
-场景 11 | 推荐词质量验证 | SKIP | -
-场景 12 | 延迟基准测量 | SKIP | -
-场景 13 | 完整闭环测试 | SKIP | -
+Timestamp: 2026-04-07T15:13:12+08:00
 
-总计: 0 PASS | 1 FAIL | 0 WARN | 13 SKIP
-最高优先级问题: 场景 00 服务健康检查 - GET /demo/status failed: request failed after 0.00s: All connection attempts failed
+Scenario 00 | Service health check            | PASS | 0.01s
+Scenario 01 | Warm user recommendation        | FAIL | 15.00s
+Scenario 02 | Cold user degradation           | FAIL | 15.01s
+Scenario 03 | Multi-turn session reuse        | FAIL | 15.02s
+Scenario 04 | Positive feedback loop          | FAIL | 15.02s
+Scenario 05 | Repeated negative feedback      | FAIL | 15.02s
+Scenario 06 | Missing session_id -> 400       | FAIL | 15.01s
+Scenario 07 | Empty query -> 400              | FAIL | 15.01s
+Scenario 08 | Non-existent user degradation   | FAIL | 15.02s
+Scenario 09 | Oversized top_k auto-clamp      | FAIL | 15.02s
+Scenario 10 | Profile endpoint init check     | FAIL | 15.01s
+Scenario 11 | Recommendation quality check    | FAIL | 15.01s
+Scenario 12 | Latency baseline benchmark      | FAIL | POST /user_api timed out after 15.01s: 
+Scenario 13 | Full closed-loop E2E            | FAIL | 15.02s
+
+Total: 1 PASS | 13 FAIL | 0 WARN
+Critical issues: Scenario 01 | Warm user recommendation | POST /user_api timed out after 15.00s: ; Scenario 02 | Cold user degradation | POST /user_api timed out after 15.01s: ; Scenario 03 | Multi-turn session reuse | POST /user_api timed out after 15.02s: 
