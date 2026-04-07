@@ -6,6 +6,7 @@ import os
 import json
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Iterable, Any, Dict, List
+import httpx
 
 try:  # Optional dependency available at runtime in agents
     import openai  # type: ignore
@@ -13,11 +14,14 @@ except Exception:  # pragma: no cover - keep base utils import-safe
     openai = None  # type: ignore
 
 _async_client: Any = None
+_async_client_init_failed = False
 
 
 def _get_async_openai_client() -> Any:
     """Lazily create and cache a single AsyncOpenAI client instance."""
-    global _async_client
+    global _async_client, _async_client_init_failed
+    if _async_client_init_failed:
+        return None
     if _async_client is None and openai is not None:
         api_key = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
         base_url = os.getenv("OPENAI_BASE_URL")
@@ -27,11 +31,32 @@ def _get_async_openai_client() -> Any:
         if base_url and "dashscope.aliyuncs.com" in base_url and api_key:
             default_headers = {"X-DashScope-Proxy-Authorization": f"Bearer {api_key}"}
 
-        _async_client = openai.AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            default_headers=default_headers,
-        )
+        # Avoid inheriting SOCKS proxy env from host shell by default, which can
+        # break client init when optional socks deps are not installed.
+        trust_env = str(os.getenv("OPENAI_TRUST_ENV", "0")).strip().lower() in {"1", "true", "yes", "on"}
+        timeout_s = float(os.getenv("OPENAI_HTTP_TIMEOUT", "30"))
+        http_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout_s), trust_env=trust_env)
+        try:
+            _async_client = openai.AsyncOpenAI(
+                api_key=api_key,
+                base_url=base_url,
+                default_headers=default_headers,
+                http_client=http_client,
+            )
+        except Exception:
+            _async_client_init_failed = True
+            try:
+                import asyncio
+
+                loop = asyncio.get_running_loop()
+                loop.create_task(http_client.aclose())
+            except Exception:
+                pass
+            logging.getLogger("agent.base").warning(
+                "event=openai_client_init_failed trust_env=%s fallback=disable_llm",
+                trust_env,
+            )
+            return None
     return _async_client
 
 # Beijing timezone (UTC+8)
@@ -143,13 +168,32 @@ async def call_openai_chat(
         kwargs["temperature"] = temperature
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
+    timeout_errors: tuple[type[BaseException], ...] = (httpx.TimeoutException,)
+    api_timeout_error = getattr(openai, "APITimeoutError", None) if openai is not None else None
+    if isinstance(api_timeout_error, type):
+        timeout_errors = timeout_errors + (api_timeout_error,)
     try:
         chat_completion = await client.chat.completions.create(**kwargs)
-    except TypeError:
-        chat_completion = await client.chat.completions.create(
-            messages=messages,
-            model=model,
+    except timeout_errors as exc:
+        logging.getLogger("agent.base").warning(
+            "event=openai_chat_timeout model=%s error=%s",
+            model,
+            exc,
         )
+        return ""
+    except TypeError:
+        try:
+            chat_completion = await client.chat.completions.create(
+                messages=messages,
+                model=model,
+            )
+        except timeout_errors as exc:
+            logging.getLogger("agent.base").warning(
+                "event=openai_chat_timeout model=%s error=%s",
+                model,
+                exc,
+            )
+            return ""
     return getattr(chat_completion.choices[0].message, "content", "") or ""
 
 

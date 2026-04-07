@@ -129,6 +129,7 @@ def retrieve_books_by_query(
     if not q_tokens:
         return [dict(item) for item in pool[: max(1, top_k)]]
 
+    query_seed = sum(ord(ch) for ch in query or "")
     scored: List[tuple[float, Dict[str, Any]]] = []
     for idx, book in enumerate(pool):
         tokens = _tokenize(_book_text(book))
@@ -139,7 +140,8 @@ def retrieve_books_by_query(
             g = str(genre).replace("_", " ").lower()
             if any(part in q_tokens for part in g.split()):
                 genre_bonus += 0.05
-        score = coverage + min(0.15, genre_bonus) + 0.001 * (1.0 - idx / max(1, len(pool)))
+        tie_breaker = (((query_seed + idx * 17) % 997) / 997000.0)
+        score = coverage + min(0.15, genre_bonus) + 0.001 * (1.0 - idx / max(1, len(pool))) + tie_breaker
         scored.append((score, book))
 
     scored.sort(key=lambda row: row[0], reverse=True)

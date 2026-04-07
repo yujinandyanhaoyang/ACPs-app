@@ -34,5 +34,5 @@ url = "redis://localhost:6379/1"
 
 [bandit]
 UCB_C = 1.41
-MAX_ROUNDS = 3
+MAX_ROUNDS = 1
 MIN_TRIALS_FOR_CONFIDENCE = 20

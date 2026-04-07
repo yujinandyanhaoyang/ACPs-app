@@ -1,20 +1,20 @@
 ===== ACPs Reading Concierge UAT Report =====
-Timestamp: 2026-04-07T16:06:52+08:00
+Timestamp: 2026-04-07T17:20:52+08:00
 
-Scenario 00 | Service health check            | PASS | 0.01s
-Scenario 01 | Warm user recommendation        | FAIL | 15.01s
-Scenario 02 | Cold user degradation           | FAIL | 15.02s
-Scenario 03 | Multi-turn session reuse        | FAIL | 15.02s
-Scenario 04 | Positive feedback loop          | FAIL | 15.02s
-Scenario 05 | Repeated negative feedback      | FAIL | 15.01s
-Scenario 06 | Missing session_id -> 400       | FAIL | 15.01s
-Scenario 07 | Empty query -> 400              | FAIL | 15.01s
-Scenario 08 | Non-existent user degradation   | FAIL | 15.02s
-Scenario 09 | Oversized top_k auto-clamp      | FAIL | 15.02s
-Scenario 10 | Profile endpoint init check     | FAIL | 15.02s
-Scenario 11 | Recommendation quality check    | FAIL | 15.00s
-Scenario 12 | Latency baseline benchmark      | FAIL | POST /user_api timed out after 15.02s: 
-Scenario 13 | Full closed-loop E2E            | FAIL | 15.02s
+Scenario 00 | Service health check            | PASS | 0.00s
+Scenario 01 | Warm user recommendation        | PASS | 44.44s
+Scenario 02 | Cold user degradation           | PASS | 43.37s
+Scenario 03 | Multi-turn session reuse        | PASS | 90.62s
+Scenario 04 | Positive feedback loop          | PASS | 0.08s
+Scenario 05 | Repeated negative feedback      | PASS | 0.01s
+Scenario 06 | Missing session_id -> 400       | PASS | 0.01s
+Scenario 07 | Empty query -> 400              | PASS | 0.00s
+Scenario 08 | Non-existent user degradation   | PASS | 44.07s
+Scenario 09 | Oversized top_k auto-clamp      | PASS | 43.77s
+Scenario 10 | Profile endpoint init check     | PASS | 0.01s
+Scenario 11 | Recommendation quality check    | PASS | 0.00s
+Scenario 12 | Latency baseline benchmark      | WARN | P50=43.69s | P90=44.62s | Max=44.62s
+Scenario 13 | Full closed-loop E2E            | PASS | 88.41s
 
-Total: 1 PASS | 13 FAIL | 0 WARN
-Critical issues: Scenario 01 | Warm user recommendation | POST /user_api timed out after 15.01s: ; Scenario 02 | Cold user degradation | POST /user_api timed out after 15.02s: ; Scenario 03 | Multi-turn session reuse | POST /user_api timed out after 15.02s: 
+Total: 13 PASS | 0 FAIL | 1 WARN
+Critical issues: None

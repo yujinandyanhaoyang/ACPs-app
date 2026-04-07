@@ -51,7 +51,7 @@ class AgentConfig:
     port: int = 8213
     redis_url: str = "redis://localhost:6379/1"
     ucb_c: float = 1.41
-    max_rounds: int = 3
+    max_rounds: int = 1
     min_trials_for_confidence: int = 20
 
 
@@ -273,6 +273,12 @@ def _ucb_pick(context_type: str, confidence: float, divergence: float, strategy_
     min_trials = min(float(records[a]["trials"]) for a in actions)
 
     if min_trials < CFG.min_trials_for_confidence:
+        if confidence >= 0.7 and divergence >= 0.5:
+            return "balanced", records
+        if confidence >= 0.7:
+            return "profile_dominant", records
+        if divergence >= 0.7:
+            return "content_dominant", records
         return "conservative", records
 
     total_trials = sum(float(records[a]["trials"]) for a in actions)
@@ -336,12 +342,14 @@ async def _arbitrate(payload: Dict[str, Any]) -> Dict[str, Any]:
     content = payload.get("content_proposal") if isinstance(payload.get("content_proposal"), dict) else {}
     profile_supp = payload.get("rpa_supplement") if isinstance(payload.get("rpa_supplement"), dict) else {}
     content_supp = payload.get("bca_supplement") if isinstance(payload.get("bca_supplement"), dict) else {}
+    cold_start = bool(profile.get("cold_start") or payload.get("cold_start"))
+    max_rounds = 2 if cold_start else 1
 
     rounds: List[Dict[str, Any]] = []
     converged = False
     fallback_applied = False
 
-    for round_idx in range(1, max(1, CFG.max_rounds) + 1):
+    for round_idx in range(1, max(1, max_rounds) + 1):
         issues = _quality_issues(profile, content, payload)
         if not issues:
             converged = True
@@ -371,7 +379,7 @@ async def _arbitrate(payload: Dict[str, Any]) -> Dict[str, Any]:
 
         rounds.append(round_item)
 
-        if round_idx >= CFG.max_rounds:
+        if round_idx >= max_rounds:
             fallback_applied = True
             break
 

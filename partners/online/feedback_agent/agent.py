@@ -246,7 +246,12 @@ def _resolve_partner(partner_key: str) -> Dict[str, Any]:
 
 async def _invoke_local(app_obj: FastAPI, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     rpc = _mk_rpc_payload(payload)
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app_obj), base_url="http://agent", timeout=20) as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app_obj),
+        base_url="http://agent",
+        timeout=20,
+        trust_env=False,
+    ) as client:
         resp = await client.post(endpoint, json=rpc)
     resp.raise_for_status()
     return resp.json()
@@ -254,10 +259,21 @@ async def _invoke_local(app_obj: FastAPI, endpoint: str, payload: Dict[str, Any]
 
 async def _invoke_remote(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     rpc = _mk_rpc_payload(payload)
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with httpx.AsyncClient(timeout=20, trust_env=False) as client:
         resp = await client.post(url, json=rpc)
     resp.raise_for_status()
     return resp.json()
+
+
+def _extract_result(rpc_resp: Dict[str, Any]) -> Dict[str, Any]:
+    products = ((rpc_resp or {}).get("result") or {}).get("products") or []
+    if not products:
+        return {}
+    items = products[0].get("dataItems") or []
+    for item in items:
+        if item.get("type") == "data" and isinstance(item.get("data"), dict):
+            return item["data"]
+    return {}
 
 
 async def _emit_inform(partner_key: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -307,6 +323,9 @@ async def _process_event(event: BehaviorEvent) -> Dict[str, Any]:
         rating_count = STORE.incr_rating_count()
 
     informs: List[Dict[str, Any]] = []
+    rda_reward_updated = False
+    profile_updated = False
+    cf_retrain_triggered = False
 
     if _session_completed(event_type, event.session_completed):
         rda_payload = {
@@ -319,9 +338,26 @@ async def _process_event(event: BehaviorEvent) -> Dict[str, Any]:
             "user_id": event.user_id,
             "source": "feedback_agent",
         }
-        informs.append(await _emit_inform("rda", rda_payload))
+        rda_emit = await _emit_inform("rda", rda_payload)
+        informs.append(rda_emit)
+        rda_reward_updated = str(rda_emit.get("status") or "").lower() == "sent"
 
-    if CFG.user_update_threshold > 0 and user_count % CFG.user_update_threshold == 0:
+    should_update_profile = weight > 0 or (CFG.user_update_threshold > 0 and user_count >= CFG.user_update_threshold)
+    if should_update_profile:
+        profile_snapshot = await _invoke_local(
+            reader_profile.app,
+            "/reader-profile/rpc",
+            {
+                "performative": "request",
+                "action": "uma.build_profile",
+                "user_id": event.user_id,
+            },
+        )
+        profile_data = _extract_result(profile_snapshot)
+        profile_event_count = int(profile_data.get("event_count") or 0)
+        should_update_profile = (profile_event_count + user_count) >= CFG.user_update_threshold
+
+    if should_update_profile:
         rpa_payload = {
             "performative": "inform",
             "action": "feedback.update_profile",
@@ -330,7 +366,9 @@ async def _process_event(event: BehaviorEvent) -> Dict[str, Any]:
             "event_count": user_count,
             "source": "feedback_agent",
         }
-        informs.append(await _emit_inform("rpa", rpa_payload))
+        rpa_emit = await _emit_inform("rpa", rpa_payload)
+        informs.append(rpa_emit)
+        profile_updated = should_update_profile
 
     if rating_count is not None and CFG.cf_retrain_threshold > 0 and rating_count % CFG.cf_retrain_threshold == 0:
         eng_payload = {
@@ -340,7 +378,9 @@ async def _process_event(event: BehaviorEvent) -> Dict[str, Any]:
             "global_rating_events": rating_count,
             "source": "feedback_agent",
         }
-        informs.append(await _emit_inform("engine", eng_payload))
+        engine_emit = await _emit_inform("engine", eng_payload)
+        informs.append(engine_emit)
+        cf_retrain_triggered = str(engine_emit.get("status") or "").lower() == "sent"
 
     return {
         "status": "accepted",
@@ -350,6 +390,11 @@ async def _process_event(event: BehaviorEvent) -> Dict[str, Any]:
             "global_rating_count": rating_count,
         },
         "informs": informs,
+        "triggers": {
+            "profile_updated": profile_updated,
+            "cf_retrain_triggered": cf_retrain_triggered,
+            "rda_reward_updated": rda_reward_updated,
+        },
     }
 
 

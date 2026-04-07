@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -27,10 +28,12 @@ try:
 except Exception:  # pragma: no cover
     tomllib = None
 
-from agents.reader_profile_agent import profile_agent as reader_profile
-from agents.book_content_agent import book_content_agent as book_content
+from partners.online.reader_profile_agent import agent as reader_profile
+from partners.online.book_content_agent import agent as book_content
+from partners.online.feedback_agent import agent as feedback_agent
 from partners.online.recommendation_decision_agent import agent as recommendation_decision
 from partners.online.recommendation_engine_agent import agent as recommendation_engine
+from services.book_retrieval import load_books, retrieve_books_by_query
 
 load_dotenv()
 
@@ -46,6 +49,7 @@ LOG_LEVEL = str(os.getenv("READING_CONCIERGE_LOG_LEVEL", "INFO")).upper()
 DISCOVERY_BASE_URL = str(os.getenv("DISCOVERY_BASE_URL", "http://127.0.0.1:8005")).rstrip("/")
 DISCOVERY_ENABLED = str(os.getenv("READING_DISCOVERY_ENABLED", "true")).strip().lower() in {"1", "true", "yes", "on"}
 DISCOVERY_TIMEOUT = float(str(os.getenv("READING_DISCOVERY_TIMEOUT", "5")))
+PARTNER_TIMEOUT = float(str(os.getenv("PARTNER_TIMEOUT", "60")))
 
 logger = get_agent_logger("agent.reading_concierge", "READING_CONCIERGE_LOG_LEVEL", LOG_LEVEL)
 
@@ -142,12 +146,34 @@ class UserRequest(BaseModel):
     session_id: Optional[str] = None
     user_id: str = ""
     query: str = ""
-    user_profile: Dict[str, Any] = Field(default_factory=dict)
-    history: List[Dict[str, Any]] = Field(default_factory=list)
-    reviews: List[Dict[str, Any]] = Field(default_factory=list)
-    books: List[Dict[str, Any]] = Field(default_factory=list)
-    candidate_ids: List[str] = Field(default_factory=list)
+    user_profile: Dict[str, Any] = Field(default_factory=dict, deprecated=True)
+    history: List[Dict[str, Any]] = Field(default_factory=list, deprecated=True)
+    reviews: List[Dict[str, Any]] = Field(default_factory=list, deprecated=True)
+    books: List[Dict[str, Any]] = Field(default_factory=list, deprecated=True)
+    candidate_ids: List[str] = Field(default_factory=list, deprecated=True)
     constraints: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ProfileResponse(BaseModel):
+    user_id: str
+    confidence: float
+    cold_start: bool
+    event_count: int
+    behavior_genres: List[str] = Field(default_factory=list)
+    strategy_suggestion: str
+    profile_vector_dim: int
+    model: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FeedbackRequest(BaseModel):
+    user_id: str = ""
+    session_id: str = ""
+    book_id: str = ""
+    event_type: str = ""
+    context_type: Optional[str] = None
+    arm_action: Optional[str] = None
+    reward_override: Optional[float] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 def _resolve_partner(partner_key: str) -> Dict[str, Any]:
@@ -156,6 +182,7 @@ def _resolve_partner(partner_key: str) -> Dict[str, Any]:
         "content": "BOOK_CONTENT_RPC_URL",
         "rda": "RECOMMENDATION_DECISION_RPC_URL",
         "engine": "RECOMMENDATION_ENGINE_RPC_URL",
+        "feedback": "FEEDBACK_AGENT_RPC_URL",
     }
     local_map = {
         "profile": {
@@ -177,6 +204,11 @@ def _resolve_partner(partner_key: str) -> Dict[str, Any]:
             "agent_id": recommendation_engine.AGENT_ID,
             "app": recommendation_engine.app,
             "endpoint": "/recommendation-engine/rpc",
+        },
+        "feedback": {
+            "agent_id": feedback_agent.AGENT_ID,
+            "app": feedback_agent.app,
+            "endpoint": "/feedback/rpc",
         },
     }
     item = dict(local_map[partner_key])
@@ -200,7 +232,7 @@ def _search_discovery(query: str) -> List[Dict[str, Any]]:
         payload = {"query": query, "top_k": 20}
         paths = ["/api/discovery/search", "/acps-adp-v2/discover", "/acps-adp-v2/discover/v1"]
         data = None
-        with httpx.Client(timeout=DISCOVERY_TIMEOUT) as client:
+        with httpx.Client(timeout=DISCOVERY_TIMEOUT, trust_env=False) as client:
             for path in paths:
                 try:
                     resp = client.post(f"{DISCOVERY_BASE_URL}{path}", json=payload)
@@ -298,7 +330,7 @@ def _mk_rpc_payload(task_id: str, payload: Dict[str, Any], command: str = "start
     message = {
         "type": "message",
         "id": str(uuid.uuid4()),
-        "sentAt": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "sentAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "senderRole": "leader",
         "senderId": LEADER_ID,
         "command": command,
@@ -317,7 +349,12 @@ def _mk_rpc_payload(task_id: str, payload: Dict[str, Any], command: str = "start
 
 async def _invoke_local(app_obj: FastAPI, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     rpc = _mk_rpc_payload(f"task-{uuid.uuid4()}", payload)
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app_obj), base_url="http://agent", timeout=30) as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app_obj),
+        base_url="http://agent",
+        timeout=PARTNER_TIMEOUT,
+        trust_env=False,
+    ) as client:
         resp = await client.post(endpoint, json=rpc)
     resp.raise_for_status()
     return resp.json()
@@ -325,7 +362,7 @@ async def _invoke_local(app_obj: FastAPI, endpoint: str, payload: Dict[str, Any]
 
 async def _invoke_remote(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     rpc = _mk_rpc_payload(f"task-{uuid.uuid4()}", payload)
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=PARTNER_TIMEOUT, trust_env=False) as client:
         resp = await client.post(url, json=rpc)
     resp.raise_for_status()
     return resp.json()
@@ -410,15 +447,117 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
     return {"intent": "recommend_books", "constraints": {}, "preferred_genres": [], "scenario_hint": "auto", "response_style": "concise"}
 
 
-async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
+def _normalize_book_row(row: Dict[str, Any], index: int) -> Dict[str, Any]:
+    book_id = str(row.get("book_id") or row.get("id") or row.get("asin") or row.get("title") or f"book_{index}").strip()
+    title = str(row.get("title") or row.get("name") or book_id)
+    author = str(row.get("author") or row.get("authors") or "unknown")
+    description = str(row.get("description") or row.get("desc") or "")
+    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
+    return {
+        "book_id": book_id,
+        "title": title,
+        "author": author,
+        "description": description,
+        "genres": [str(g).strip().lower() for g in genres if str(g).strip()],
+    }
+
+
+def _catalog_index() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
+    raw = load_books()
+    normalized: List[Dict[str, Any]] = []
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for idx, row in enumerate(raw):
+        if not isinstance(row, dict):
+            continue
+        item = _normalize_book_row(row, idx)
+        if not item["book_id"]:
+            continue
+        normalized.append(item)
+        by_id[item["book_id"]] = item
+    return normalized, by_id
+
+
+async def _derive_books_from_query(query: str, candidate_ids: List[str], top_k: int = 5) -> List[Dict[str, Any]]:
+    catalog, by_id = _catalog_index()
+    selected: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for cid in candidate_ids:
+        key = str(cid or "").strip()
+        if not key or key in seen:
+            continue
+        row = by_id.get(key)
+        if row:
+            selected.append(dict(row))
+        else:
+            selected.append(
+                {
+                    "book_id": key,
+                    "title": key,
+                    "author": "unknown",
+                    "description": "",
+                    "genres": [],
+                }
+            )
+        seen.add(key)
+
+    retrieval_size = max(20, min(120, max(1, int(top_k)) * 20))
+    for row in retrieve_books_by_query(query=query, books=catalog, top_k=retrieval_size):
+        normalized = _normalize_book_row(row if isinstance(row, dict) else {}, len(selected))
+        key = normalized["book_id"]
+        if not key or key in seen:
+            continue
+        selected.append(normalized)
+        seen.add(key)
+
+    if query and len(selected) > 1:
+        query_seed = sum(ord(ch) for ch in str(query))
+        offset = query_seed % len(selected)
+        if offset:
+            selected = selected[offset:] + selected[:offset]
+
+    return selected[:max(20, retrieval_size)]
+
+
+def _normalize_recommendations_for_frontend(
+    recommendations: List[Dict[str, Any]],
+    explanations: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    explain_by_id: Dict[str, Dict[str, Any]] = {}
+    for row in explanations:
+        if isinstance(row, dict) and row.get("book_id"):
+            explain_by_id[str(row.get("book_id"))] = row
+
+    normalized: List[Dict[str, Any]] = []
+    for idx, row in enumerate(recommendations):
+        if not isinstance(row, dict):
+            continue
+        book_id = str(row.get("book_id") or f"book_{idx + 1}")
+        explanation = explain_by_id.get(book_id, {})
+        item = dict(row)
+        item["rank"] = int(row.get("rank") or (idx + 1))
+        item["book_id"] = book_id
+        item["score_total"] = float(row.get("score_total") or row.get("composite_score") or 0.0)
+        item["novelty_score"] = float(row.get("novelty_score") or 0.0)
+        item["diversity_score"] = float(row.get("diversity_score") or 0.0)
+        item["score_parts"] = row.get("score_parts") if isinstance(row.get("score_parts"), dict) else {}
+        item["justification"] = str(row.get("justification") or explanation.get("justification") or "")
+        normalized.append(item)
+    return normalized
+
+
+async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False) -> Dict[str, Any]:
     session_id = req.session_id or f"session-{uuid.uuid4()}"
     SESSION_STORE.append_message(session_id, "user", req.query)
+    req_payload = req.model_dump()
 
     intent = await _parse_intent(req.query)
 
     constraints = req.constraints if isinstance(req.constraints, dict) else {}
     ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}
     scoring_weights = constraints.get("scoring_weights") if isinstance(constraints.get("scoring_weights"), dict) else {}
+    requested_top_k = int(constraints.get("top_k") or 5)
+    top_k = max(1, min(requested_top_k, 10))
 
     # 1) Notify RDA to stand by.
     rda_standby_payload = {
@@ -435,17 +574,23 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
         "action": "uma.build_profile",
         "user_id": req.user_id,
         "query": req.query,
-        "user_profile": req.user_profile,
-        "history": req.history,
-        "reviews": req.reviews,
+        "user_profile": req_payload.get("user_profile") if isinstance(req_payload.get("user_profile"), dict) else {},
+        "history": req_payload.get("history") if isinstance(req_payload.get("history"), list) else [],
+        "reviews": req_payload.get("reviews") if isinstance(req_payload.get("reviews"), list) else [],
     }
+    req_books = req_payload.get("books") if isinstance(req_payload.get("books"), list) else []
+    req_candidate_ids = req_payload.get("candidate_ids") if isinstance(req_payload.get("candidate_ids"), list) else []
     content_payload = {
         "performative": "request",
         "action": "bca.build_content_proposal",
         "user_id": req.user_id,
         "query": req.query,
-        "books": req.books,
-        "candidate_ids": req.candidate_ids,
+        "books": req_books if allow_deprecated_payload and req_books else await _derive_books_from_query(
+            query=req.query,
+            candidate_ids=req_candidate_ids if allow_deprecated_payload else [],
+            top_k=top_k,
+        ),
+        "candidate_ids": req_candidate_ids if allow_deprecated_payload else [],
         "declared_genres": intent.get("preferred_genres") or [],
     }
     if ablation_flags.get("disable_alignment"):
@@ -523,7 +668,7 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
         "mmr_lambda": rda_data.get("mmr_lambda", 0.5),
         "strategy": rda_data.get("strategy", "balanced"),
         "candidates": content_outputs.get("content_vectors") or [],
-        "top_k": int((constraints or {}).get("top_k") or 10),
+        "top_k": top_k,
     }
     if ablation_flags.get("disable_cf_path"):
         engine_payload["cf_weight"] = 0.0
@@ -544,13 +689,14 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
 
     recommendations = engine_data.get("recommendations") if isinstance(engine_data.get("recommendations"), list) else []
     explanations = engine_data.get("explanations") if isinstance(engine_data.get("explanations"), list) else []
+    normalized_recommendations = _normalize_recommendations_for_frontend(recommendations, explanations)
 
     response = {
         "session_id": session_id,
         "user_id": req.user_id,
         "leader_id": LEADER_ID,
         "intent": intent,
-        "state": "completed" if recommendations else "needs_input",
+        "state": "completed" if normalized_recommendations else "needs_input",
         "partner_tasks": {
             "rda_standby": {"state": _state(standby_resp), **standby_route},
             "rpa": {"state": profile_state, **profile_route},
@@ -565,7 +711,7 @@ async def _orchestrate(req: UserRequest) -> Dict[str, Any]:
             "engine": engine_data,
         },
         "ablation_flags": ablation_flags,
-        "recommendations": recommendations,
+        "recommendations": normalized_recommendations,
         "explanations": explanations,
     }
 
@@ -603,17 +749,132 @@ async def user_api(req: UserRequest):
     if not str(req.user_id or "").strip():
         raise HTTPException(status_code=422, detail="user_id is required for /user_api")
     if not str(req.query or "").strip():
-        raise HTTPException(status_code=422, detail="query is required")
-    return await _orchestrate(req)
+        raise HTTPException(status_code=400, detail="query is required")
+    return await _orchestrate(req, allow_deprecated_payload=False)
 
 
 @app.post("/user_api_debug")
 async def user_api_debug(req: UserRequest):
     if not str(req.query or "").strip():
-        raise HTTPException(status_code=422, detail="query is required")
+        raise HTTPException(status_code=400, detail="query is required")
     if not str(req.user_id or "").strip():
         req.user_id = f"anon-{uuid.uuid4()}"
-    return await _orchestrate(req)
+    return await _orchestrate(req, allow_deprecated_payload=True)
+
+
+@app.get("/api/profile", response_model=ProfileResponse)
+async def api_profile(user_id: str = ""):
+    uid = str(user_id or "").strip()
+    if not uid:
+        raise HTTPException(status_code=400, detail="user_id is required")
+
+    payload = {
+        "performative": "request",
+        "action": "uma.build_profile",
+        "user_id": uid,
+    }
+    profile_resp, _ = await _invoke_partner("profile", payload)
+    if _state(profile_resp) in {"failed", "rejected", "canceled"}:
+        raise HTTPException(status_code=503, detail="profile agent unavailable")
+
+    profile_data = _extract_result(profile_resp)
+    if not profile_data:
+        raise HTTPException(status_code=404, detail="profile not found")
+
+    model_info = profile_data.get("model") if isinstance(profile_data.get("model"), dict) else {}
+    profile_vector = profile_data.get("profile_vector") if isinstance(profile_data.get("profile_vector"), list) else []
+    lambda_decay = model_info.get("lambda_decay")
+    if lambda_decay is None:
+        lambda_decay = model_info.get("lambda")
+    vector_dim = int(model_info.get("vector_dim") or len(profile_vector) or 0)
+
+    return {
+        "user_id": uid,
+        "confidence": float(profile_data.get("confidence") or 0.0),
+        "cold_start": bool(profile_data.get("cold_start", False)),
+        "event_count": int(profile_data.get("event_count") or 0),
+        "behavior_genres": profile_data.get("behavior_genres") if isinstance(profile_data.get("behavior_genres"), list) else [],
+        "strategy_suggestion": str(profile_data.get("strategy_suggestion") or "balanced"),
+        "profile_vector_dim": vector_dim,
+        "model": {
+            "lambda_decay": float(lambda_decay or 0.0),
+            "vector_dim": vector_dim,
+            "warm_threshold": int(model_info.get("warm_threshold") or 0),
+        },
+    }
+
+
+async def _post_feedback_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
+    webhook_url = str(os.getenv("FEEDBACK_AGENT_WEBHOOK_URL") or "").strip()
+    if webhook_url:
+        async with httpx.AsyncClient(timeout=20, trust_env=False) as client:
+            resp = await client.post(webhook_url, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        return data if isinstance(data, dict) else {}
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=feedback_agent.app),
+        base_url="http://agent",
+        timeout=20,
+        trust_env=False,
+    ) as client:
+        resp = await client.post("/feedback/webhook", json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+    return data if isinstance(data, dict) else {}
+
+
+@app.post("/api/feedback")
+async def api_feedback(req: FeedbackRequest):
+    user_id = str(req.user_id or "").strip()
+    session_id = str(req.session_id or "").strip()
+    book_id = str(req.book_id or "").strip()
+    event_type = str(req.event_type or "").strip().lower()
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    if not book_id:
+        raise HTTPException(status_code=400, detail="book_id is required")
+    if not event_type:
+        raise HTTPException(status_code=400, detail="event_type is required")
+
+    metadata = dict(req.metadata or {})
+    if "book_id" not in metadata:
+        metadata["book_id"] = book_id
+
+    payload = {
+        "user_id": user_id,
+        "event_type": event_type,
+        "session_id": session_id,
+        "context_type": req.context_type,
+        "action": req.arm_action,
+        "reward_override": req.reward_override,
+        "metadata": metadata,
+    }
+    try:
+        feedback_result = await _post_feedback_webhook(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"feedback agent unavailable: {exc}")
+
+    triggers = feedback_result.get("triggers") if isinstance(feedback_result.get("triggers"), dict) else {}
+    event = feedback_result.get("event") if isinstance(feedback_result.get("event"), dict) else {}
+    counters = feedback_result.get("counters") if isinstance(feedback_result.get("counters"), dict) else {}
+    return {
+        "status": str(feedback_result.get("status") or "accepted"),
+        "event_id": str(event.get("event_id") or ""),
+        "counters": {
+            "user_event_count": int(counters.get("user_event_count") or 0),
+            "global_rating_count": int(counters.get("global_rating_count") or 0),
+        },
+        "triggers": {
+            "profile_updated": bool(triggers.get("profile_updated", False)),
+            "cf_retrain_triggered": bool(triggers.get("cf_retrain_triggered", False)),
+            "rda_reward_updated": bool(triggers.get("rda_reward_updated", False)),
+        },
+    }
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any, Dict, List
 
@@ -52,6 +53,61 @@ def _fallback_rationale(item: Dict[str, Any], fallback_template: str) -> str:
     return fallback_template.format(title=title, author=author)
 
 
+async def _generate_one(
+    row: Dict[str, Any],
+    *,
+    main_template: str,
+    fallback_template: str,
+    use_llm: bool,
+    llm_model: str,
+    llm_temperature: float,
+    llm_max_tokens: int,
+) -> Dict[str, Any]:
+    book_id = str(row.get("book_id") or "")
+    title = str(row.get("title") or book_id)
+    author = str(row.get("author") or "Unknown")
+    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
+    genre_tags = ", ".join(str(g) for g in genres if str(g).strip()) or "N/A"
+    content_similarity = _safe_float(row.get("content_sim"), 0.0)
+    cf_evidence = "available" if _safe_float(row.get("cf_score"), 0.0) > 0 else "not available"
+    matched = row.get("matched_prefs") if isinstance(row.get("matched_prefs"), list) else []
+    matched_preferences = ", ".join(str(m) for m in matched if str(m).strip()) or "N/A"
+
+    rationale = _fallback_rationale(row, fallback_template)
+    source = "fallback"
+    if use_llm and main_template.strip():
+        prompt = main_template.format(
+            title=title,
+            author=author,
+            genre_tags=genre_tags,
+            content_similarity=content_similarity,
+            cf_evidence=cf_evidence,
+            matched_preferences=matched_preferences,
+        )
+        try:
+            raw = await call_openai_chat(
+                [
+                    {"role": "system", "content": "You generate concise personalized recommendation rationales."},
+                    {"role": "user", "content": prompt},
+                ],
+                model=llm_model,
+                temperature=llm_temperature,
+                max_tokens=llm_max_tokens,
+            )
+            text = str(raw or "").strip()
+            if text:
+                rationale = text
+                source = "llm"
+        except Exception:
+            source = "fallback"
+
+    return {
+        "book_id": book_id,
+        "justification": rationale,
+        "source": source,
+    }
+
+
 async def generate_rationale(
     final_list: List[Dict[str, Any]],
     prompts: Dict[str, str],
@@ -66,53 +122,18 @@ async def generate_rationale(
     )
 
     use_llm = bool(str(os.getenv("OPENAI_API_KEY") or "").strip()) and bool(main_template.strip())
-    out: List[Dict[str, Any]] = []
-
-    for row in final_list:
-        book_id = str(row.get("book_id") or "")
-        title = str(row.get("title") or book_id)
-        author = str(row.get("author") or "Unknown")
-        genres = row.get("genres") if isinstance(row.get("genres"), list) else []
-        genre_tags = ", ".join(str(g) for g in genres if str(g).strip()) or "N/A"
-        content_similarity = _safe_float(row.get("content_sim"), 0.0)
-        cf_evidence = "available" if _safe_float(row.get("cf_score"), 0.0) > 0 else "not available"
-        matched = row.get("matched_prefs") if isinstance(row.get("matched_prefs"), list) else []
-        matched_preferences = ", ".join(str(m) for m in matched if str(m).strip()) or "N/A"
-
-        rationale = _fallback_rationale(row, fallback_template)
-        source = "fallback"
-        if use_llm:
-            prompt = main_template.format(
-                title=title,
-                author=author,
-                genre_tags=genre_tags,
-                content_similarity=content_similarity,
-                cf_evidence=cf_evidence,
-                matched_preferences=matched_preferences,
-            )
-            try:
-                raw = await call_openai_chat(
-                    [
-                        {"role": "system", "content": "You generate concise personalized recommendation rationales."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    model=llm_model,
-                    temperature=llm_temperature,
-                    max_tokens=llm_max_tokens,
-                )
-                text = str(raw or "").strip()
-                if text:
-                    rationale = text
-                    source = "llm"
-            except Exception:
-                source = "fallback"
-
-        out.append(
-            {
-                "book_id": book_id,
-                "justification": rationale,
-                "source": source,
-            }
+    tasks = [
+        _generate_one(
+            row,
+            main_template=main_template,
+            fallback_template=fallback_template,
+            use_llm=use_llm,
+            llm_model=llm_model,
+            llm_temperature=llm_temperature,
+            llm_max_tokens=llm_max_tokens,
         )
-
-    return out
+        for row in final_list
+    ]
+    if not tasks:
+        return []
+    return await asyncio.gather(*tasks)

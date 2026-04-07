@@ -147,6 +147,12 @@ def _resolve_sentence_transformer(model_name: str):
 		return None
 
 
+def _hash_fallback_embeddings(texts: List[str], fallback_dim: int) -> Tuple[List[List[float]], Dict[str, Any]]:
+	vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in texts]
+	dim = len(vectors[0]) if vectors else 0
+	return vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
+
+
 def generate_text_embeddings(
 	texts: Iterable[str],
 	model_name: str,
@@ -179,7 +185,12 @@ async def _resolve_dashscope_embeddings(
 ) -> Tuple[List[List[float]], Dict[str, Any]]:
 	try:
 		import openai  # type: ignore
-		client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+		import httpx
+		client = openai.AsyncOpenAI(
+			api_key=api_key,
+			base_url=base_url,
+			http_client=httpx.AsyncClient(timeout=60, trust_env=False),
+		)
 		response = await client.embeddings.create(model=model_name, input=texts)
 		embeddings: List[List[float]] = []
 		for row in response.data or []:
@@ -207,22 +218,17 @@ async def generate_text_embeddings_async(
 		vectors, meta = await _resolve_dashscope_embeddings(text_list, model_name, base_url, api_key)
 		if vectors:
 			return vectors, meta
-
-	effective_model = str(model_name or "").strip()
-	if not (api_key and base_url):
-		remote_like_model = (
-			effective_model.startswith("text-embedding")
-			or effective_model.startswith("qwen")
+		_LOGGER.info(
+			"event=dashscope_embed_fallback model=%s reason=empty_or_failed_response",
+			model_name,
 		)
-		if remote_like_model:
-			_LOGGER.info(
-				"event=offline_model_switch from_model=%s to_model=%s reason=offline_no_api",
-				effective_model,
-				_DEFAULT_OFFLINE_EMBED_MODEL,
-			)
-			effective_model = _DEFAULT_OFFLINE_EMBED_MODEL
 
-	return generate_text_embeddings(text_list, model_name=effective_model, fallback_dim=fallback_dim)
+	if not (api_key and base_url):
+		_LOGGER.info(
+			"event=offline_embed_fallback model=%s reason=missing_api_key_or_base_url",
+			model_name,
+		)
+	return _hash_fallback_embeddings(text_list, fallback_dim)
 
 
 def _token_features(book: Dict[str, Any]) -> List[str]:
