@@ -1414,64 +1414,6 @@
       { emoji: '👎', reward: -0.5, label: 'Skipped' },
       { emoji: '❌', reward: -0.8, label: 'Not interested' },
     ];
-    const DEFAULT_BOOKS = [
-      {
-        book_id: 'demo-b1',
-        title: 'Foundation',
-        author: 'Isaac Asimov',
-        description: 'A classic saga about psychohistory, empire, and the long arc of civilization.',
-        genres: ['science_fiction', 'classic', 'politics'],
-      },
-      {
-        book_id: 'demo-b2',
-        title: 'The Left Hand of Darkness',
-        author: 'Ursula K. Le Guin',
-        description: 'A deeply humane story about culture, identity, and diplomacy on an icy world.',
-        genres: ['science_fiction', 'anthropology', 'literary'],
-      },
-      {
-        book_id: 'demo-b3',
-        title: 'The Dispossessed',
-        author: 'Ursula K. Le Guin',
-        description: 'An anarchist moon and the tension between freedom, science, and society.',
-        genres: ['science_fiction', 'politics', 'philosophy'],
-      },
-      {
-        book_id: 'demo-b4',
-        title: 'Hyperion',
-        author: 'Dan Simmons',
-        description: 'A future pilgrimage story that blends big ideas, mystery, and rich worldbuilding.',
-        genres: ['science_fiction', 'adventure', 'epic'],
-      },
-      {
-        book_id: 'demo-b5',
-        title: '1984',
-        author: 'George Orwell',
-        description: 'A political dystopia about surveillance, propaganda, and the cost of control.',
-        genres: ['dystopian', 'politics', 'classic'],
-      },
-      {
-        book_id: 'demo-b6',
-        title: 'Sapiens',
-        author: 'Yuval Noah Harari',
-        description: 'A broad history of humanity that pairs well with readers who like social context.',
-        genres: ['history', 'nonfiction', 'culture'],
-      },
-      {
-        book_id: 'demo-b7',
-        title: 'The Windup Girl',
-        author: 'Paolo Bacigalupi',
-        description: 'Biotech, climate pressure, and power struggles in a far-future world.',
-        genres: ['science_fiction', 'climate', 'speculative'],
-      },
-      {
-        book_id: 'demo-b8',
-        title: 'Station Eleven',
-        author: 'Emily St. John Mandel',
-        description: 'A literary post-collapse novel about memory, art, and human connection.',
-        genres: ['literary', 'post_apocalyptic', 'drama'],
-      },
-    ];
     const PIPELINE_STEPS = [
       { key: 'RC', name: 'Reading Concierge', abbr: 'RC' },
       { key: 'RPA', name: 'Reader Profile Agent', abbr: 'RPA' },
@@ -2077,7 +2019,7 @@
 
     function readDebugPayloadOverride() {
       if (!el('debugPayloadOverride').checked) {
-        return { user_profile: {}, history: [], books: [] };
+        return { user_profile: {}, history: [] };
       }
 
       const profile = JSON.parse(el('userProfileJson').value || '{}');
@@ -2089,27 +2031,18 @@
         throw new Error('History JSON must be an array.');
       }
 
-      return { user_profile: profile, history, books: [] };
+      return { user_profile: profile, history };
     }
 
     function buildPayload() {
-      const debugPayload = readDebugPayloadOverride();
-      const books = el('debugPayloadOverride').checked
-        ? debugPayload.books
-        : (debugPayload.books.length ? debugPayload.books : DEFAULT_BOOKS);
-      state.submittedBooks = books;
+      state.submittedBooks = [];
       return {
         user_id: state.userId,
         query: el('query').value.trim(),
-        user_profile: debugPayload.user_profile,
-        history: debugPayload.history,
-        books,
+        session_id: state.sessionId || null,
         constraints: {
           scenario: state.scenario,
           top_k: state.topK,
-          strict_remote_validation: el('strictRemoteValidation').value === 'true',
-          debug_payload_override: el('debugPayloadOverride').checked,
-          ablation: true,
         },
       };
     }
