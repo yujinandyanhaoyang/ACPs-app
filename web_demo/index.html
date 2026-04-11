@@ -1152,8 +1152,10 @@
         <h2>Profile-aware recommendations with transparent arbitration, scoring, and feedback loops.</h2>
         <p>
           This demo mirrors the architecture in the prompt-engineering guide while staying compatible with the
-          existing backend at <code>http://localhost:8000</code>. It prefers the newer architecture paths when
-          available and falls back to the current <code>/user_api</code> orchestration endpoint.
+          current backend origin. When served over HTTP(S), it uses the page origin automatically and falls back
+          to <code>http://localhost:8000</code> only for local file-based development. It prefers the newer
+          architecture paths when available and falls back to the current <code>/user_api</code> orchestration
+          endpoint.
         </p>
       </div>
       <div class="hero-grid">
@@ -1404,7 +1406,17 @@
   <div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
 
   <script>
-    const API_BASE = window.API_BASE || 'http://localhost:8000';
+    function resolveApiBase() {
+      if (typeof window.API_BASE === 'string' && window.API_BASE.trim()) {
+        return window.API_BASE.trim().replace(/\/$/, '');
+      }
+      if (window.location && window.location.origin && window.location.origin !== 'null') {
+        return window.location.origin.replace(/\/$/, '');
+      }
+      return 'http://localhost:8000';
+    }
+
+    const API_BASE = resolveApiBase();
     const STORAGE_KEY = 'acps-reading-demo-state';
     const FEEDBACK_OPTS = [
       { emoji: '📖', reward: 1.0, label: 'Read to the end' },
