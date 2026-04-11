@@ -1,0 +1,239 @@
+nohup: ignoring input
+2026-04-11 18:51:25+0800 | WARNING | partner.recommendation_decision_agent | event=redis_client_unavailable fallback=local_file
+2026-04-11 18:51:25+0800 | WARNING | partner.feedback_agent | event=redis_client_unavailable fallback=memory
+INFO:     Started server process [14239]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8210 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59338 - "GET /demo/status HTTP/1.1" 200 OK
+2026-04-11 18:51:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:52:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:52:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 18:52:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:52:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 18:52:47+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:53:30+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:53:30+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 18:53:30+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:53:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     111.198.54.250:58755 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+2026-04-11 18:53:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:54:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:54:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 18:54:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:54:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 18:54:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:55:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:55:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+event=openai_chat_timeout model=qwen3.5-27b error=Request timed out.
+2026-04-11 18:55:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:55:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 18:55:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:56:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:56:31+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+event=openai_chat_timeout model=qwen3.5-27b error=Request timed out.
+2026-04-11 18:56:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:56:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:56286 - "POST /api/feedback HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:56300 - "POST /user_api HTTP/1.1" 400 Bad Request
+2026-04-11 18:56:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:57:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:57:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 18:57:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:57:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 18:57:49+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:58:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:58:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 18:58:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:58:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     111.198.54.250:62759 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+2026-04-11 18:58:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:52964 - "GET /api/profile?user_id=demo_user_001 HTTP/1.1" 200 OK
+2026-04-11 18:58:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:52964 - "GET /api/profile?user_id=ghost_user_99999 HTTP/1.1" 200 OK
+2026-04-11 18:58:49+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:59:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 18:59:32+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 18:59:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 18:59:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 18:59:49+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:00:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:00:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:00:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:00:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:45830 - "GET /demo/status HTTP/1.1" 200 OK
+2026-04-11 19:00:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:45830 - "GET /api/profile?user_id=demo_user_001 HTTP/1.1" 200 OK
+2026-04-11 19:00:49+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:01:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:01:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:01:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:01:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     111.198.54.250:1761 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:48794 - "GET /demo/status HTTP/1.1" 200 OK
+2026-04-11 19:04:49+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:05:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:05:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:05:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:05:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 19:05:49+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:06:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:06:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:06:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:06:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 19:06:50+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:07:33+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:07:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:07:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:07:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 19:07:50+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:08:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:08:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:08:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:08:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+2026-04-11 19:08:50+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:09:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:09:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+event=openai_chat_timeout model=qwen3.5-27b error=Request timed out.
+event=openai_chat_timeout model=qwen3.5-27b error=Request timed out.
+INFO:     111.198.54.250:5378 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+2026-04-11 19:09:35+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:09:35+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:48076 - "POST /user_api HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48076 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48076 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48076 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34994 - "POST /api/feedback HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:35004 - "POST /user_api HTTP/1.1" 400 Bad Request
+2026-04-11 19:09:36+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:10:21+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:10:21+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:10:21+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:10:22+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:52832 - "GET /demo/status HTTP/1.1" 200 OK
+2026-04-11 19:13:21+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:14:05+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:14:06+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:14:06+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:14:06+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:52838 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:14:08+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:14:52+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:14:52+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+INFO:     111.198.54.250:8994 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+2026-04-11 19:14:52+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:14:52+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:35210 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:14:53+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:15:37+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:15:37+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:15:37+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:15:37+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:45024 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:15:39+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:16:23+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:16:23+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:16:23+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:16:23+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:45024 - "POST /user_api HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "POST /api/feedback HTTP/1.1" 200 OK
+2026-04-11 19:16:24+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:59300 - "GET /api/profile?user_id=demo_user_001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59312 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59312 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59312 - "POST /api/feedback HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59324 - "POST /api/feedback HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:59336 - "POST /user_api HTTP/1.1" 400 Bad Request
+2026-04-11 19:16:25+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:17:09+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:17:09+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:17:10+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:17:10+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:59344 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:17:11+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:17:56+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:17:56+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:17:56+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:17:56+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:57264 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:17:56+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:44442 - "GET /api/profile?user_id=demo_user_001 HTTP/1.1" 200 OK
+2026-04-11 19:17:56+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:44442 - "GET /api/profile?user_id=ghost_user_99999 HTTP/1.1" 200 OK
+2026-04-11 19:17:57+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:18:42+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:18:42+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:18:42+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:18:42+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:44452 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:18:44+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:19:29+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:19:29+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+INFO:     111.198.54.250:12703 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+2026-04-11 19:19:29+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:19:29+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:44452 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:19:30+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:20:15+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:20:15+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:20:15+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:20:15+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:44452 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:20:16+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:21:01+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:21:01+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:21:01+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:21:01+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:44452 - "POST /user_api HTTP/1.1" 200 OK
+2026-04-11 19:21:03+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:21:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:21:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:21:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:21:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:44452 - "POST /user_api HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34848 - "GET /demo/status HTTP/1.1" 200 OK
+2026-04-11 19:21:48+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:34848 - "GET /api/profile?user_id=demo_user_001 HTTP/1.1" 200 OK
+2026-04-11 19:21:50+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:22:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:22:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:22:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:22:34+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:34848 - "POST /user_api HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34848 - "POST /api/feedback HTTP/1.1" 200 OK
+2026-04-11 19:22:35+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+INFO:     127.0.0.1:34848 - "GET /api/profile?user_id=demo_user_001 HTTP/1.1" 200 OK
+2026-04-11 19:22:36+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:23:19+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=profile expected_aic=1.2.156.3088.0001.00001.2FO018.P0JY4U.1.0PXP
+2026-04-11 19:23:19+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=content expected_aic=1.2.156.3088.0001.00001.KVDS1R.9ABQ25.1.01ST
+2026-04-11 19:23:20+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=rda expected_aic=1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV
+2026-04-11 19:23:20+0800 | WARNING | agent.reading_concierge | event=partner_discovery_miss partner=engine expected_aic=1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY
+INFO:     127.0.0.1:34848 - "POST /user_api HTTP/1.1" 200 OK
+INFO:     111.198.54.250:16141 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+INFO:     59.64.129.139:59355 - "GET /demo/status HTTP/1.1" 200 OK
+INFO:     59.64.129.139:49707 - "GET /demo/status HTTP/1.1" 200 OK
+INFO:     59.64.129.139:49711 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     59.64.129.139:56439 - "GET /demo/status HTTP/1.1" 200 OK
+INFO:     59.64.129.139:56498 - "GET /demo/status HTTP/1.1" 200 OK
+INFO:     111.198.54.250:20007 - "GET /user_api HTTP/1.1" 405 Method Not Allowed
+INFO:     59.64.129.139:62620 - "GET /demo HTTP/1.1" 200 OK
+INFO:     59.64.129.139:57015 - "GET /demo/status HTTP/1.1" 200 OK

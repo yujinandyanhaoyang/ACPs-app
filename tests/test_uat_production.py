@@ -13,7 +13,7 @@ import httpx
 import pytest
 
 
-BASE_URL = str(os.getenv("UAT_BASE_URL") or "http://8.146.235.243:8210").rstrip("/")
+BASE_URL = str(os.getenv("UAT_BASE_URL") or "http://127.0.0.1:8210").rstrip("/")
 TIMEOUT = 60.0
 USER_WARM = "demo_user_001"
 USER_COLD = "brand_new_user_uat_9999"
@@ -113,6 +113,8 @@ def _scenario_context(scenario_id: str):
             detail=meta["detail"],
             duration_s=time.perf_counter() - started_at,
         )
+        raise
+        raise
         raise
     else:
         _record_result(
@@ -342,7 +344,7 @@ async def test_scenario_00_service_health_check():
             if error:
                 _mark_backend_unavailable(error)
                 raise AssertionError(
-                    "ABORT: Production server at 8.146.235.243:8210 is not reachable."
+                    "ABORT: Production server at 127.0.0.1:8210 is not reachable."
                 )
             assert status == 200, f"GET /demo/status expected HTTP 200, got {status}; body={body}"
             assert body.get("service") == "reading_concierge", f"GET /demo/status service mismatch: {body}"

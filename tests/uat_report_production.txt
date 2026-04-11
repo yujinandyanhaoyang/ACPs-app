@@ -1,0 +1,20 @@
+===== ACPs Reading Concierge Production UAT Report =====
+Timestamp: 2026-04-11T19:23:20+08:00
+
+Scenario 00 | Service health check            | PASS | 0.00s
+Scenario 01 | Warm user recommendation        | PASS | 45.75s
+Scenario 02 | Cold user degradation           | PASS | 46.10s
+Scenario 03 | Multi-turn session reuse        | PASS | 91.21s
+Scenario 04 | Positive feedback loop          | PASS | 0.23s
+Scenario 05 | Repeated negative feedback      | PASS | 0.03s
+Scenario 06 | Missing session_id -> 400       | PASS | 0.01s
+Scenario 07 | Empty query -> 400              | PASS | 0.00s
+Scenario 08 | Non-existent user degradation   | PASS | 46.12s
+Scenario 09 | Oversized top_k auto-clamp      | PASS | 46.29s
+Scenario 10 | Profile endpoint init check     | PASS | 0.07s
+Scenario 11 | Recommendation quality check    | PASS | 0.00s
+Scenario 12 | Latency baseline benchmark      | WARN | P50=46.32s | P90=47.09s | Max=47.09s
+Scenario 13 | Full closed-loop E2E            | PASS | 91.66s
+
+Total: 13 PASS | 0 FAIL | 1 WARN
+Critical issues: None

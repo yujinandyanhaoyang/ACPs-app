@@ -133,6 +133,8 @@ def _scenario_context(scenario_id: str):
             duration_s=time.perf_counter() - started_at,
         )
         raise
+        raise
+        raise
     else:
         _record_result(
             scenario_id,

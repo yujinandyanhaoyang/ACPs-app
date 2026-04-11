@@ -49,7 +49,7 @@ class AgentConfig:
     faiss_index_path: str = "data/book_faiss.index"
     als_model_path: str = "data/als_model.npz"
     hnswlib_path: str = "data/user_sim.bin"
-    llm_model: str = "qwen3.5-27b"
+    llm_model: str = "qwen-flash-character"
     llm_temperature: float = 0.4
     llm_max_tokens: int = 300
     confidence_penalty_threshold: float = 0.6
