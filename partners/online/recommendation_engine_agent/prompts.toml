@@ -1,19 +1,27 @@
 [explanation_main]
 template = """
-You are a professional book recommendation assistant.
-Given the following evidence, generate a concise and personalized recommendation rationale (2–3 sentences).
+You are a helpful book recommendation assistant.
+Write a 2-3 sentence personalized recommendation explanation in English.
 
-Book: {title} by {author}
-Genres: {genre_tags}
-Content similarity to user profile: {content_similarity:.2f}
-Collaborative filtering evidence: {cf_evidence}
-Matched user preferences: {matched_preferences}
+User's request: {query}
 
-Rationale:
+Book details:
+- Title: {title}
+- Author: {author}
+- Genres: {genre_tags}
+- Description: {description}
+
+Evidence:
+- Content similarity score: {content_similarity:.2f}
+- Collaborative filtering: {cf_evidence}
+- Matched user preferences: {matched_preferences}
+
+Requirements:
+- Directly mention how this book relates to the user's request
+- Name at least one specific genre or theme from the book
+- Keep the tone natural and conversational
+- Output only the explanation text, no preamble or prefix
 """
 
 [explanation_fallback]
-template = """
-Based on your reading history and the characteristics of this book,
-we believe "{title}" by {author} may be of interest to you.
-"""
+template = "Because you're interested in {genre_tags}, we recommend \"{title}\" by {author}. {description}"

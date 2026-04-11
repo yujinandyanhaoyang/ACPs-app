@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import math
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -9,6 +11,10 @@ try:
     import numpy as np
 except Exception:  # pragma: no cover
     np = None  # type: ignore
+
+
+logger = logging.getLogger(__name__)
+_BOOK_META_CACHE: Dict[str, Dict[str, Any]] | None = None
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -53,7 +59,14 @@ def _normalize_candidates(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
             continue
         item = dict(row)
         item["book_id"] = book_id
-        item.setdefault("title", book_id)
+        if not str(item.get("title") or "").strip():
+            item["title"] = ""
+        if not str(item.get("author") or "").strip():
+            item["author"] = ""
+        if not isinstance(item.get("genres"), list):
+            item["genres"] = []
+        if not str(item.get("description") or "").strip():
+            item["description"] = ""
         item["_vector"] = _extract_vector(item)
         out.append(item)
     return out
@@ -83,6 +96,85 @@ def _load_json(path: Path) -> Dict[str, Any]:
         return data if isinstance(data, dict) else {}
     except Exception:
         return {}
+
+
+def _resolve_metadata_path() -> Path | None:
+    root = str(os.getenv("BOOK_RETRIEVAL_DATASET_PATH") or "").strip()
+    if not root:
+        return None
+    base = Path(root)
+    candidates = [
+        base / "processed" / "goodreads" / "books_master.jsonl",
+        base / "processed" / "books_min.jsonl",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    logger.warning("event=metadata_source_missing root=%s", root)
+    return None
+
+
+def _load_book_metadata() -> Dict[str, Dict[str, Any]]:
+    global _BOOK_META_CACHE
+    if _BOOK_META_CACHE is not None:
+        return _BOOK_META_CACHE
+
+    path = _resolve_metadata_path()
+    if path is None:
+        _BOOK_META_CACHE = {}
+        return _BOOK_META_CACHE
+
+    meta: Dict[str, Dict[str, Any]] = {}
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                row = json.loads(line)
+                if isinstance(row, dict):
+                    book_id = str(row.get("book_id") or "").strip()
+                    if book_id:
+                        meta[book_id] = row
+    except Exception as exc:
+        logger.warning("event=metadata_load_failed path=%s error=%s", path, exc)
+        meta = {}
+
+    _BOOK_META_CACHE = meta
+    return _BOOK_META_CACHE
+
+
+def _enrich_candidates_with_metadata(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    book_meta = _load_book_metadata()
+    if not book_meta:
+        return candidates
+
+    enriched_count = 0
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        book_id = str(candidate.get("book_id") or "").strip()
+        if not book_id:
+            continue
+        meta = book_meta.get(book_id)
+        if not meta:
+            continue
+
+        before = dict(candidate)
+        if not str(candidate.get("title") or "").strip():
+            candidate["title"] = meta.get("title") or candidate.get("title")
+        if not str(candidate.get("author") or "").strip():
+            candidate["author"] = meta.get("author") or ""
+        if not isinstance(candidate.get("genres"), list) or not candidate.get("genres"):
+            candidate["genres"] = meta.get("genres") or []
+        if not str(candidate.get("description") or "").strip():
+            candidate["description"] = meta.get("description") or meta.get("blurb") or ""
+
+        if candidate != before:
+            enriched_count += 1
+
+    logger.info("event=metadata_enriched total=%d enriched=%d", len(candidates), enriched_count)
+    return candidates
 
 
 def _cf_recall_fallback(
@@ -205,6 +297,7 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
     cf_rows = _cf_recall_fallback(candidates, profile_vector, top_k=cf_top_k, als_model_path=als_model_path)
 
     merged = _merge_ann_cf(ann_rows, cf_rows, ann_weight=ann_weight, cf_weight=cf_weight)
+    merged = _enrich_candidates_with_metadata(merged)
 
     meta = {
         "ann_top_k": ann_top_k,

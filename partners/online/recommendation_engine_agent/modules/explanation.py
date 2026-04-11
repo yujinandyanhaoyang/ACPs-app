@@ -50,7 +50,18 @@ def assess_confidence(preliminary_list: List[Dict[str, Any]]) -> Dict[str, float
 def _fallback_rationale(item: Dict[str, Any], fallback_template: str) -> str:
     title = str(item.get("title") or item.get("book_id") or "this book")
     author = str(item.get("author") or "the author")
-    return fallback_template.format(title=title, author=author)
+    genres = item.get("genres") if isinstance(item.get("genres"), list) else []
+    genre_tags = ", ".join(str(g) for g in genres if str(g).strip()) or "general interest"
+    description = str(item.get("description") or "")
+    try:
+        return fallback_template.format(
+            title=title,
+            author=author,
+            genre_tags=genre_tags,
+            description=description,
+        )
+    except KeyError:
+        return f'We recommend "{title}" by {author}.'
 
 
 async def _generate_one(
@@ -58,6 +69,8 @@ async def _generate_one(
     *,
     main_template: str,
     fallback_template: str,
+    user_query: str = "",
+    description: str = "",
     use_llm: bool,
     llm_model: str,
     llm_temperature: float,
@@ -72,6 +85,8 @@ async def _generate_one(
     cf_evidence = "available" if _safe_float(row.get("cf_score"), 0.0) > 0 else "not available"
     matched = row.get("matched_prefs") if isinstance(row.get("matched_prefs"), list) else []
     matched_preferences = ", ".join(str(m) for m in matched if str(m).strip()) or "N/A"
+    description_text = str(description or "No description available.")
+    query_text = str(user_query or "")
 
     rationale = _fallback_rationale(row, fallback_template)
     source = "fallback"
@@ -83,6 +98,8 @@ async def _generate_one(
             content_similarity=content_similarity,
             cf_evidence=cf_evidence,
             matched_preferences=matched_preferences,
+            description=description_text,
+            query=query_text,
         )
         try:
             raw = await call_openai_chat(
@@ -114,19 +131,29 @@ async def generate_rationale(
     llm_model: str,
     llm_temperature: float,
     llm_max_tokens: int,
+    payload: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     main_template = str(prompts.get("main") or "")
     fallback_template = str(
         prompts.get("fallback")
-        or 'Based on your reading history and the characteristics of this book, we believe "{title}" by {author} may be of interest to you.'
+        or 'Because you are interested in {genre_tags}, we recommend "{title}" by {author}. {description}'
     )
 
-    use_llm = bool(str(os.getenv("OPENAI_API_KEY") or "").strip()) and bool(main_template.strip())
+    _llm_key = (
+        os.getenv("OPENAI_API_KEY")
+        or os.getenv("DASHSCOPE_API_KEY")
+        or os.getenv("LLM_API_KEY")
+        or ""
+    )
+    use_llm = bool(_llm_key.strip()) and bool(main_template.strip())
+    user_query = str((payload or {}).get("query") or "")
     tasks = [
         _generate_one(
             row,
             main_template=main_template,
             fallback_template=fallback_template,
+            user_query=user_query,
+            description=str(row.get("description") or ""),
             use_llm=use_llm,
             llm_model=llm_model,
             llm_temperature=llm_temperature,
