@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -46,16 +46,16 @@ logger = get_agent_logger("partner.recommendation_engine_agent", "RECOMMENDATION
 @dataclass
 class AgentConfig:
     port: int = 8214
-    faiss_index_path: str = "data/book_faiss.index"
-    als_model_path: str = "data/als_model.npz"
-    hnswlib_path: str = "data/user_sim.bin"
-    llm_model: str = "qwen-flash-character"
-    llm_temperature: float = 0.4
-    llm_max_tokens: int = 300
-    confidence_penalty_threshold: float = 0.6
-    penalty_multiplier: float = 0.7
-    default_mmr_lambda: float = 0.5
-    default_min_coverage: float = 0.6
+    faiss_index_path: str = field(init=False)
+    als_model_path: str = field(init=False)
+    hnswlib_path: str = field(init=False)
+    llm_model: str = field(init=False)
+    llm_temperature: float = field(init=False)
+    llm_max_tokens: int = field(init=False)
+    confidence_penalty_threshold: float = field(init=False)
+    penalty_multiplier: float = field(init=False)
+    default_mmr_lambda: float = field(init=False)
+    default_min_coverage: float = field(init=False)
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -65,52 +65,100 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _missing_config_error(section: str, key: str) -> RuntimeError:
+    return RuntimeError(f"Missing required config key: [{section}].{key} — set it in config.toml")
+
+
+def _require_section(data: Dict[str, Any], section: str, required_key: str) -> Dict[str, Any]:
+    section_data = data.get(section)
+    if not isinstance(section_data, dict):
+        raise _missing_config_error(section, required_key)
+    return section_data
+
+
+def _require_value(section_data: Dict[str, Any], section: str, key: str) -> Any:
+    if key not in section_data:
+        raise _missing_config_error(section, key)
+    value = section_data.get(key)
+    if value is None:
+        raise _missing_config_error(section, key)
+    if isinstance(value, str) and not value.strip():
+        raise _missing_config_error(section, key)
+    return value
+
+
 def _load_config() -> AgentConfig:
     cfg = AgentConfig()
-    if not tomllib or not CONFIG_PATH.exists():
-        return cfg
+    if not tomllib:
+        raise RuntimeError("Missing required TOML parser support for config.toml")
+    if not CONFIG_PATH.exists():
+        raise RuntimeError(f"Missing required config file: {CONFIG_PATH}")
     try:
         data = tomllib.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except Exception as exc:
-        logger.warning("event=config_parse_failed error=%s", exc)
-        return cfg
+        raise RuntimeError(f"Failed to parse config.toml: {exc}") from exc
 
-    server = data.get("server") if isinstance(data, dict) else {}
-    index = data.get("index") if isinstance(data, dict) else {}
-    llm = data.get("llm") if isinstance(data, dict) else {}
-    ranking = data.get("ranking") if isinstance(data, dict) else {}
-    quality = data.get("quality") if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        raise RuntimeError("Invalid config.toml format: expected a TOML table at the top level")
 
     try:
+        server = data.get("server") if isinstance(data, dict) else {}
         if isinstance(server, dict) and server.get("port") is not None:
             cfg.port = int(server["port"])
     except Exception:
         pass
 
-    if isinstance(index, dict):
-        cfg.faiss_index_path = str(index.get("FAISS_INDEX_PATH") or cfg.faiss_index_path)
-        cfg.als_model_path = str(index.get("ALS_MODEL_PATH") or cfg.als_model_path)
-        cfg.hnswlib_path = str(index.get("HNSWLIB_PATH") or cfg.hnswlib_path)
+    index = _require_section(data, "index", "FAISS_INDEX_PATH")
+    cfg.faiss_index_path = str(_require_value(index, "index", "FAISS_INDEX_PATH"))
+    cfg.als_model_path = str(_require_value(index, "index", "ALS_MODEL_PATH"))
+    cfg.hnswlib_path = str(_require_value(index, "index", "HNSWLIB_PATH"))
+    logger.info(
+        "event=config_loaded section=index faiss=%s als=%s hnswlib=%s",
+        cfg.faiss_index_path,
+        cfg.als_model_path,
+        cfg.hnswlib_path,
+    )
 
-    if isinstance(llm, dict):
-        cfg.llm_model = str(llm.get("model") or cfg.llm_model)
-        cfg.llm_temperature = _safe_float(llm.get("temperature"), cfg.llm_temperature)
-        try:
-            cfg.llm_max_tokens = int(llm.get("max_tokens") or cfg.llm_max_tokens)
-        except Exception:
-            pass
+    llm = _require_section(data, "llm", "model")
+    configured_llm_model = str(_require_value(llm, "llm", "model"))
+    cfg.llm_model = configured_llm_model
+    cfg.llm_temperature = _safe_float(_require_value(llm, "llm", "temperature"))
+    cfg.llm_max_tokens = int(_require_value(llm, "llm", "max_tokens"))
+    logger.info(
+        "event=config_loaded section=llm model=%s temperature=%s max_tokens=%s",
+        configured_llm_model,
+        cfg.llm_temperature,
+        cfg.llm_max_tokens,
+    )
+    env_llm_model = str(os.getenv("RECOMMENDATION_ENGINE_LLM_MODEL") or "").strip()
+    if env_llm_model:
+        cfg.llm_model = env_llm_model
+        if cfg.llm_model != configured_llm_model:
+            logger.info(
+                "event=config_override section=llm source=env var=RECOMMENDATION_ENGINE_LLM_MODEL model=%s",
+                cfg.llm_model,
+            )
 
-    if isinstance(ranking, dict):
-        cfg.confidence_penalty_threshold = _safe_float(
-            ranking.get("CONFIDENCE_PENALTY_THRESHOLD"), cfg.confidence_penalty_threshold
-        )
-        cfg.penalty_multiplier = _safe_float(ranking.get("PENALTY_MULTIPLIER"), cfg.penalty_multiplier)
-        cfg.default_mmr_lambda = _safe_float(ranking.get("DEFAULT_MMR_LAMBDA"), cfg.default_mmr_lambda)
+    ranking = _require_section(data, "ranking", "CONFIDENCE_PENALTY_THRESHOLD")
+    cfg.confidence_penalty_threshold = _safe_float(
+        _require_value(ranking, "ranking", "CONFIDENCE_PENALTY_THRESHOLD")
+    )
+    cfg.penalty_multiplier = _safe_float(_require_value(ranking, "ranking", "PENALTY_MULTIPLIER"))
+    cfg.default_mmr_lambda = _safe_float(_require_value(ranking, "ranking", "DEFAULT_MMR_LAMBDA"))
+    logger.info(
+        "event=config_loaded section=ranking confidence_penalty_threshold=%s penalty_multiplier=%s default_mmr_lambda=%s",
+        cfg.confidence_penalty_threshold,
+        cfg.penalty_multiplier,
+        cfg.default_mmr_lambda,
+    )
 
-    if isinstance(quality, dict):
-        cfg.default_min_coverage = _safe_float(quality.get("DEFAULT_MIN_COVERAGE"), cfg.default_min_coverage)
+    quality = _require_section(data, "quality", "DEFAULT_MIN_COVERAGE")
+    cfg.default_min_coverage = _safe_float(_require_value(quality, "quality", "DEFAULT_MIN_COVERAGE"))
+    logger.info(
+        "event=config_loaded section=quality default_min_coverage=%s",
+        cfg.default_min_coverage,
+    )
 
-    cfg.llm_model = str(os.getenv("RECOMMENDATION_ENGINE_LLM_MODEL") or cfg.llm_model)
     return cfg
 
 

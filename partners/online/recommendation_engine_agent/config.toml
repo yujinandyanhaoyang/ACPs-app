@@ -36,7 +36,7 @@ HNSWLIB_PATH     = "data/user_sim.bin"
 
 # Backward-compatible runtime section.
 [llm]
-model       = "qwen3.5-27b"
+model       = "qwen-flash-character"
 temperature = 0.4
 max_tokens  = 300
 
