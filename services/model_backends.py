@@ -168,7 +168,7 @@ def generate_text_embeddings(
 	if model is not None:
 		vectors = model.encode(
 			text_list,
-			batch_size=len(text_list),
+			batch_size=64,
 			normalize_embeddings=True,
 			show_progress_bar=False,
 			convert_to_numpy=True,
