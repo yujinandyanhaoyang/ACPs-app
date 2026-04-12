@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -75,13 +77,41 @@ def write_index(index: IndexFlatIP, path: str) -> None:
         np.savez_compressed(f, dim=np.asarray([index.dim], dtype=np.int64), vectors=index._vectors.astype(np.float32))
 
 
+def _load_real_faiss():
+    shim_path = Path(__file__).resolve()
+    shim_dir = shim_path.parent
+
+    original_sys_path = list(sys.path)
+    try:
+        sys.modules.pop("faiss", None)
+        sys.path = [
+            entry
+            for entry in original_sys_path
+            if Path(entry or ".").resolve() != shim_dir
+        ]
+        spec = importlib.util.find_spec("faiss")
+        if spec is None or spec.loader is None or getattr(spec, "origin", None) == str(shim_path):
+            raise ImportError("real faiss module not found")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path = original_sys_path
+
+
 def read_index(path: str) -> IndexFlatIP:
     file_path = Path(path)
     with file_path.open("rb") as f:
-        with np.load(f, allow_pickle=False) as data:
+        magic = f.read(4)
+
+    if magic[:2] == b"PK":
+        with np.load(str(file_path), allow_pickle=False) as data:
             dim = int(np.asarray(data["dim"]).reshape(-1)[0])
-            vectors = np.asarray(data["vectors"], dtype=np.float32)
-    index = IndexFlatIP(dim)
-    if vectors.size:
-        index._vectors = vectors.reshape((-1, dim)).astype(np.float32)
-    return index
+            vectors = np.asarray(data["vectors"], dtype=np.float32) if "vectors" in data else np.zeros((0, dim), dtype=np.float32)
+        index = IndexFlatIP(dim)
+        if vectors.size:
+            index.add(vectors.reshape((-1, dim)).astype(np.float32))
+        return index
+
+    real_faiss = _load_real_faiss()
+    return real_faiss.read_index(str(file_path))
