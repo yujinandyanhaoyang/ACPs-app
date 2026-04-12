@@ -60,6 +60,13 @@ class IndexFlatIP:
 
         return sorted_scores.astype(np.float32), sorted_indices.astype(np.int64)
 
+    def reconstruct(self, key: int, out: Any | None = None):
+        vector = self._vectors[int(key)].astype(np.float32)
+        if out is None:
+            return vector.copy()
+        out[...] = vector
+        return out
+
 
 def write_index(index: IndexFlatIP, path: str) -> None:
     file_path = Path(path)

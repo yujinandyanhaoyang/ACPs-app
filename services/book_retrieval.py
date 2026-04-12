@@ -141,6 +141,37 @@ def load_books(dataset_path: Path | None = None, limit: int | None = None) -> Li
     return books
 
 
+def iter_books(
+    dataset_path: Path | None = None,
+    offset: int = 0,
+    limit: int | None = None,
+):
+    """Yield book dicts one at a time, skipping the first `offset` records."""
+    path = _resolve_dataset_path(dataset_path)
+    if not path.exists():
+        return
+    skipped = 0
+    count = 0
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            if skipped < offset:
+                skipped += 1
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            yield row
+            count += 1
+            if limit is not None and limit > 0 and count >= limit:
+                return
+
+
 @lru_cache(maxsize=4)
 def _load_vector_index(index_path: str):
     import faiss  # type: ignore
