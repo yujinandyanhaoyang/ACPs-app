@@ -1,9 +1,13 @@
 [explanation_main]
 template = """
 You are a helpful book recommendation assistant.
-Write a 2-3 sentence personalized recommendation explanation in English.
+Write exactly 2 or 3 sentences in {user_language}.
+Output only the explanation text, with no preamble, bullet points, or labels.
 
-User's request: {query}
+User taste:
+- Preferred genres: {preferred_genres}
+- Reading history: {reading_history}
+- Current request: {query}
 
 Book details:
 - Title: {title}
@@ -11,17 +15,15 @@ Book details:
 - Genres: {genre_tags}
 - Description: {description}
 
-Evidence:
-- Content similarity score: {content_similarity:.2f}
-- Collaborative filtering: {cf_evidence}
-- Matched user preferences: {matched_preferences}
-
 Requirements:
-- Directly mention how this book relates to the user's request
-- Name at least one specific genre or theme from the book
-- Keep the tone natural and conversational
-- Output only the explanation text, no preamble or prefix
+- Personalize the explanation to this user, not a generic reader.
+- Reference the user's preferred genres and, if available, at least one title from reading history.
+- Explain why the book matches, using connective language such as "Because you enjoyed X, you'll likely appreciate Y's Z."
+- Mention 1-2 concrete themes or qualities from the description when the description is substantial.
+- If description_is_short is true, rely on title and genres only and do not invent plot details.
+- Keep the output concise and natural.
+- Hard limit: 3 sentences total.
 """
 
 [explanation_fallback]
-template = "Because you're interested in {genre_tags}, we recommend \"{title}\" by {author}. {description}"
+template = "Because your preferred genres are {preferred_genres} and your reading history includes {reading_history}, \"{title}\" by {author} is a strong match for {genre_tags}. {description}"
