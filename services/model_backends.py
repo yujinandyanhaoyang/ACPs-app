@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import math
 import os
@@ -228,7 +229,7 @@ async def generate_text_embeddings_async(
 			"event=offline_embed_fallback model=%s reason=missing_api_key_or_base_url",
 			model_name,
 		)
-	return _hash_fallback_embeddings(text_list, fallback_dim)
+	return await asyncio.to_thread(generate_text_embeddings, text_list, model_name, fallback_dim)
 
 
 def _token_features(book: Dict[str, Any]) -> List[str]:

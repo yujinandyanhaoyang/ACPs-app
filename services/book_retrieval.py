@@ -3,14 +3,18 @@ from __future__ import annotations
 import json
 import os
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Sequence
+
+import numpy as np
 
 from services.data_paths import get_processed_data_path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-MERGED_ENRICHED_DATASET_PATH = get_processed_data_path("merged", "books_master_merged_enriched.jsonl")
-MERGED_DATASET_PATH = get_processed_data_path("merged", "books_master_merged.jsonl")
+MERGED_ENRICHED_DATASET_PATH = get_processed_data_path("books_master_merged_enriched.jsonl")
+MERGED_DATASET_PATH = get_processed_data_path("books_master_merged.jsonl")
+BOOKS_ENRICHED_DATASET_PATH = get_processed_data_path("books_enriched.jsonl")
 GOODREADS_DATASET_PATH = get_processed_data_path("goodreads", "books_master.jsonl")
 BOOKS_MIN_DATASET_PATH = get_processed_data_path("books_min.jsonl")
 DATASET_ENV_KEY = "BOOK_RETRIEVAL_DATASET_PATH"
@@ -23,12 +27,25 @@ def _normalize_dataset_path(path: Path) -> Path:
     preferred = [
         path / "books_master_merged_enriched.jsonl",
         path / "books_master_merged.jsonl",
+        path / "books_enriched.jsonl",
         path / "books_master.jsonl",
         path / "books_min.jsonl",
     ]
     for candidate in preferred:
         if candidate.exists():
             return candidate
+
+    preferred_names = [
+        "books_master_merged_enriched.jsonl",
+        "books_master_merged.jsonl",
+        "books_enriched.jsonl",
+        "books_master.jsonl",
+        "books_min.jsonl",
+    ]
+    for name in preferred_names:
+        matches = sorted(candidate for candidate in path.rglob(name) if candidate.is_file())
+        if matches:
+            return matches[0]
 
     for candidate in sorted(path.rglob("*.jsonl")):
         if candidate.is_file():
@@ -39,6 +56,8 @@ def _normalize_dataset_path(path: Path) -> Path:
         return MERGED_ENRICHED_DATASET_PATH
     if MERGED_DATASET_PATH.exists():
         return MERGED_DATASET_PATH
+    if BOOKS_ENRICHED_DATASET_PATH.exists():
+        return BOOKS_ENRICHED_DATASET_PATH
     if GOODREADS_DATASET_PATH.exists():
         return GOODREADS_DATASET_PATH
     return BOOKS_MIN_DATASET_PATH
@@ -56,6 +75,8 @@ def _resolve_dataset_path(dataset_path: Path | None = None) -> Path:
         return MERGED_ENRICHED_DATASET_PATH
     if MERGED_DATASET_PATH.exists():
         return MERGED_DATASET_PATH
+    if BOOKS_ENRICHED_DATASET_PATH.exists():
+        return BOOKS_ENRICHED_DATASET_PATH
     if GOODREADS_DATASET_PATH.exists():
         return GOODREADS_DATASET_PATH
     return BOOKS_MIN_DATASET_PATH
@@ -72,6 +93,8 @@ def get_active_retrieval_corpus_info(dataset_path: Path | None = None) -> Dict[s
         source = "merged-enriched-default"
     elif path == MERGED_DATASET_PATH:
         source = "merged-default"
+    elif path == BOOKS_ENRICHED_DATASET_PATH:
+        source = "books-enriched-default"
     elif path == GOODREADS_DATASET_PATH:
         source = "goodreads-default"
     elif path == BOOKS_MIN_DATASET_PATH:
@@ -98,7 +121,7 @@ def _book_text(book: Dict[str, Any]) -> str:
     return f"{title} {author} {description} {genres}"
 
 
-def load_books(dataset_path: Path | None = None) -> List[Dict[str, Any]]:
+def load_books(dataset_path: Path | None = None, limit: int | None = None) -> List[Dict[str, Any]]:
     path = _resolve_dataset_path(dataset_path)
     if not path.exists():
         return []
@@ -113,7 +136,128 @@ def load_books(dataset_path: Path | None = None) -> List[Dict[str, Any]]:
             if not isinstance(row, dict):
                 continue
             books.append(row)
+            if limit is not None and limit > 0 and len(books) >= limit:
+                break
     return books
+
+
+@lru_cache(maxsize=4)
+def _load_vector_index(index_path: str):
+    import faiss  # type: ignore
+
+    return faiss.read_index(index_path)
+
+
+@lru_cache(maxsize=4)
+def _load_vector_meta(meta_path: str) -> List[Dict[str, Any]]:
+    path = Path(meta_path)
+    if not path.exists():
+        return []
+
+    rows: List[Dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, dict):
+                rows.append(row)
+    return rows
+
+
+@lru_cache(maxsize=1)
+def _load_books_by_id() -> Dict[str, Dict[str, Any]]:
+    books: Dict[str, Dict[str, Any]] = {}
+    for row in load_books():
+        book_id = str(row.get("book_id") or row.get("id") or "").strip()
+        if not book_id or book_id in books:
+            continue
+        books[book_id] = dict(row)
+    return books
+
+
+def _normalize_query_embedding(query_embedding: Sequence[float], dim: int) -> np.ndarray:
+    vector = np.asarray(list(query_embedding), dtype=np.float32).reshape(-1)
+    if vector.size == 0:
+        vector = np.zeros((dim,), dtype=np.float32)
+    if vector.size < dim:
+        padded = np.zeros((dim,), dtype=np.float32)
+        padded[: vector.size] = vector
+        vector = padded
+    elif vector.size > dim:
+        vector = vector[:dim]
+    norm = float(np.linalg.norm(vector))
+    if norm > 0.0:
+        vector = vector / norm
+    return vector.reshape(1, dim)
+
+
+def retrieve_books_by_vector(
+    query_embedding: List[float],
+    top_k: int = 100,
+    index_path: Path | None = None,
+    meta_path: Path | None = None,
+) -> List[Dict[str, Any]]:
+    """
+    Given a 384-dim query embedding, return top_k candidate books
+    from the FAISS index with their full metadata loaded from
+    books_master_merged.jsonl.
+    """
+
+    if top_k <= 0:
+        top_k = 1
+
+    default_dataset_root = Path(
+        os.getenv(DATASET_ENV_KEY, "").strip()
+        or str(MERGED_DATASET_PATH.parent.parent)
+    ).expanduser()
+    default_index_path = default_dataset_root / "processed" / "books_index.faiss"
+    default_meta_path = default_dataset_root / "processed" / "books_index_meta.jsonl"
+
+    resolved_index_path = Path(index_path) if index_path is not None else default_index_path
+    resolved_meta_path = Path(meta_path) if meta_path is not None else default_meta_path
+
+    if not resolved_index_path.exists() or not resolved_meta_path.exists():
+        return []
+
+    index = _load_vector_index(str(resolved_index_path))
+    dim = int(getattr(index, "dim", len(query_embedding) or 0))
+    if dim <= 0:
+        return []
+
+    query = _normalize_query_embedding(query_embedding, dim)
+    scores, indices = index.search(query, top_k)
+    meta_rows = _load_vector_meta(str(resolved_meta_path))
+    books_by_id = _load_books_by_id()
+
+    results: List[Dict[str, Any]] = []
+    row_scores = scores[0].tolist() if len(scores) else []
+    row_indices = indices[0].tolist() if len(indices) else []
+    for score, idx in zip(row_scores, row_indices):
+        if int(idx) < 0:
+            continue
+        meta = meta_rows[int(idx)] if int(idx) < len(meta_rows) else None
+        if not meta:
+            continue
+        book_id = str(meta.get("book_id") or "").strip()
+        record = dict(books_by_id.get(book_id, {}))
+        if not record:
+            record = {
+                "book_id": book_id,
+                "source": str(meta.get("source") or ""),
+                "title": str(meta.get("title") or ""),
+            }
+        record.setdefault("book_id", book_id)
+        record.setdefault("source", str(meta.get("source") or ""))
+        record.setdefault("title", str(meta.get("title") or ""))
+        record["score"] = float(score)
+        record["index"] = int(idx)
+        results.append(record)
+    return results
 
 
 def retrieve_books_by_query(

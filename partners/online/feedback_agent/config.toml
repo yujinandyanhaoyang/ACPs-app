@@ -1,7 +1,7 @@
 [llm.fast]
 api_key = "sk-5955ab75f437457796d1c47630de9658"
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "qwen-flash-character"
+model = "qwen3.5-plus-2026-02-15"
 
 [llm.default]
 api_key = "sk-5955ab75f437457796d1c47630de9658"

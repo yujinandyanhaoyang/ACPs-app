@@ -265,6 +265,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     explanations = await generate_rationale(
         final_list=final_ranked,
+        payload=payload,
         prompts=PROMPTS,
         llm_model=CFG.llm_model,
         llm_temperature=CFG.llm_temperature,

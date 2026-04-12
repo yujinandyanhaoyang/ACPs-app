@@ -2125,7 +2125,7 @@
         const resp = await fetchJson(`${API_BASE}/user_api`, {
           method: 'POST',
           body: JSON.stringify(payload),
-          timeout: 30000,
+          timeout: 60000,
         });
         if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
 
