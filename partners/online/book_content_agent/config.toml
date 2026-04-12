@@ -1,11 +1,3 @@
-[llm.fast]
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "qwen3.5-35b-a3b"
-
-[llm.default]
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "qwen3.5-27b"
-
 [server]
 host = "0.0.0.0"
 port = 8212

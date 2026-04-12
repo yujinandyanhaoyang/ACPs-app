@@ -1,11 +1,3 @@
-[llm.fast]
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "gui-plus-2026-02-26"
-
-[llm.default]
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "MiniMax-M2.1"
-
 [server]
 host = "0.0.0.0"
 port = 8213
