@@ -81,7 +81,7 @@ def build_index(
                 model_name=model_name,
                 fallback_dim=EMBED_DIM,
             )
-            embeddings = _normalize_rows(vectors)
+            embeddings = np.asarray(vectors, dtype=np.float32)
             index.add(embeddings)
 
             for j, book in enumerate(batch):
@@ -97,8 +97,6 @@ def build_index(
                     )
                     + "\n"
                 )
-            meta_fp.flush()
-
             done = i + len(batch)
             print(
                 f"[progress] {done}/{len(books)} ({done / len(books) * 100:.1f}%) batch={batch_size}",

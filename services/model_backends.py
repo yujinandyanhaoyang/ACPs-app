@@ -171,12 +171,10 @@ def generate_text_embeddings(
 			batch_size=min(256, len(text_list)),
 			normalize_embeddings=True,
 			show_progress_bar=False,
+			convert_to_numpy=True,
 		)
-		vectors_as_list: List[List[float]] = []
-		for row in vectors:
-			vectors_as_list.append([round(_to_float(item), 6) for item in row.tolist()])
-		dim = len(vectors_as_list[0]) if vectors_as_list else 0
-		return vectors_as_list, {"backend": "sentence-transformers", "model": effective_model, "vector_dim": dim}
+		dim = int(vectors.shape[1]) if vectors.ndim == 2 else 0
+		return vectors.tolist(), {"backend": "sentence-transformers", "model": effective_model, "vector_dim": dim}
 
 	fallback_vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in text_list]
 	dim = len(fallback_vectors[0]) if fallback_vectors else 0
