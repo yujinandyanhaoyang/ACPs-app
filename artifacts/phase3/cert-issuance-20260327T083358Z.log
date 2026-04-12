@@ -1,7 +1,0 @@
-[phase3] using config: /root/WORK/ACPs-app/ca-client.conf
-[phase3] issuing certs for 4 AICs...
-[phase3] ca-client new-cert --aic 1.2.156.3088.0001.00001.U3IBA8.JI874M.1.03Y1
-Loading account key from /root/WORK/ACPs-app/private/account.key
-Loading existing agent key from /root/WORK/ACPs-app/private/1.2.156.3088.0001.00001.U3IBA8.JI874M.1.03Y1.key
-Generating CSR for 1.2.156.3088.0001.00001.U3IBA8.JI874M.1.03Y1
-Registering ACME account...

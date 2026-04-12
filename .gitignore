@@ -6,6 +6,8 @@ data/
 
 # Python
 __pycache__/
+csr/
+artifacts/
 *.py[cod]
 *.pyo
 *.egg-info/
