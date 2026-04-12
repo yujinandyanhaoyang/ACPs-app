@@ -166,7 +166,12 @@ def generate_text_embeddings(
 	effective_model = _resolve_embedding_model_name(model_name)
 	model = _resolve_sentence_transformer(effective_model)
 	if model is not None:
-		vectors = model.encode(text_list, normalize_embeddings=True)
+		vectors = model.encode(
+			text_list,
+			batch_size=min(256, len(text_list)),
+			normalize_embeddings=True,
+			show_progress_bar=False,
+		)
 		vectors_as_list: List[List[float]] = []
 		for row in vectors:
 			vectors_as_list.append([round(_to_float(item), 6) for item in row.tolist()])
