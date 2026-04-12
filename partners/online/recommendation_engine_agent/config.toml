@@ -1,13 +1,3 @@
-[llm.fast]
-api_key = "sk-5955ab75f437457796d1c47630de9658"
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "qwen-flash-character"
-
-[llm.default]
-api_key = "sk-5955ab75f437457796d1c47630de9658"
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "kimi-k2.5glm-5"
-
 [server]
 host = "0.0.0.0"
 port = 8214
@@ -30,13 +20,12 @@ max_concurrent_tasks = 10
 level = "INFO"
 
 [index]
-FAISS_INDEX_PATH = "data/book_faiss.index"
+FAISS_INDEX_PATH = "/root/WORK/DATA/processed/books_index.faiss"
 ALS_MODEL_PATH   = "data/als_model.npz"
 HNSWLIB_PATH     = "data/user_sim.bin"
 
-# Backward-compatible runtime section.
 [llm]
-model       = "qwen-flash-character"
+model       = "qwen-plus"
 temperature = 0.4
 max_tokens  = 300
 

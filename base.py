@@ -24,7 +24,11 @@ def _get_async_openai_client() -> Any:
         return None
     if _async_client is None and openai is not None:
         api_key = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
-        base_url = os.getenv("OPENAI_BASE_URL")
+        base_url = (
+            os.getenv("RECOMMENDATION_ENGINE_LLM_BASE_URL")
+            or os.getenv("DASHSCOPE_BASE_URL")
+            or os.getenv("OPENAI_BASE_URL")
+        )
 
         # DashScope compatible-mode needs an extra proxy header; keep it optional for plain OpenAI.
         default_headers: Optional[Dict[str, str]] = None

@@ -1,10 +1,8 @@
 [llm.fast]
-api_key = "sk-5955ab75f437457796d1c47630de9658"
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 model = "kimi-k2.5"
 
 [llm.default]
-api_key = "sk-5955ab75f437457796d1c47630de9658"
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 model = "qwen3.5-122b-a10b"
 
