@@ -103,13 +103,22 @@ def _resolve_metadata_path() -> Path | None:
     if not root:
         return None
     base = Path(root)
+
+    # 当 env 指向文件本身时直接返回
+    if base.is_file() and base.suffix == ".jsonl":
+        return base
+
+    # 当 env 指向目录时，按优先级查找
     candidates = [
+        base / "processed" / "books_master_merged.jsonl",
+        base / "processed" / "books_enriched.jsonl",
         base / "processed" / "goodreads" / "books_master.jsonl",
         base / "processed" / "books_min.jsonl",
     ]
     for candidate in candidates:
         if candidate.is_file():
             return candidate
+
     logger.warning("event=metadata_source_missing root=%s", root)
     return None
 
@@ -119,12 +128,26 @@ def _load_book_metadata() -> Dict[str, Dict[str, Any]]:
     if _BOOK_META_CACHE is not None:
         return _BOOK_META_CACHE
 
+    try:
+        from services.book_retrieval import load_books
+        rows = load_books()
+        meta: Dict[str, Dict[str, Any]] = {}
+        for row in rows:
+            book_id = str(row.get("book_id") or "").strip()
+            if book_id:
+                meta[book_id] = row
+        _BOOK_META_CACHE = meta
+        logger.info("event=metadata_loaded_via_book_retrieval count=%d", len(meta))
+        return _BOOK_META_CACHE
+    except Exception as exc:
+        logger.warning("event=metadata_load_via_book_retrieval_failed error=%s", exc)
+
     path = _resolve_metadata_path()
     if path is None:
         _BOOK_META_CACHE = {}
         return _BOOK_META_CACHE
 
-    meta: Dict[str, Dict[str, Any]] = {}
+    meta = {}
     try:
         with path.open("r", encoding="utf-8") as f:
             for line in f:

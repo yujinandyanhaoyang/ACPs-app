@@ -159,6 +159,124 @@ def main() -> int:
     print(f"Ranking ready : {'YES' if ranking_ready else 'NO'}")
     print(f"Blockers      : {'none' if not blockers else '; '.join(blockers)}")
 
+    # ── Phase 2: Full REA pipeline (recall → rank → explain) ──────────────
+    print("\n=== Phase 2: REA Pipeline Smoke Test ===")
+
+    from partners.online.recommendation_engine_agent.modules.recall import recall_candidates
+    from partners.online.recommendation_engine_agent.modules.ranking import rerank_round2, score_round1
+    from partners.online.recommendation_engine_agent.modules.explanation import assess_confidence, generate_rationale
+    import asyncio as _asyncio
+    import json as _json
+
+    _ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+    _ARTIFACTS_DIR.mkdir(exist_ok=True)
+
+    rea_payload = {
+        "candidates": enriched_results,
+        "profile_vector": query_vector,
+        "preferred_genres": ["Mystery", "Thriller"],
+        "user_profile": {
+            "preferred_genres": ["Mystery", "Thriller"],
+            "reading_history": ["Gone Girl", "The Girl on the Train"],
+            "language": "zh",
+        },
+        "top_k": 5,
+        "mmr_lambda": 0.5,
+        "ann_weight": 0.6,
+        "cf_weight": 0.4,
+    }
+
+    recall_cfg = {
+        "faiss_index_path": str(SMOKE_INDEX_PATH),
+        "als_model_path": "data/als_model.npz",
+        "hnswlib_path": "data/user_sim.bin",
+        "ann_ef_search": 100,
+        "ann_top_k": len(enriched_results),
+        "cf_top_k": len(enriched_results),
+        "cf_sim_users": 50,
+    }
+
+    recalled, recall_meta = recall_candidates(rea_payload, recall_cfg)
+    preliminary, r1_meta = score_round1(recalled, score_weights={}, top_k=max(20, 5 * 10))
+    confidence_map = assess_confidence(preliminary)
+
+    final_ranked, r2_meta = rerank_round2(
+        preliminary_list=preliminary,
+        confidence_list=confidence_map,
+        mmr_lambda=0.5,
+        confidence_penalty_threshold=0.6,
+        penalty_multiplier=0.7,
+        top_k=5,
+    )
+
+    try:
+        import tomllib as _tomllib
+        _prompts_path = PROJECT_ROOT / "partners/online/recommendation_engine_agent/prompts.toml"
+        _prompts_data = _tomllib.loads(_prompts_path.read_text(encoding="utf-8")) if _prompts_path.exists() else {}
+        _em = _prompts_data.get("explanation_main") or {}
+        _ef = _prompts_data.get("explanation_fallback") or {}
+        _prompts = {
+            "main": str(_em.get("template") or "") if isinstance(_em, dict) else "",
+            "fallback": str(_ef.get("template") or "") if isinstance(_ef, dict) else "",
+        }
+    except Exception:
+        _prompts = {"main": "", "fallback": ""}
+
+    explanations = _asyncio.run(generate_rationale(
+        final_list=final_ranked,
+        payload=rea_payload,
+        prompts=_prompts,
+        llm_model="qwen-plus",
+        llm_temperature=0.4,
+        llm_max_tokens=300,
+    ))
+
+    _okfail(len(final_ranked) == 5, f"final_ranked has 5 items (got {len(final_ranked)})")
+    _okfail(all(_safe_str(r.get("title")) for r in final_ranked), "all top-5 have non-empty title")
+    _okfail(all(r.get("rank") in range(1, 6) for r in final_ranked), "rank fields are 1-5")
+    _okfail(
+        all(float(r.get("score_total") or r.get("score_round1") or 0) > 0 for r in final_ranked),
+        "all score_total > 0",
+    )
+    _okfail(len(explanations) == 5, f"explanations has 5 items (got {len(explanations)})")
+    _okfail(any(_safe_str(e.get("justification")) for e in explanations), "at least 1 non-empty justification")
+
+    llm_count = sum(1 for e in explanations if e.get("source") == "llm")
+    fb_count = len(explanations) - llm_count
+    print(f"LLM explanations : {llm_count}/5")
+    print(f"Fallback         : {fb_count}/5")
+    if final_ranked:
+        top1 = final_ranked[0]
+        top1_just = next(
+            (e.get("justification", "") for e in explanations if e.get("book_id") == top1.get("book_id")), ""
+        )
+        print(f"Top-1            : {_safe_str(top1.get('title'))} — {str(top1_just)[:80]}")
+
+    _result = {
+        "query": QUERY,
+        "index_ntotal": ntotal,
+        "top5": [
+            {
+                "rank": r.get("rank"),
+                "book_id": r.get("book_id"),
+                "title": r.get("title"),
+                "genres": r.get("genres"),
+                "score_total": r.get("score_total"),
+                "justification": next(
+                    (e.get("justification") for e in explanations if e.get("book_id") == r.get("book_id")), ""
+                ),
+                "explanation_source": next(
+                    (e.get("source") for e in explanations if e.get("book_id") == r.get("book_id")), "fallback"
+                ),
+            }
+            for r in final_ranked
+        ],
+        "recall_meta": recall_meta,
+        "ranking_meta": {"round1": r1_meta, "round2": r2_meta},
+    }
+    _out_path = _ARTIFACTS_DIR / "e2e_phase2_result.json"
+    _out_path.write_text(_json.dumps(_result, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"[info] Phase 2 result saved → {_out_path}")
     return 0 if not blockers else 1
 
 
