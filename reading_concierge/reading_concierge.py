@@ -67,7 +67,7 @@ _DISCOVERY_CACHE_TTL_SEC = 30
 class RuntimeConfig(BaseModel):
     port: int = 8210
     redis_url: str = "redis://localhost:6379/0"
-    llm_model: str = "qwen-flash-character"
+    llm_model: str = "gui-plus-2026-02-26"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 512
     partner_aics: Dict[str, str] = Field(default_factory=dict)
@@ -145,10 +145,11 @@ register_acs_route(
 
 @app.on_event("startup")
 async def _warmup() -> None:
-    try:
-        _catalog_index()
-    except Exception as exc:
-        logger.warning("event=warmup_failed error=%s", exc)
+    logger.info(
+        "event=startup_complete leader_id=%s port=%s",
+        LEADER_ID,
+        RUNTIME.port,
+    )
 
 
 class UserRequest(BaseModel):
@@ -488,45 +489,41 @@ def _catalog_index() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
 
 
 async def _derive_books_from_query(query: str, candidate_ids: List[str], top_k: int = 5) -> List[Dict[str, Any]]:
-    catalog, by_id = _catalog_index()
-    selected: List[Dict[str, Any]] = []
-    seen: set[str] = set()
-
-    for cid in candidate_ids:
-        key = str(cid or "").strip()
-        if not key or key in seen:
-            continue
-        row = by_id.get(key)
-        if row:
-            selected.append(dict(row))
-        else:
-            selected.append(
-                {
-                    "book_id": key,
-                    "title": key,
-                    "author": "unknown",
-                    "description": "",
-                    "genres": [],
-                }
-            )
-        seen.add(key)
-
     retrieval_size = max(20, min(120, max(1, int(top_k)) * 20))
-    for row in retrieve_books_by_query(query=query, books=catalog, top_k=retrieval_size):
-        normalized = _normalize_book_row(row if isinstance(row, dict) else {}, len(selected))
+    seen: set[str] = set()
+    results: List[Dict[str, Any]] = []
+
+    # Resolve any explicitly requested candidate_ids first (deprecated path).
+    if candidate_ids:
+        from services.book_retrieval import _load_books_by_id
+
+        by_id = _load_books_by_id()
+        for cid in candidate_ids:
+            key = str(cid or "").strip()
+            if not key or key in seen:
+                continue
+            row = by_id.get(key) or {
+                "book_id": key,
+                "title": key,
+                "author": "unknown",
+                "description": "",
+                "genres": [],
+            }
+            results.append(dict(row))
+            seen.add(key)
+
+    # Primary path: FAISS vector recall (books=None triggers the fast path).
+    for row in retrieve_books_by_query(query=query, books=None, top_k=retrieval_size):
+        normalized = _normalize_book_row(
+            row if isinstance(row, dict) else {}, len(results)
+        )
         key = normalized["book_id"]
         if not key or key in seen:
             continue
-        selected.append(normalized)
+        results.append(normalized)
         seen.add(key)
 
-    if query and len(selected) > 1:
-        query_seed = sum(ord(ch) for ch in str(query))
-        offset = query_seed % len(selected)
-        if offset:
-            selected = selected[offset:] + selected[:offset]
-
-    return selected[:max(20, retrieval_size)]
+    return results[:max(20, retrieval_size)]
 
 
 def _normalize_recommendations_for_frontend(
