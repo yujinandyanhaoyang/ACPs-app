@@ -128,42 +128,53 @@ def _load_book_metadata() -> Dict[str, Dict[str, Any]]:
     if _BOOK_META_CACHE is not None:
         return _BOOK_META_CACHE
 
+    # Use the shared lightweight book_retrieval cache instead of
+    # loading the 1.4 GB master file directly.
     try:
-        from services.book_retrieval import load_books
-        rows = load_books()
-        meta: Dict[str, Dict[str, Any]] = {}
-        for row in rows:
-            book_id = str(row.get("book_id") or "").strip()
-            if book_id:
-                meta[book_id] = row
-        _BOOK_META_CACHE = meta
-        logger.info("event=metadata_loaded_via_book_retrieval count=%d", len(meta))
-        return _BOOK_META_CACHE
+        from services.book_retrieval import _load_books_by_id
+        meta = _load_books_by_id()
+        if meta:
+            _BOOK_META_CACHE = meta
+            logger.info(
+                "event=metadata_loaded_via_shared_cache count=%d", len(meta)
+            )
+            return _BOOK_META_CACHE
     except Exception as exc:
-        logger.warning("event=metadata_load_via_book_retrieval_failed error=%s", exc)
+        logger.warning(
+            "event=metadata_load_via_shared_cache_failed error=%s", exc
+        )
 
-    path = _resolve_metadata_path()
-    if path is None:
-        _BOOK_META_CACHE = {}
-        return _BOOK_META_CACHE
-
-    meta = {}
+    # Hard fallback: read FAISS meta file directly (never load_books()).
     try:
-        with path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                row = json.loads(line)
-                if isinstance(row, dict):
+        from services.data_paths import get_processed_data_root
+        env_meta = str(os.getenv("FAISS_INDEX_META_PATH") or "").strip()
+        meta_path = Path(env_meta) if env_meta else (
+            get_processed_data_root() / "books_index_meta.jsonl"
+        )
+        meta: Dict[str, Dict[str, Any]] = {}
+        if meta_path.exists():
+            with meta_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        row = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(row, dict):
+                        continue
                     book_id = str(row.get("book_id") or "").strip()
                     if book_id:
                         meta[book_id] = row
+        _BOOK_META_CACHE = meta
+        logger.info(
+            "event=metadata_loaded_via_faiss_meta count=%d", len(meta)
+        )
     except Exception as exc:
-        logger.warning("event=metadata_load_failed path=%s error=%s", path, exc)
-        meta = {}
+        logger.warning("event=metadata_load_fallback_failed error=%s", exc)
+        _BOOK_META_CACHE = {}
 
-    _BOOK_META_CACHE = meta
     return _BOOK_META_CACHE
 
 

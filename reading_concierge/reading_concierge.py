@@ -145,10 +145,18 @@ register_acs_route(
 
 @app.on_event("startup")
 async def _warmup() -> None:
+    import asyncio as _asyncio
+    from services.book_retrieval import _load_books_by_id
+    from partners.online.recommendation_engine_agent.modules.recall import _load_book_metadata
+
+    loop = _asyncio.get_event_loop()
+    await loop.run_in_executor(None, _load_books_by_id)
+    await loop.run_in_executor(None, _load_book_metadata)
     logger.info(
-        "event=startup_complete leader_id=%s port=%s",
+        "event=startup_complete leader_id=%s port=%s books_cached=%s",
         LEADER_ID,
         RUNTIME.port,
+        len(_load_books_by_id()),
     )
 
 

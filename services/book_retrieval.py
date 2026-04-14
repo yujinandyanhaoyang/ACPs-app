@@ -202,12 +202,39 @@ def _load_vector_meta(meta_path: str) -> List[Dict[str, Any]]:
 
 @lru_cache(maxsize=1)
 def _load_books_by_id() -> Dict[str, Dict[str, Any]]:
+    """
+    Build a lightweight book_id -> record map from the FAISS meta file
+    (books_index_meta.jsonl). This file is already loaded by _load_vector_meta()
+    and contains book_id, title, source - enough for result enrichment without
+    reading the 1.4 GB master file.
+    """
+    from services.data_paths import get_processed_data_root
+
+    env_meta = str(os.getenv("FAISS_INDEX_META_PATH") or "").strip()
+    if env_meta:
+        meta_path = Path(env_meta)
+    else:
+        meta_path = get_processed_data_root() / "books_index_meta.jsonl"
+
     books: Dict[str, Dict[str, Any]] = {}
-    for row in load_books():
-        book_id = str(row.get("book_id") or row.get("id") or "").strip()
-        if not book_id or book_id in books:
-            continue
-        books[book_id] = dict(row)
+    if not meta_path.exists():
+        return books
+
+    with meta_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(row, dict):
+                continue
+            book_id = str(row.get("book_id") or row.get("id") or "").strip()
+            if not book_id or book_id in books:
+                continue
+            books[book_id] = dict(row)
     return books
 
 
