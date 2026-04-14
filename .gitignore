@@ -1,8 +1,6 @@
 # Environment / secrets
 .env
 
-# Dataset artifacts (kept outside git)
-data/
 
 # Python
 __pycache__/

@@ -5,6 +5,7 @@ import os
 import sys
 import uuid
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -140,6 +141,14 @@ register_acs_route(
     str(ACS_PATH),
     endpoint_override_url=f"{READING_CONCIERGE_BASE_URL}/user_api",
 )
+
+
+@app.on_event("startup")
+async def _warmup() -> None:
+    try:
+        _catalog_index()
+    except Exception as exc:
+        logger.warning("event=warmup_failed error=%s", exc)
 
 
 class UserRequest(BaseModel):
@@ -462,6 +471,7 @@ def _normalize_book_row(row: Dict[str, Any], index: int) -> Dict[str, Any]:
     }
 
 
+@lru_cache(maxsize=1)
 def _catalog_index() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
     raw = load_books()
     normalized: List[Dict[str, Any]] = []

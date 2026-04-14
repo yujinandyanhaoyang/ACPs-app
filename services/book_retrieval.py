@@ -242,18 +242,19 @@ def retrieve_books_by_vector(
     if top_k <= 0:
         top_k = 1
 
-    _env_index = os.getenv("BOOKS_INDEX_PATH", "").strip()
-    _env_meta = os.getenv("BOOKS_INDEX_META_PATH", "").strip()
-    if _env_index and _env_meta:
-        default_index_path = Path(_env_index)
-        default_meta_path = Path(_env_meta)
+    # Prefer explicit env vars (declared in .env.example)
+    env_index = str(os.getenv("FAISS_INDEX_PATH") or "").strip()
+    env_meta = str(os.getenv("FAISS_INDEX_META_PATH") or "").strip()
+    if env_index and env_meta:
+        default_index_path = Path(env_index)
+        default_meta_path = Path(env_meta)
     else:
-        default_dataset_root = Path(
-            os.getenv(DATASET_ENV_KEY, "").strip()
-            or str(MERGED_DATASET_PATH.parent.parent)
-        ).expanduser()
-        default_index_path = default_dataset_root / "processed" / "books_index.faiss"
-        default_meta_path = default_dataset_root / "processed" / "books_index_meta.jsonl"
+        # Fallback: derive from DATASET_ROOT or PROCESSED_DATA_ROOT
+        from services.data_paths import get_processed_data_root
+
+        proc_root = get_processed_data_root()
+        default_index_path = proc_root / "books_index.faiss"
+        default_meta_path = proc_root / "books_index_meta.jsonl"
 
     resolved_index_path = Path(index_path) if index_path is not None else default_index_path
     resolved_meta_path = Path(meta_path) if meta_path is not None else default_meta_path
