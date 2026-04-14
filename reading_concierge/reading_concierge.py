@@ -34,7 +34,7 @@ from partners.online.book_content_agent import agent as book_content
 from partners.online.feedback_agent import agent as feedback_agent
 from partners.online.recommendation_decision_agent import agent as recommendation_decision
 from partners.online.recommendation_engine_agent import agent as recommendation_engine
-from services.book_retrieval import load_books, retrieve_books_by_query
+from services.book_retrieval import retrieve_books_by_query
 
 load_dotenv()
 
@@ -482,17 +482,14 @@ def _normalize_book_row(row: Dict[str, Any], index: int) -> Dict[str, Any]:
 
 @lru_cache(maxsize=1)
 def _catalog_index() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
-    raw = load_books()
-    normalized: List[Dict[str, Any]] = []
-    by_id: Dict[str, Dict[str, Any]] = {}
-    for idx, row in enumerate(raw):
-        if not isinstance(row, dict):
-            continue
-        item = _normalize_book_row(row, idx)
-        if not item["book_id"]:
-            continue
-        normalized.append(item)
-        by_id[item["book_id"]] = item
+    """
+    Lightweight stub: delegates to the shared FAISS meta cache.
+    Does NOT load the 1.4 GB books_master_merged.jsonl.
+    """
+    from services.book_retrieval import _load_books_by_id
+
+    by_id = _load_books_by_id()
+    normalized = list(by_id.values())
     return normalized, by_id
 
 
