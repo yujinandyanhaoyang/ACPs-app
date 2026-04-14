@@ -151,10 +151,14 @@ async def _warmup() -> None:
     from partners.online.recommendation_engine_agent.modules.recall import _load_book_metadata
 
     loop = asyncio.get_event_loop()
-    await asyncio.gather(
+    _books_cache, _meta_cache, embed_model = await asyncio.gather(
         loop.run_in_executor(None, _load_books_by_id),
         loop.run_in_executor(None, _load_book_metadata),
         loop.run_in_executor(None, warmup_embedding_model, None),
+    )
+    logger.info(
+        "event=embedding_model_warm model=%s",
+        embed_model or os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or "",
     )
     logger.info(
         "event=startup_complete leader_id=%s port=%s books_cached=%s",
