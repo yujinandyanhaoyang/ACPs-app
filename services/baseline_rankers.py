@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import json
 import math
 import os
@@ -9,9 +8,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence
 
 from base import call_openai_chat
-from agents.reader_profile_agent import profile_agent as reader_profile
-from agents.book_content_agent import book_content_agent as book_content
-from agents.rec_ranking_agent import rec_ranking_agent as rec_ranking
 from services.book_retrieval import load_books, retrieve_books_by_query
 from services.data_paths import get_processed_data_path
 
@@ -127,6 +123,9 @@ def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_
 
 def _retrieve_baseline_candidate_pool(case_payload: Dict[str, Any], top_k: int) -> List[Dict[str, Any]]:
     query = str(case_payload.get("query") or "")
+    inline_books = _normalize_books(case_payload)
+    if inline_books:
+        return inline_books[: max(1, top_k)]
     explicit_candidate_ids = [str(item or "").strip() for item in (case_payload.get("candidate_ids") or []) if str(item or "").strip()]
     dataset_books = load_books()
 
@@ -259,106 +258,14 @@ def traditional_hybrid_rank(case_payload: Dict[str, Any], top_k: int = 5) -> Lis
     return _attach_rank(rows[: max(1, top_k)])
 
 
-def _build_sequential_candidates(content_outputs: Dict[str, Any], books: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    vectors = content_outputs.get("content_vectors") or []
-    tags = content_outputs.get("book_tags") or []
-    tags_by_id = {
-        str(row.get("book_id") or ""): row
-        for row in tags
-        if isinstance(row, dict) and str(row.get("book_id") or "")
-    }
-    books_by_id = {
-        str(row.get("book_id") or row.get("id") or ""): row
-        for row in (books or [])
-        if isinstance(row, dict)
-    }
-
-    candidates: List[Dict[str, Any]] = []
-    for row in vectors:
-        if not isinstance(row, dict):
-            continue
-        bid = str(row.get("book_id") or "")
-        if not bid:
-            continue
-        tag = tags_by_id.get(bid) or {}
-        source = books_by_id.get(bid) or {}
-        diversity_signal = 0.2 + 0.2 * len(tag.get("diversity_indicators") or [])
-        novelty_signal = 0.3 + 0.1 * len(tag.get("topics") or [])
-        candidates.append(
-            {
-                "book_id": bid,
-                "title": source.get("title") or row.get("title") or bid,
-                "author": source.get("author") or "",
-                "description": source.get("description") or row.get("description") or "",
-                "genres": source.get("genres") or row.get("genres") or [],
-                "topics": tag.get("topics") or [],
-                "vector": row.get("vector") or [],
-                "kg_signal": min(1.0, max(0.0, _safe_float(row.get("kg_signal"), 0.2))),
-                "novelty_score": min(1.0, novelty_signal),
-                "diversity_score": min(1.0, diversity_signal),
-            }
-        )
-    return candidates
-
-
-async def multi_agent_sequential_rank(case_payload: Dict[str, Any], top_k: int = 5) -> List[Dict[str, Any]]:
-    books = case_payload.get("books") or _retrieve_baseline_candidate_pool(case_payload, max(top_k * 2, 12))
-    if not books:
-        books = _normalize_books(case_payload)
-
-    constraints = case_payload.get("constraints") or {}
-    scoring_weights = constraints.get("scoring_weights") or {
-        "collaborative": 0.25,
-        "semantic": 0.35,
-        "knowledge": 0.2,
-        "diversity": 0.2,
-    }
-
-    profile_payload = {
-        "user_profile": case_payload.get("user_profile") or {},
-        "history": case_payload.get("history") or [],
-        "reviews": case_payload.get("reviews") or [],
-        "query": case_payload.get("query") or "",
-        "scenario": str(constraints.get("scenario") or "warm"),
-    }
-    content_payload = {
-        "books": books,
-        "candidate_ids": case_payload.get("candidate_ids") or [],
-        "query": case_payload.get("query") or "",
-        "kg_mode": constraints.get("kg_mode", "local"),
-        "use_remote_kg": constraints.get("use_remote_kg", False),
-        "kg_endpoint": constraints.get("kg_endpoint"),
-    }
-
-    profile_result = await reader_profile._analyze_profile(profile_payload)
-    content_result = await book_content._analyze_content(content_payload)
-
-    profile_vector = profile_result.get("preference_vector") or {}
-    content_outputs = (content_result.get("outputs") or {})
-    ranking_payload = {
-        "query": case_payload.get("query") or "",
-        "history": case_payload.get("history") or [],
-        "profile_vector": profile_vector,
-        "content_vectors": content_outputs.get("content_vectors") or [],
-        "candidates": _build_sequential_candidates(content_outputs, books),
-        "constraints": {
-            "top_k": max(1, int(top_k)),
-            "scoring_weights": scoring_weights,
-            "ground_truth_ids": constraints.get("ground_truth_ids") or [],
-        },
-    }
-
-    ranking_result = await rec_ranking._analyze_ranking(ranking_payload)
-    return ((ranking_result.get("outputs") or {}).get("ranking") or [])[: max(1, top_k)]
-
-
 def multi_agent_proxy_rank(case_payload: Dict[str, Any], top_k: int = 5) -> List[Dict[str, Any]]:
-    try:
-        asyncio.get_running_loop()
-        # Keep sync API safe inside active event loops.
-        return traditional_hybrid_rank(case_payload, top_k=top_k)
-    except RuntimeError:
-        return _attach_rank(asyncio.run(multi_agent_sequential_rank(case_payload, top_k=top_k)))
+    rows = traditional_hybrid_rank(case_payload, top_k=top_k)
+    normalized: List[Dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        item.setdefault("score_diversity", _safe_float(item.get("novelty_score"), 0.0))
+        normalized.append(item)
+    return normalized
 
 
 def llm_only_rank(case_payload: Dict[str, Any], top_k: int = 5) -> List[Dict[str, Any]]:

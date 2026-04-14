@@ -295,7 +295,7 @@ GET /demo/status
   "leader_id": "reading_concierge_001",
   "partner_mode": "auto",
   "redis_url": "redis://localhost:6379/0",
-  "llm_model": "qwen3.5-122b-a10b",
+  "llm_model": "glm-5",
   "demo_page_available": true
 }
 ```

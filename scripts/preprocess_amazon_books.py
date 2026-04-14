@@ -135,7 +135,7 @@ def _iter_books(metadata_path: Path, source_name: str, max_books: int) -> Iterab
                 year = int(match.group(0))
 
         yield {
-            "book_id": f"amz_{asin}",
+            "book_id": asin,
             "title": title,
             "author": _extract_author(row),
             "description": _extract_description(row),
@@ -178,7 +178,7 @@ def _split_interactions(
         if not user_id or not asin:
             continue
 
-        book_id = f"amz_{asin}"
+        book_id = asin
         if book_id not in valid_book_ids:
             continue
 

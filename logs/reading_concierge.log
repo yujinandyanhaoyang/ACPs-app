@@ -1,0 +1,13 @@
+2026-04-13 15:29:01+0800 | WARNING | partner.recommendation_decision_agent | event=redis_client_unavailable fallback=local_file
+2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=index faiss=/root/WORK/DATA/processed/books_index.faiss als=data/als_model.npz hnswlib=data/user_sim.bin
+2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=llm model=qwen-plus temperature=0.4 max_tokens=300
+2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_override section=llm source=env var=RECOMMENDATION_ENGINE_LLM_MODEL model=glm-5
+2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=ranking confidence_penalty_threshold=0.6 penalty_multiplier=0.7 default_mmr_lambda=0.5
+2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=quality default_min_coverage=0.6
+2026-04-13 15:29:01+0800 | WARNING | partner.feedback_agent | event=redis_client_unavailable fallback=memory
+INFO:     Started server process [3987]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 8210): address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.

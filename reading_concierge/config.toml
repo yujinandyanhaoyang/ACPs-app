@@ -4,7 +4,7 @@ model = "kimi-k2.5"
 
 [llm.default]
 base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "qwen3.5-122b-a10b"
+model = "glm-5"
 
 [server]
 host = "0.0.0.0"

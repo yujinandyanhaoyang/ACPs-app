@@ -36,7 +36,7 @@ def evaluate(query: str, top_k: int, index_path: Path, meta_path: Path) -> dict:
         [query], model_name="all-MiniLM-L6-v2", fallback_dim=384
     )
     results = retrieve_books_by_vector(
-        vectors, top_k=top_k, index_path=index_path, meta_path=meta_path
+        vectors[0], top_k=top_k, index_path=index_path, meta_path=meta_path
     )
 
     genre_counter: Counter = Counter()

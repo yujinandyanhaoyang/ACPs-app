@@ -91,7 +91,7 @@ def _iter_books(books_path: Path, book_genres: Dict[str, List[str]]) -> Iterable
             language_code = _clean_text(str(row.get("language_code") or ""))
 
             record = {
-                "book_id": f"gr_{gid}",
+                "book_id": gid,
                 "title": title,
                 "author": author,
                 "description": "",
@@ -142,7 +142,7 @@ def _split_interactions(
 
             item = {
                 "user_id": f"gr_u_{user_id}",
-                "book_id": f"gr_{book_id}",
+            "book_id": book_id,
                 "rating": rating,
                 "timestamp": None,
                 "review_text": "",

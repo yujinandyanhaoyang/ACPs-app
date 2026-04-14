@@ -242,12 +242,18 @@ def retrieve_books_by_vector(
     if top_k <= 0:
         top_k = 1
 
-    default_dataset_root = Path(
-        os.getenv(DATASET_ENV_KEY, "").strip()
-        or str(MERGED_DATASET_PATH.parent.parent)
-    ).expanduser()
-    default_index_path = default_dataset_root / "processed" / "books_index.faiss"
-    default_meta_path = default_dataset_root / "processed" / "books_index_meta.jsonl"
+    _env_index = os.getenv("BOOKS_INDEX_PATH", "").strip()
+    _env_meta = os.getenv("BOOKS_INDEX_META_PATH", "").strip()
+    if _env_index and _env_meta:
+        default_index_path = Path(_env_index)
+        default_meta_path = Path(_env_meta)
+    else:
+        default_dataset_root = Path(
+            os.getenv(DATASET_ENV_KEY, "").strip()
+            or str(MERGED_DATASET_PATH.parent.parent)
+        ).expanduser()
+        default_index_path = default_dataset_root / "processed" / "books_index.faiss"
+        default_meta_path = default_dataset_root / "processed" / "books_index_meta.jsonl"
 
     resolved_index_path = Path(index_path) if index_path is not None else default_index_path
     resolved_meta_path = Path(meta_path) if meta_path is not None else default_meta_path
@@ -296,6 +302,21 @@ def retrieve_books_by_query(
     books: Sequence[Dict[str, Any]] | None = None,
     top_k: int = 8,
 ) -> List[Dict[str, Any]]:
+    # Fast path: if we have a FAISS index and can embed the query, use vector recall
+    # instead of a full-corpus keyword scan.
+    if query and books is None:
+        try:
+            from services.model_backends import generate_text_embeddings, _DEFAULT_OFFLINE_EMBED_MODEL
+
+            model_name = os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or _DEFAULT_OFFLINE_EMBED_MODEL
+            vectors, meta = generate_text_embeddings([query], model_name)
+            if vectors and vectors[0]:
+                results = retrieve_books_by_vector(vectors[0], top_k=top_k)
+                if results:
+                    return results
+        except Exception:
+            pass
+
     pool = list(books) if books is not None else load_books()
     if not pool:
         return []
