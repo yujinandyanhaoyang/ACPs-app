@@ -148,6 +148,30 @@ def _resolve_sentence_transformer(model_name: str):
 		return None
 
 
+def warmup_embedding_model(model_name: str | None = None) -> str:
+	"""Load the sentence-transformer model into _SENTENCE_MODEL_CACHE.
+	Safe to call at startup from run_in_executor."""
+	effective = _resolve_embedding_model_name(
+		model_name or os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or _DEFAULT_OFFLINE_EMBED_MODEL
+	)
+	model = _resolve_sentence_transformer(effective)
+	if model is not None:
+		try:
+			model.encode(
+				["warmup"],
+				batch_size=1,
+				normalize_embeddings=True,
+				show_progress_bar=False,
+				convert_to_numpy=True,
+			)
+		except Exception:
+			pass
+		_LOGGER.info("event=embedding_model_warm model=%s", effective)
+		return effective
+	_LOGGER.warning("event=embedding_model_warmup_failed model=%s", effective)
+	return ""
+
+
 def _hash_fallback_embeddings(texts: List[str], fallback_dim: int) -> Tuple[List[List[float]], Dict[str, Any]]:
 	vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in texts]
 	dim = len(vectors[0]) if vectors else 0

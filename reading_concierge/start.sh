@@ -14,5 +14,5 @@ exec .venv/bin/python -m uvicorn \
     --host 0.0.0.0 \
     --port 8210 \
     --workers 1 \
-    --timeout-keep-alive 180 \
+    --timeout-keep-alive 300 \
     --log-level info

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 import os
 import sys
 import uuid
@@ -145,13 +146,16 @@ register_acs_route(
 
 @app.on_event("startup")
 async def _warmup() -> None:
-    import asyncio as _asyncio
     from services.book_retrieval import _load_books_by_id
+    from services.model_backends import warmup_embedding_model
     from partners.online.recommendation_engine_agent.modules.recall import _load_book_metadata
 
-    loop = _asyncio.get_event_loop()
-    await loop.run_in_executor(None, _load_books_by_id)
-    await loop.run_in_executor(None, _load_book_metadata)
+    loop = asyncio.get_event_loop()
+    await asyncio.gather(
+        loop.run_in_executor(None, _load_books_by_id),
+        loop.run_in_executor(None, _load_book_metadata),
+        loop.run_in_executor(None, warmup_embedding_model, None),
+    )
     logger.info(
         "event=startup_complete leader_id=%s port=%s books_cached=%s",
         LEADER_ID,
@@ -447,14 +451,17 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
         return {"intent": "recommend_books", "constraints": {}, "preferred_genres": [], "scenario_hint": "auto", "response_style": "concise"}
 
     try:
-        raw = await call_openai_chat(
-            [
-                {"role": "system", "content": INTENT_PROMPT["system"]},
-                {"role": "user", "content": user_prompt},
-            ],
-            model=RUNTIME.llm_model,
-            temperature=RUNTIME.llm_temperature,
-            max_tokens=RUNTIME.llm_max_tokens,
+        raw = await asyncio.wait_for(
+            call_openai_chat(
+                [
+                    {"role": "system", "content": INTENT_PROMPT["system"]},
+                    {"role": "user", "content": user_prompt},
+                ],
+                model=RUNTIME.llm_model,
+                temperature=RUNTIME.llm_temperature,
+                max_tokens=RUNTIME.llm_max_tokens,
+            ),
+            timeout=10.0,
         )
         parsed = _safe_json_object(raw)
         if parsed:
@@ -609,7 +616,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
         # Alignment ablation: neutralize declared preference signals to BCA.
         content_payload["declared_genres"] = []
 
-    (profile_resp, profile_route), (content_resp, content_route) = await __import__("asyncio").gather(
+    (profile_resp, profile_route), (content_resp, content_route) = await asyncio.gather(
         _invoke_partner("profile", profile_payload),
         _invoke_partner("content", content_payload),
     )
