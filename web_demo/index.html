@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
-  <title>Reading Concierge Demo</title>
+  <title>阅读管家演示</title>
   <style>
     :root {
       --bg: #f4efe8;
@@ -215,83 +215,6 @@
       background: var(--surface-strong);
     }
 
-    .hero {
-      margin-top: 18px;
-      border-radius: calc(var(--radius-lg) + 4px);
-      border: 1px solid var(--border);
-      background:
-        linear-gradient(135deg, rgba(15, 76, 129, 0.18), rgba(180, 88, 60, 0.16)),
-        var(--surface);
-      backdrop-filter: blur(18px);
-      box-shadow: var(--shadow);
-      padding: 22px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .hero-head {
-      display: grid;
-      gap: 8px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      width: fit-content;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: var(--primary-soft);
-      color: var(--primary);
-      font-size: 0.82rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .hero h2 {
-      margin: 0;
-      font-size: clamp(1.45rem, 3vw, 2.45rem);
-      line-height: 1.05;
-      letter-spacing: -0.03em;
-    }
-
-    .hero p {
-      margin: 0;
-      max-width: 78ch;
-      color: var(--text-muted);
-      font-size: 1rem;
-    }
-
-    .hero-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .metric {
-      padding: 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.18);
-    }
-
-    body[data-theme="dark"] .metric {
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .metric-label {
-      color: var(--text-muted);
-      font-size: 0.82rem;
-      margin-bottom: 8px;
-    }
-
-    .metric-value {
-      font-size: 1.2rem;
-      font-weight: 750;
-      letter-spacing: -0.02em;
-    }
-
     .layout {
       display: grid;
       grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
@@ -460,52 +383,6 @@
       background: var(--primary-soft);
       color: var(--primary);
       border-color: rgba(15, 76, 129, 0.24);
-    }
-
-    .persona-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-
-    .persona-card {
-      padding: 12px;
-      border-radius: var(--radius-md);
-      border: 1.5px solid var(--border);
-      background: var(--surface-soft);
-      cursor: pointer;
-      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-      text-align: left;
-    }
-
-    .persona-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-soft);
-    }
-
-    .persona-card.is-active {
-      border-color: var(--persona-color, var(--primary));
-      background: rgba(var(--persona-rgb, 15,76,129), 0.08);
-      box-shadow: 0 0 0 3px rgba(var(--persona-rgb, 15,76,129), 0.12);
-    }
-
-    .persona-emoji {
-      font-size: 1.4rem;
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    .persona-name {
-      font-weight: 750;
-      font-size: 0.92rem;
-      letter-spacing: -0.01em;
-      color: var(--text);
-    }
-
-    .persona-label {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: 2px;
     }
 
     .profile-bars,
@@ -1104,10 +981,6 @@
       .layout {
         grid-template-columns: 1fr;
       }
-
-      .hero-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
     }
 
     @media (max-width: 720px) {
@@ -1119,14 +992,6 @@
         padding: 14px;
         align-items: flex-start;
         flex-direction: column;
-      }
-
-      .hero {
-        padding: 18px;
-      }
-
-      .hero-grid {
-        grid-template-columns: 1fr;
       }
 
       .card-header,
@@ -1178,108 +1043,77 @@
       <div class="brand">
         <div class="brand-mark">RC</div>
         <div class="brand-copy">
-          <h1>Reading Concierge</h1>
-          <p>Agentic book recommendation demo for the new multi-agent architecture.</p>
+          <h1>阅读管家</h1>
+          <p>面向多智能体架构的图书推荐演示。</p>
         </div>
       </div>
       <div class="topbar-actions">
-        <div class="pill" id="backendPill">Backend: <strong>checking</strong></div>
-        <div class="pill" id="architecturePill">Pipeline: <strong>RC → RPA → BCA → RDA → Engine</strong></div>
-        <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle color theme">
+        <div class="pill" id="backendPill">后端：<strong>检查中</strong></div>
+        <div class="pill" id="architecturePill">流程：<strong>RC → RPA → BCA → RDA → Engine</strong></div>
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="切换颜色主题">
           <span aria-hidden="true">◐</span>
-          <span id="themeToggleLabel">Light</span>
+          <span id="themeToggleLabel">浅色</span>
         </button>
       </div>
     </header>
-
-    <section class="hero">
-      <div class="hero-head">
-        <div class="eyebrow">Native HTML / CSS / JS</div>
-        <h2>Profile-aware recommendations with transparent arbitration, scoring, and feedback loops.</h2>
-        <p>
-          Select a test persona below to simulate personalized recommendations for readers with different
-          tastes. The same query submitted by different users produces different results - demonstrating
-          profile-aware arbitration, semantic + collaborative filtering, and MMR diversity reranking across
-          the RC -> RPA -> BCA -> RDA -> Engine pipeline.
-        </p>
-      </div>
-      <div class="hero-grid">
-        <div class="metric">
-          <div class="metric-label">Current persona</div>
-          <div class="metric-value" id="metricUser">Alex Chen</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Session</div>
-          <div class="metric-value" id="metricSession">-</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Latest state</div>
-          <div class="metric-value" id="metricState">idle</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Accepted / Top K</div>
-          <div class="metric-value" id="metricTopK">3</div>
-        </div>
-      </div>
-    </section>
 
     <div class="layout">
       <aside class="stack">
         <section class="card" aria-labelledby="profileTitle">
           <div class="card-header">
             <div>
-              <h3 id="profileTitle">Profile Snapshot</h3>
-              <p>Rendered from the latest orchestration response or the profile endpoint if it exists.</p>
+              <h3 id="profileTitle">画像快照</h3>
+              <p>来自最新编排响应或画像接口的渲染结果。</p>
             </div>
-            <span class="badge badge--cold" id="profileBadge">Cold start</span>
+            <span class="badge badge--cold" id="profileBadge">冷启动</span>
           </div>
           <div class="card-body">
             <div class="status-card" style="margin-bottom: 14px;">
               <div class="status-row">
                 <div>
-                  <div class="status-title" id="profileUserLabel">No profile yet</div>
-                  <div class="status-subtitle" id="profileSubtitle">Run a query to materialize the user profile.</div>
+                  <div class="status-title" id="profileUserLabel">尚无画像</div>
+                  <div class="status-subtitle" id="profileSubtitle">运行一次查询即可生成用户画像。</div>
                 </div>
-                <button class="btn-secondary" id="refreshProfileBtn" type="button">Refresh profile</button>
+                <button class="btn-secondary" id="refreshProfileBtn" type="button">刷新画像</button>
               </div>
               <div class="chip-row" id="profileChips">
-                <span class="chip">confidence: —</span>
-                <span class="chip">genres: —</span>
-                <span class="chip">strategy: —</span>
+                <span class="chip">置信度：—</span>
+                <span class="chip">类型：—</span>
+                <span class="chip">策略：—</span>
               </div>
             </div>
 
-            <div class="section-title">Profile metrics</div>
+            <div class="section-title">画像指标</div>
             <div class="profile-bars" id="profileBars">
               <div class="bar-row">
-                <div class="bar-label">Confidence</div>
+                <div class="bar-label">置信度</div>
                 <div class="bar-track"><div class="bar-fill" id="profileConfidenceFill"></div></div>
                 <div class="bar-value" id="profileConfidenceValue">—</div>
               </div>
               <div class="bar-row">
-                <div class="bar-label">Vector length</div>
+                <div class="bar-label">向量长度</div>
                 <div class="bar-track"><div class="bar-fill" id="profileVectorFill"></div></div>
                 <div class="bar-value" id="profileVectorValue">—</div>
               </div>
               <div class="bar-row">
-                <div class="bar-label">Arbitration bias</div>
+                <div class="bar-label">仲裁偏置</div>
                 <div class="bar-track"><div class="bar-fill" id="profileArbitrationFill"></div></div>
                 <div class="bar-value" id="profileArbitrationValue">—</div>
               </div>
               <div class="bar-row">
-                <div class="bar-label">Diversity pressure</div>
+                <div class="bar-label">多样性压力</div>
                 <div class="bar-track"><div class="bar-fill" id="profileDiversityFill"></div></div>
                 <div class="bar-value" id="profileDiversityValue">—</div>
               </div>
             </div>
 
-            <div class="section-title" style="margin-top: 16px;">RDA arbitration</div>
+            <div class="section-title" style="margin-top: 16px;">RDA 仲裁</div>
             <div class="arms-list" id="armList">
               <div class="status-card">
                 <div class="status-row">
                   <div>
-                    <div class="status-title">Waiting for results</div>
-                    <div class="status-subtitle">The arbitration summary will appear after the first run.</div>
+                    <div class="status-title">等待结果</div>
+                    <div class="status-subtitle">首次运行后会显示仲裁摘要。</div>
                   </div>
                 </div>
               </div>
@@ -1290,21 +1124,22 @@
         <section class="card" aria-labelledby="settingsTitle">
           <div class="card-header">
             <div>
-              <h3 id="settingsTitle">Query Settings</h3>
-              <p>Scenario controls and persona selection.</p>
+              <h3 id="settingsTitle">查询设置</h3>
+              <p>场景控制与测试人设选择。</p>
             </div>
           </div>
           <div class="card-body">
             <div class="field">
-              <label class="section-title" style="margin-bottom:10px;">Test Persona</label>
-              <div class="persona-grid" id="personaGrid"></div>
+              <label for="personaSelect">测试人设</label>
+              <select id="personaSelect"></select>
+              <div class="hint" id="personaHint"></div>
             </div>
             <div class="field">
-              <label for="scenario">Scenario</label>
+              <label for="scenario">场景</label>
               <select id="scenario">
-                <option value="cold">Cold start</option>
-                <option value="warm">Warm start</option>
-                <option value="explore">Explore / novelty</option>
+                <option value="cold">冷启动</option>
+                <option value="warm">热启动</option>
+                <option value="explore">探索 / 新颖性</option>
               </select>
             </div>
             <div class="field">
@@ -1312,10 +1147,10 @@
               <input type="number" id="topK" min="1" max="10" value="3" />
             </div>
             <div class="field">
-              <label for="strictRemoteValidation">Strict remote validation</label>
+              <label for="strictRemoteValidation">严格远程校验</label>
               <select id="strictRemoteValidation">
-                <option value="false">Off</option>
-                <option value="true">On</option>
+                <option value="false">关闭</option>
+                <option value="true">开启</option>
               </select>
             </div>
           </div>
@@ -1326,33 +1161,33 @@
         <section class="card" aria-labelledby="queryTitle">
           <div class="card-header">
             <div>
-              <h3 id="queryTitle">Query Workspace</h3>
-              <p>Run the recommendation pipeline, inspect results, and submit feedback.</p>
+              <h3 id="queryTitle">查询工作区</h3>
+              <p>运行推荐流程、查看结果并提交反馈。</p>
             </div>
           </div>
           <div class="card-body">
             <div class="field">
-              <label for="query">Natural language query</label>
+              <label for="query">自然语言查询</label>
               <input
                 type="text"
                 id="query"
-                value="Recommend science fiction books with social themes."
-                placeholder="Ask for a style, topic, or reading goal"
+                value="推荐带有社会议题的科幻书籍。"
+                placeholder="输入风格、主题或阅读目标"
               />
             </div>
 
             <div class="field">
-              <div class="section-title" style="margin-bottom: 10px;">Scenario chips</div>
-              <div class="chip-row" id="scenarioChips" role="tablist" aria-label="Scenario selection">
-                <button class="chip is-active" type="button" data-scenario="cold">Cold</button>
-                <button class="chip" type="button" data-scenario="warm">Warm</button>
-                <button class="chip" type="button" data-scenario="explore">Explore</button>
+              <div class="section-title" style="margin-bottom: 10px;">场景快捷切换</div>
+              <div class="chip-row" id="scenarioChips" role="tablist" aria-label="场景选择">
+                <button class="chip is-active" type="button" data-scenario="cold">冷启动</button>
+                <button class="chip" type="button" data-scenario="warm">热启动</button>
+                <button class="chip" type="button" data-scenario="explore">探索</button>
               </div>
             </div>
 
             <div class="btn-row">
-              <button class="btn-primary" id="runBtn" type="button">Get recommendations</button>
-              <button class="btn-secondary" id="loadProfileBtn" type="button">Load profile</button>
+              <button class="btn-primary" id="runBtn" type="button">获取推荐</button>
+              <button class="btn-secondary" id="loadProfileBtn" type="button">加载画像</button>
             </div>
           </div>
         </section>
@@ -1360,15 +1195,15 @@
         <section class="card" id="pipelineCard" aria-labelledby="pipelineTitle" style="display:none;">
           <div class="card-header">
             <div>
-              <h3 id="pipelineTitle">Pipeline Trace</h3>
-              <p>RC, RPA, BCA, RDA, and Engine are tracked step by step.</p>
+              <h3 id="pipelineTitle">流程追踪</h3>
+              <p>RC、RPA、BCA、RDA 和 Engine 会逐步显示处理状态。</p>
             </div>
-            <span class="badge badge--warn" id="pipelineStatusBadge">Waiting</span>
+            <span class="badge badge--warn" id="pipelineStatusBadge">等待中</span>
           </div>
           <div class="pipeline-trace">
             <div class="pipeline-header">
               <span aria-hidden="true">◌</span>
-              Orchestration flow
+              编排流程
             </div>
             <div class="pipeline-steps" id="pipelineSteps"></div>
           </div>
@@ -1377,18 +1212,18 @@
         <section class="card" aria-labelledby="resultsTitle">
           <div class="card-header">
             <div>
-              <h3 id="resultsTitle">Recommendations</h3>
-              <p>Ranked results with score tags, rationales, and feedback controls.</p>
+              <h3 id="resultsTitle">推荐结果</h3>
+              <p>包含评分标签、推荐理由和反馈控件的排序结果。</p>
             </div>
           </div>
           <div class="card-body">
             <div class="results-toolbar">
-              <div class="results-count" id="resultsCount">No recommendation run yet.</div>
-              <div class="badge" id="resultsStateBadge">Idle</div>
+              <div class="results-count" id="resultsCount">尚未运行推荐。</div>
+              <div class="badge" id="resultsStateBadge">空闲</div>
             </div>
             <div id="resultsArea">
               <div class="empty-state">
-                Run a query to render the ranking and rationale cards.
+                运行一次查询即可生成排序和理由卡片。
               </div>
             </div>
           </div>
@@ -1398,24 +1233,24 @@
           <div class="summary-card">
             <div class="summary-head">
               <div>
-                <h3 id="feedbackSummaryTitle">Feedback Summary</h3>
-                <p>Client-side feedback loop that mirrors the phase 5 architecture. It will use the server endpoint if available.</p>
+                <h3 id="feedbackSummaryTitle">反馈摘要</h3>
+                <p>与第 5 阶段架构一致的前端反馈闭环，若服务器接口可用则优先使用。</p>
               </div>
-              <span class="badge badge--ok" id="feedbackBadge">Ready</span>
+              <span class="badge badge--ok" id="feedbackBadge">就绪</span>
             </div>
             <div class="summary-grid">
               <div class="summary-row">
-                <div class="summary-label">RDA reward total</div>
+                <div class="summary-label">RDA 奖励总和</div>
                 <div class="summary-track"><div class="summary-fill" id="summaryRewardFill"></div></div>
                 <div class="summary-value" id="summaryRewardValue">0.0</div>
               </div>
               <div class="summary-row">
-                <div class="summary-label">Profile update threshold</div>
+                <div class="summary-label">画像更新阈值</div>
                 <div class="summary-track"><div class="summary-fill" id="summaryProfileFill"></div></div>
                 <div class="summary-value" id="summaryProfileValue">0 / 0</div>
               </div>
               <div class="summary-row">
-                <div class="summary-label">CF retrain threshold</div>
+                <div class="summary-label">CF 重新训练阈值</div>
                 <div class="summary-track"><div class="summary-fill" id="summaryCFill"></div></div>
                 <div class="summary-value" id="summaryCValue">0 / 0</div>
               </div>
@@ -1425,7 +1260,7 @@
 
         <section class="card" aria-labelledby="debugTitle">
           <details>
-            <summary id="debugTitle">Developer Log</summary>
+            <summary id="debugTitle">开发日志</summary>
             <pre class="raw-json" id="debugArea">{}</pre>
           </details>
         </section>
@@ -1449,62 +1284,63 @@
     const API_BASE = resolveApiBase();
     const STORAGE_KEY = 'acps-reading-demo-state';
     const FEEDBACK_OPTS = [
-      { emoji: '📖', reward: 1.0, label: 'Read to the end' },
-      { emoji: '👍', reward: 0.8, label: 'Strong recommendation' },
-      { emoji: '👀', reward: 0.3, label: 'Clicked to inspect' },
-      { emoji: '😐', reward: 0.1, label: 'Mild interest' },
-      { emoji: '👎', reward: -0.5, label: 'Skipped' },
-      { emoji: '❌', reward: -0.8, label: 'Not interested' },
+      { emoji: '📖', reward: 1.0, label: '读完' },
+      { emoji: '👍', reward: 0.8, label: '强烈推荐' },
+      { emoji: '👀', reward: 0.3, label: '点开查看' },
+      { emoji: '😐', reward: 0.1, label: '轻微兴趣' },
+      { emoji: '👎', reward: -0.5, label: '跳过' },
+      { emoji: '❌', reward: -0.8, label: '不感兴趣' },
     ];
     const PIPELINE_STEPS = [
-      { key: 'RC', name: 'Reading Concierge', abbr: 'RC' },
-      { key: 'RPA', name: 'Reader Profile Agent', abbr: 'RPA' },
-      { key: 'BCA', name: 'Book Content Agent', abbr: 'BCA' },
-      { key: 'RDA', name: 'Decision Agent', abbr: 'RDA' },
-      { key: 'Engine', name: 'Recommendation Engine', abbr: 'ENG' },
+      { key: 'RC', name: '阅读管家', abbr: 'RC' },
+      { key: 'RPA', name: '读者画像智能体', abbr: 'RPA' },
+      { key: 'BCA', name: '图书内容智能体', abbr: 'BCA' },
+      { key: 'RDA', name: '决策智能体', abbr: 'RDA' },
+      { key: 'Engine', name: '推荐引擎', abbr: 'ENG' },
     ];
     const TEST_PERSONAS = [
       {
         id: "demo_user_001",
         name: "Alex Chen",
-        label: "Sci-Fi Explorer",
+        label: "科幻探索者",
         emoji: "🚀",
         color: "#0f4c81",
-        description: "Loves hard science fiction and speculative technology. Reads 3–4 books/month, prefers standalone novels over series.",
-        defaultQuery: "hard science fiction with realistic technology and societal impact",
+        description: "喜欢硬科幻和前沿科技题材，每月阅读 3–4 本，偏好单本小说而非系列作品。",
+        defaultQuery: "硬科幻，要求技术设定真实并关注社会影响",
         scenario: "warm"
       },
       {
         id: "demo_user_002",
         name: "Maria Santos",
-        label: "Mystery & Thriller",
+        label: "悬疑与惊悚",
         emoji: "🔍",
         color: "#b4583c",
-        description: "Voracious mystery reader, favors psychological thrillers and Scandinavian noir. Has rated 200+ books on Goodreads.",
-        defaultQuery: "psychological thriller with unreliable narrator dark atmosphere",
+        description: "重度悬疑读者，偏爱心理惊悚和北欧黑色小说，已在 Goodreads 上评价 200 多本书。",
+        defaultQuery: "心理惊悚，带有不可靠叙述者和阴暗氛围",
         scenario: "warm"
       },
       {
         id: "demo_user_003",
         name: "James Okafor",
-        label: "History & Biography",
+        label: "历史与传记",
         emoji: "📜",
         color: "#2f855a",
-        description: "Academic reader focused on historical non-fiction and political biographies. Values depth and primary sources.",
-        defaultQuery: "historical biography political leadership 20th century",
+        description: "学术型读者，专注历史非虚构和政治人物传记，重视深度与一手资料。",
+        defaultQuery: "20 世纪政治领导人物的历史传记",
         scenario: "cold"
       },
       {
         id: "demo_user_004",
         name: "Yuki Tanaka",
-        label: "Fantasy & Romance",
+        label: "奇幻与浪漫",
         emoji: "✨",
         color: "#7b4fad",
-        description: "Casual reader who enjoys epic fantasy series and contemporary romance. Prefers emotionally resonant stories.",
-        defaultQuery: "epic fantasy with romance subplot magic system world building",
+        description: "休闲读者，喜欢史诗奇幻系列和当代浪漫故事，更偏好情感共鸣强的作品。",
+        defaultQuery: "史诗奇幻，带浪漫支线，包含魔法体系和世界观构建",
         scenario: "explore"
       }
     ];
+    const VALID_SCENARIOS = ['cold', 'warm', 'explore'];
 
     const state = {
       theme: 'light',
@@ -1523,6 +1359,11 @@
     };
 
     const el = (id) => document.getElementById(id);
+
+    function setMetric(id, value) {
+      const node = el(id);
+      if (node) node.textContent = value;
+    }
 
     function escapeHtml(value) {
       return String(value ?? '')
@@ -1571,7 +1412,7 @@
       }
       const resolvedPersona = TEST_PERSONAS.find((p) => p.id === state.userId) || TEST_PERSONAS[0];
       state.userId = resolvedPersona.id;
-      if (!state.scenario || !TEST_PERSONAS.find((p) => p.scenario === state.scenario)) {
+      if (!state.scenario || !VALID_SCENARIOS.includes(state.scenario)) {
         state.scenario = resolvedPersona.scenario;
       }
     }
@@ -1588,7 +1429,7 @@
     function applyTheme(theme) {
       state.theme = theme === 'dark' ? 'dark' : 'light';
       document.body.dataset.theme = state.theme;
-      el('themeToggleLabel').textContent = state.theme === 'dark' ? 'Dark' : 'Light';
+      el('themeToggleLabel').textContent = state.theme === 'dark' ? '深色' : '浅色';
       persistState();
     }
 
@@ -1633,9 +1474,9 @@
           <div class="step-icon" id="icon_${step.key}">${step.abbr}</div>
           <div>
             <div class="step-name">${escapeHtml(step.name)}</div>
-            <div class="step-detail" id="detail_${step.key}">Waiting to run...</div>
+            <div class="step-detail" id="detail_${step.key}">等待运行...</div>
           </div>
-          <div class="step-badge" id="badge_${step.key}">Waiting</div>
+          <div class="step-badge" id="badge_${step.key}">等待中</div>
         </div>
       `).join('');
     }
@@ -1655,30 +1496,30 @@
         step.classList.add('is-running');
         icon.classList.add('is-running');
         badge.classList.add('is-running');
-        badge.textContent = 'Running';
+        badge.textContent = '运行中';
       } else if (status === 'done') {
         step.classList.add('is-done');
         icon.classList.add('is-done');
         icon.textContent = '✓';
         badge.classList.add('is-done');
-        badge.textContent = 'Done';
+        badge.textContent = '完成';
       } else if (status === 'error') {
         step.classList.add('is-error');
         icon.classList.add('is-error');
         icon.textContent = '!';
         badge.classList.add('is-error');
-        badge.textContent = 'Error';
+        badge.textContent = '错误';
       } else {
         icon.textContent = PIPELINE_STEPS.find((s) => s.key === key)?.abbr || key;
-        badge.textContent = 'Waiting';
+        badge.textContent = '等待中';
       }
 
       if (detail) detailEl.textContent = detail;
     }
 
     function markPipelineAllWaiting() {
-      PIPELINE_STEPS.forEach((step) => setPipelineStep(step.key, 'waiting', 'Waiting to run...'));
-      el('pipelineStatusBadge').textContent = 'Waiting';
+      PIPELINE_STEPS.forEach((step) => setPipelineStep(step.key, 'waiting', '等待运行...'));
+      el('pipelineStatusBadge').textContent = '等待中';
       el('pipelineStatusBadge').className = 'badge badge--warn';
     }
 
@@ -1688,11 +1529,11 @@
       el('pipelineCard').style.display = 'block';
 
       const previews = [
-        ['RC', 'Interpreting the query and scenario hint.'],
-        ['RPA', 'Building a user-profile proposal.'],
-        ['BCA', 'Assembling content proposals from candidate books.'],
-        ['RDA', 'Arbitrating weights and diversity pressure.'],
-        ['Engine', 'Ranking and explaining the final list.'],
+        ['RC', '解析查询与场景提示。'],
+        ['RPA', '生成读者画像提案。'],
+        ['BCA', '汇总候选图书内容提案。'],
+        ['RDA', '仲裁权重与多样性压力。'],
+        ['Engine', '排序并解释最终列表。'],
       ];
 
       previews.forEach(([key, detail], index) => {
@@ -1714,11 +1555,11 @@
       const engineResults = resp.partner_results?.engine || {};
 
       const details = {
-        RC: resp.intent?.intent ? `Intent: ${resp.intent.intent}` : 'Intent parsed',
-        RPA: profileResults.confidence != null ? `Confidence ${fmtNum(profileResults.confidence)}` : 'Profile proposal ready',
-        BCA: contentResults.outputs?.alignment_status || contentResults.alignment_status || 'Content proposal ready',
-        RDA: rdaResults.strategy ? `Strategy: ${rdaResults.strategy}` : 'Arbitration complete',
-        Engine: `${(resp.recommendations || []).length} recommendations returned`,
+        RC: resp.intent?.intent ? `意图：${resp.intent.intent}` : '已解析意图',
+        RPA: profileResults.confidence != null ? `置信度 ${fmtNum(profileResults.confidence)}` : '画像提案就绪',
+        BCA: contentResults.outputs?.alignment_status || contentResults.alignment_status || '内容提案就绪',
+        RDA: rdaResults.strategy ? `策略：${rdaResults.strategy}` : '仲裁完成',
+        Engine: `${(resp.recommendations || []).length} 条推荐返回`,
       };
 
       PIPELINE_STEPS.forEach((step) => {
@@ -1731,7 +1572,7 @@
         }
       });
 
-      el('pipelineStatusBadge').textContent = resp.state === 'completed' ? 'Completed' : 'Needs input';
+      el('pipelineStatusBadge').textContent = resp.state === 'completed' ? '已完成' : '需要输入';
       el('pipelineStatusBadge').className = `badge ${resp.state === 'completed' ? 'badge--ok' : 'badge--warn'}`;
     }
 
@@ -1766,22 +1607,22 @@
 
       const profileBadge = el('profileBadge');
       if (Number.isFinite(confidence) && confidence > 0.72) {
-        profileBadge.textContent = 'Warm user';
+        profileBadge.textContent = '热启动用户';
         profileBadge.className = 'badge badge--warm';
       } else {
-        profileBadge.textContent = 'Cold start';
+        profileBadge.textContent = '冷启动';
         profileBadge.className = 'badge badge--cold';
       }
 
       el('profileUserLabel').textContent = profile?.user_id || state.userId;
       el('profileSubtitle').textContent = profile?.strategy_suggestion
-        ? `Strategy suggestion: ${profile.strategy_suggestion}`
-        : 'Profile summary is waiting for a completed recommendation run.';
+        ? `策略建议：${profile.strategy_suggestion}`
+        : '画像摘要等待一次完成的推荐运行。';
 
       el('profileChips').innerHTML = [
-        `confidence: ${Number.isFinite(confidence) ? confidence.toFixed(2) : '—'}`,
-        `genres: ${genres.length ? genres.join(', ') : '—'}`,
-        `strategy: ${profile?.strategy || profile?.strategy_suggestion || '—'}`,
+        `置信度：${Number.isFinite(confidence) ? confidence.toFixed(2) : '—'}`,
+        `类型：${genres.length ? genres.join('，') : '—'}`,
+        `策略：${profile?.strategy || profile?.strategy_suggestion || '—'}`,
       ].map((text) => `<span class="chip">${escapeHtml(text)}</span>`).join('');
 
       const confidencePct = Number.isFinite(confidence) ? Math.min(100, confidence * 100) : 0;
@@ -1790,7 +1631,7 @@
 
       const vectorPct = Math.min(100, vectorLength * 20);
       el('profileVectorFill').style.width = `${vectorPct}%`;
-      el('profileVectorValue').textContent = vectorLength ? `${vectorLength} dims` : '—';
+      el('profileVectorValue').textContent = vectorLength ? `${vectorLength} 维` : '—';
 
       const annWeight = Number(finalWeights.ann_weight ?? scoreWeights.semantic ?? 0);
       const cfWeight = Number(finalWeights.cf_weight ?? scoreWeights.cf ?? 0);
@@ -1805,19 +1646,19 @@
 
       const armRows = [
         {
-          label: 'ANN weight',
+          label: 'ANN 权重',
           value: Number.isFinite(annWeight) ? annWeight : 0,
-          detail: `Semantic ${Number.isFinite(scoreWeights.content) ? scoreWeights.content.toFixed(2) : '—'}`,
+          detail: `语义 ${Number.isFinite(scoreWeights.content) ? scoreWeights.content.toFixed(2) : '—'}`,
         },
         {
-          label: 'CF weight',
+          label: 'CF 权重',
           value: Number.isFinite(cfWeight) ? cfWeight : 0,
-          detail: `Collaborative ${Number.isFinite(scoreWeights.cf) ? scoreWeights.cf.toFixed(2) : '—'}`,
+          detail: `协同 ${Number.isFinite(scoreWeights.cf) ? scoreWeights.cf.toFixed(2) : '—'}`,
         },
         {
           label: 'MMR lambda',
           value: Number.isFinite(profile?.mmr_lambda) ? profile.mmr_lambda : 0,
-          detail: `Strategy ${profile?.strategy || 'balanced'}`,
+          detail: `策略 ${profile?.strategy || 'balanced'}`,
         },
       ];
 
@@ -1844,14 +1685,14 @@
         return;
       }
 
-      el('profileBadge').textContent = 'Cold start';
+      el('profileBadge').textContent = '冷启动';
       el('profileBadge').className = 'badge badge--cold';
       el('profileUserLabel').textContent = state.userId;
-      el('profileSubtitle').textContent = 'Run a query to materialize the profile snapshot.';
+      el('profileSubtitle').textContent = '运行一次查询即可生成画像快照。';
       el('profileChips').innerHTML = `
-        <span class="chip">confidence: —</span>
-        <span class="chip">genres: —</span>
-        <span class="chip">strategy: —</span>
+        <span class="chip">置信度：—</span>
+        <span class="chip">类型：—</span>
+        <span class="chip">策略：—</span>
       `;
       el('profileConfidenceFill').style.width = '0%';
       el('profileVectorFill').style.width = '0%';
@@ -1865,8 +1706,8 @@
         <div class="status-card">
           <div class="status-row">
             <div>
-              <div class="status-title">Waiting for results</div>
-              <div class="status-subtitle">The RDA arbitration summary appears after the first completed run.</div>
+              <div class="status-title">等待结果</div>
+              <div class="status-subtitle">首次完成运行后会显示 RDA 仲裁摘要。</div>
             </div>
           </div>
         </div>
@@ -1884,17 +1725,17 @@
     }
 
     function buildResultCard(book, index, explanation) {
-      const title = escapeHtml(book.title || book.book_title || 'Unknown Title');
-      const author = escapeHtml(book.author || 'Unknown author');
+      const title = escapeHtml(book.title || book.book_title || '未知标题');
+      const author = escapeHtml(book.author || '未知作者');
       const matchScore = Number(book.composite_score ?? book.match_score ?? book.score ?? 0);
       const noveltyScore = Number(book.novelty_score ?? book.novelty ?? 0);
       const rationale = escapeHtml(
         explanation?.justification ||
         (Array.isArray(explanation?.bullet_summary) ? explanation.bullet_summary.join(' | ') : '') ||
         book.rationale ||
-        'Semantic matching and diversification constraints selected this book.'
+        '语义匹配与多样性约束共同选中了这本书。'
       );
-      const recallLabel = book.recall_cf ? '<span class="score-tag score-tag--cf">CF recall</span>' : '';
+      const recallLabel = book.recall_cf ? '<span class="score-tag score-tag--cf">CF 召回</span>' : '';
 
       return `
         <article class="result-card" id="rc_${escapeHtml(book.book_id || index)}">
@@ -1904,16 +1745,16 @@
               <div class="result-title">${title}</div>
               <div class="result-author">${author}</div>
               <div class="score-row">
-                <span class="score-tag score-tag--match">Match ${fmtNum(matchScore)}</span>
-                <span class="score-tag score-tag--novelty">Novelty ${fmtNum(noveltyScore)}</span>
+                <span class="score-tag score-tag--match">匹配 ${fmtNum(matchScore)}</span>
+                <span class="score-tag score-tag--novelty">新颖 ${fmtNum(noveltyScore)}</span>
                 ${recallLabel}
               </div>
             </div>
-            <div class="badge badge--ok">Rank ${index + 1}</div>
+            <div class="badge badge--ok">排名 ${index + 1}</div>
           </div>
           <div class="result-rationale">"${rationale}"</div>
           <div class="feedback-panel">
-            <div class="feedback-label">How helpful was this recommendation?</div>
+            <div class="feedback-label">这条推荐有多有帮助？</div>
             <div class="feedback-actions">
               <span class="reward-flash" id="rf_${escapeHtml(book.book_id || index)}"></span>
               <div>
@@ -1949,14 +1790,14 @@
       state.feedbackGiven = {};
       state.rdaRewardSum = 0;
 
-      el('metricSession').textContent = state.sessionId.slice(0, 12);
-      el('metricState').textContent = resp.state || 'unknown';
-      el('metricTopK').textContent = String(state.topK);
-      el('resultsStateBadge').textContent = resp.state === 'completed' ? 'Completed' : 'Needs input';
+      setMetric('metricSession', state.sessionId.slice(0, 12));
+      setMetric('metricState', resp.state || 'unknown');
+      setMetric('metricTopK', String(state.topK));
+      el('resultsStateBadge').textContent = resp.state === 'completed' ? '已完成' : '需要输入';
       el('resultsStateBadge').className = `badge ${resp.state === 'completed' ? 'badge--ok' : 'badge--warn'}`;
       el('resultsCount').textContent = recommendations.length
-        ? `${recommendations.length} recommendation${recommendations.length === 1 ? '' : 's'} returned.`
-        : 'No recommendations returned.';
+        ? `返回了 ${recommendations.length} 条推荐。`
+        : '未返回推荐。';
       el('feedbackSummaryCard').style.display = recommendations.length ? 'block' : 'none';
 
       if (recommendations.length) {
@@ -1969,7 +1810,7 @@
       } else {
         el('resultsArea').innerHTML = `
           <div class="empty-state">
-            No recommendations were returned for this query.
+            该查询未返回推荐结果。
           </div>
         `;
       }
@@ -2005,7 +1846,7 @@
       el('summaryCFill').style.width = `${cfNorm * 100}%`;
       el('summaryCValue').textContent = `${Object.keys(state.feedbackGiven).length} / ${thresholdCF}`;
 
-      el('feedbackBadge').textContent = state.resultCount ? 'Active' : 'Waiting';
+      el('feedbackBadge').textContent = state.resultCount ? '活跃' : '等待中';
       el('feedbackBadge').className = `badge ${state.resultCount ? 'badge--ok' : 'badge--warn'}`;
     }
 
@@ -2036,9 +1877,9 @@
       applyFeedbackLocally(bookId, reward);
 
       if (resp?.rda_arm_updated && resp.rda_arm_updated.arm_name) {
-        showToast(`RDA arm updated: ${resp.rda_arm_updated.arm_name}`, 'success');
+        showToast(`RDA 分支已更新：${resp.rda_arm_updated.arm_name}`, 'success');
       } else if (resp?.cf_retrain_triggered) {
-        showToast('CF retrain triggered by accumulated feedback.', 'warning');
+        showToast('累计反馈已触发 CF 重新训练。', 'warning');
       } else if (resp?.profile_updated && resp.new_profile) {
         renderProfile({
           user_id: state.userId,
@@ -2051,11 +1892,11 @@
           mmr_lambda: resp.new_profile.mmr_lambda,
           strategy: resp.new_profile.strategy,
         });
-        showToast('User profile refreshed from feedback.', 'success');
+        showToast('用户画像已根据反馈刷新。', 'success');
       }
 
       if (Object.keys(state.feedbackGiven).length === state.resultCount && state.resultCount > 0) {
-        showToast('Session feedback complete.', 'success');
+        showToast('会话反馈已完成。', 'success');
       }
     }
 
@@ -2074,13 +1915,13 @@
           body: JSON.stringify(payload),
           timeout: 8000,
         });
-        if (!resp.ok) throw new Error(`Feedback request failed: ${resp.status}`);
+        if (!resp.ok) throw new Error(`反馈请求失败：${resp.status}`);
         const data = await resp.json();
         applyFeedbackResponse(bookId, reward, data);
-        showToast('Feedback sent to the server.', 'success');
+        showToast('反馈已发送到服务器。', 'success');
       } catch (err) {
         applyFeedbackLocally(bookId, reward);
-        showToast('Feedback stored locally in demo mode.', 'warning');
+        showToast('反馈已在演示模式下本地保存。', 'warning');
       }
     }
 
@@ -2110,36 +1951,17 @@
       persistState();
     }
 
-    function hexToRgb(hex) {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `${r},${g},${b}`;
-    }
-
-    function renderPersonaGrid() {
-      const grid = el('personaGrid');
-      if (!grid) return;
-      grid.innerHTML = TEST_PERSONAS.map((p) => `
-        <button
-          class="persona-card${state.userId === p.id ? ' is-active' : ''}"
-          type="button"
-          id="persona_${escapeHtml(p.id)}"
-          data-persona-id="${escapeHtml(p.id)}"
-          style="--persona-color:${escapeHtml(p.color)};--persona-rgb:${hexToRgb(p.color)};"
-          title="${escapeHtml(p.description)}"
-        >
-          <span class="persona-emoji" aria-hidden="true">${p.emoji}</span>
-          <div class="persona-name">${escapeHtml(p.name)}</div>
-          <div class="persona-label">${escapeHtml(p.label)}</div>
-        </button>
-      `).join('');
-    }
-
-    function bindPersonaCardHandlers() {
-      document.querySelectorAll('#personaGrid .persona-card').forEach((card) => {
-        card.addEventListener('click', () => switchPersona(card.dataset.personaId));
-      });
+    function renderPersonaSelect() {
+      const sel = el('personaSelect');
+      if (!sel) return;
+      sel.innerHTML = TEST_PERSONAS.map((p) =>
+        `<option value="${escapeHtml(p.id)}"${state.userId === p.id ? ' selected' : ''}>
+      ${p.emoji} ${escapeHtml(p.name)} — ${escapeHtml(p.label)}
+    </option>`
+      ).join('');
+      const persona = TEST_PERSONAS.find((p) => p.id === state.userId) || TEST_PERSONAS[0];
+      const hint = el('personaHint');
+      if (hint) hint.textContent = persona.description;
     }
 
     function switchPersona(personaId) {
@@ -2159,19 +1981,18 @@
       updateScenarioChips(persona.scenario);
       el('scenario').value = persona.scenario;
 
-      renderPersonaGrid();
-      bindPersonaCardHandlers();
+      renderPersonaSelect();
 
-      el('metricUser').textContent = `${persona.name} (${persona.id})`;
-      el('metricState').textContent = 'idle';
-      el('metricSession').textContent = '-';
+      setMetric('metricUser', `${persona.name}（${persona.id}）`);
+      setMetric('metricState', '空闲');
+      setMetric('metricSession', '-');
 
-      el('resultsArea').innerHTML = `<div class="empty-state">Switched to <strong>${escapeHtml(persona.name)}</strong> - run a query to see personalized recommendations.</div>`;
+      el('resultsArea').innerHTML = `<div class="empty-state">已切换到 <strong>${escapeHtml(persona.name)}</strong>，运行一次查询即可查看个性化推荐。</div>`;
       el('feedbackSummaryCard').style.display = 'none';
       el('pipelineCard').style.display = 'none';
       renderPlaceholderProfile();
 
-      showToast(`Switched to ${persona.name} (${persona.label})`, 'success');
+      showToast(`已切换到 ${persona.name}（${persona.label}）`, 'success');
     }
 
     function buildPayload() {
@@ -2190,7 +2011,7 @@
     function setLoading(isLoading) {
       el('runBtn').disabled = isLoading;
       el('loadProfileBtn').disabled = isLoading;
-      el('runBtn').textContent = isLoading ? 'Running...' : 'Get recommendations';
+      el('runBtn').textContent = isLoading ? '运行中...' : '获取推荐';
       if (isLoading) {
         el('resultsArea').innerHTML = `
           <div class="stack">
@@ -2206,20 +2027,20 @@
       const topK = Number(el('topK').value);
 
       if (!query) {
-        showToast('Query is required.', 'error');
+        showToast('请输入查询内容。', 'error');
         return;
       }
       if (!Number.isFinite(topK) || topK < 1) {
-        showToast('Top K must be at least 1.', 'error');
+        showToast('Top K 必须至少为 1。', 'error');
         return;
       }
 
       state.topK = topK;
       persistState();
 
-      el('metricTopK').textContent = String(state.topK);
-      el('metricState').textContent = 'running';
-      el('resultsStateBadge').textContent = 'Running';
+      setMetric('metricTopK', String(state.topK));
+      setMetric('metricState', '运行中');
+      el('resultsStateBadge').textContent = '运行中';
       el('resultsStateBadge').className = 'badge badge--warn';
       el('feedbackSummaryCard').style.display = 'none';
       el('pipelineCard').style.display = 'block';
@@ -2233,31 +2054,31 @@
         const resp = await fetchJson(`${API_BASE}/user_api`, {
           method: 'POST',
           body: JSON.stringify(payload),
-          timeout: 60000,
+          timeout: 90000,
         });
-        if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
+        if (!resp.ok) throw new Error(`服务器错误：${resp.status}`);
 
         const data = await resp.json();
         state.sessionId = data.session_id || state.sessionId || randomId();
-        el('metricSession').textContent = state.sessionId.slice(0, 12);
+        setMetric('metricSession', state.sessionId.slice(0, 12));
         syncPipelineFromResponse(data);
         renderResults(data);
         setLoading(false);
-        el('metricState').textContent = data.state || 'completed';
-        showToast('Recommendation run completed.', 'success');
+        setMetric('metricState', data.state || '已完成');
+        showToast('推荐运行已完成。', 'success');
       } catch (err) {
         clearPipelineTimers();
         setLoading(false);
-        el('metricState').textContent = 'error';
-        el('pipelineStatusBadge').textContent = 'Error';
+        setMetric('metricState', '错误');
+        el('pipelineStatusBadge').textContent = '错误';
         el('pipelineStatusBadge').className = 'badge badge--error';
-        setPipelineStep('RC', 'error', 'Recommendation request failed.');
+        setPipelineStep('RC', 'error', '推荐请求失败。');
         el('resultsArea').innerHTML = `
           <div class="empty-state" style="border-color: rgba(194, 65, 65, 0.28); color: var(--error);">
             ${escapeHtml(err.message)}
           </div>
         `;
-        showToast('Recommendation request failed.', 'error');
+        showToast('推荐请求失败。', 'error');
       }
     }
 
@@ -2265,27 +2086,26 @@
       const userId = state.userId;
       if (!userId) return;
 
-      state.userId = userId;
       const currentPersona = TEST_PERSONAS.find((p) => p.id === state.userId) || TEST_PERSONAS[0];
-      el('metricUser').textContent = `${currentPersona.name} (${currentPersona.id})`;
+      setMetric('metricUser', `${currentPersona.name}（${currentPersona.id}）`);
 
       try {
         const resp = await fetchJson(`${API_BASE}/api/profile?user_id=${encodeURIComponent(userId)}`, {
           method: 'GET',
           timeout: 8000,
         });
-        if (!resp.ok) throw new Error(`Profile endpoint returned ${resp.status}`);
+        if (!resp.ok) throw new Error(`画像接口返回 ${resp.status}`);
         const profile = await resp.json();
         renderProfile(profile);
-        showToast('Profile loaded from the server.', 'success');
+        showToast('画像已从服务器加载。', 'success');
       } catch (err) {
         const cached = loadCachedProfile(userId);
         if (cached) {
           renderProfile(cached);
-          showToast('Loaded cached profile snapshot.', 'warning');
+          showToast('已加载缓存的画像快照。', 'warning');
         } else {
           renderPlaceholderProfile();
-          showToast('Profile endpoint is unavailable, using the local snapshot.', 'warning');
+          showToast('画像接口不可用，正在使用本地快照。', 'warning');
         }
       }
     }
@@ -2293,30 +2113,30 @@
     async function loadBackendStatus() {
       try {
         const resp = await fetchJson(`${API_BASE}/demo/status`, { method: 'GET', timeout: 5000 });
-        if (!resp.ok) throw new Error(`Status endpoint returned ${resp.status}`);
+        if (!resp.ok) throw new Error(`状态接口返回 ${resp.status}`);
         const status = await resp.json();
         const pill = el('backendPill');
         const serviceName = status.service || 'reading_concierge';
         const mode = status.partner_mode || 'unknown';
-        pill.innerHTML = `Backend: <strong>${escapeHtml(serviceName)}</strong> / ${escapeHtml(mode)}`;
+        pill.innerHTML = `后端：<strong>${escapeHtml(serviceName)}</strong> / ${escapeHtml(mode)}`;
         pill.className = 'pill pill--ok';
       } catch (err) {
         const pill = el('backendPill');
-        pill.innerHTML = `Backend: <strong>offline</strong>`;
+        pill.innerHTML = `后端：<strong>离线</strong>`;
         pill.className = 'pill pill--warn';
       }
     }
 
     function restoreUiState() {
+      const initialPersona = TEST_PERSONAS.find((p) => p.id === state.userId) || TEST_PERSONAS[0];
+      if (!VALID_SCENARIOS.includes(state.scenario)) {
+        state.scenario = initialPersona.scenario;
+      }
       el('scenario').value = state.scenario;
       el('topK').value = String(state.topK);
-      const initialPersona = TEST_PERSONAS.find((p) => p.id === state.userId) || TEST_PERSONAS[0];
-      el('metricUser').textContent = `${initialPersona.name} (${initialPersona.id})`;
-      el('metricTopK').textContent = String(state.topK);
       el('query').value = initialPersona.defaultQuery;
       updateScenarioChips(state.scenario);
-      renderPersonaGrid();
-      bindPersonaCardHandlers();
+      renderPersonaSelect();
       renderPlaceholderProfile();
       initPipeline();
     }
@@ -2328,13 +2148,16 @@
       el('runBtn').addEventListener('click', runRecommendation);
       el('loadProfileBtn').addEventListener('click', refreshProfile);
       el('refreshProfileBtn').addEventListener('click', refreshProfile);
+      el('personaSelect').addEventListener('change', (event) => {
+        switchPersona(event.target.value);
+      });
       el('scenario').addEventListener('change', (event) => updateScenarioChips(event.target.value));
       el('topK').addEventListener('change', (event) => {
         const value = Number(event.target.value);
         if (Number.isFinite(value) && value > 0) {
           state.topK = value;
           persistState();
-          el('metricTopK').textContent = String(state.topK);
+          setMetric('metricTopK', String(state.topK));
         }
       });
       document.querySelectorAll('#scenarioChips .chip').forEach((chip) => {
@@ -2348,7 +2171,7 @@
     function primeDebugDefaults() {
       el('debugArea').textContent = JSON.stringify({
         api_base: API_BASE,
-        note: 'This panel shows the full orchestration response and the feedback loop state.',
+        note: '此面板显示完整编排响应和反馈闭环状态。',
       }, null, 2);
     }
 
