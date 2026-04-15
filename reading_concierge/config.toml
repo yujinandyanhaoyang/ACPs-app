@@ -11,7 +11,7 @@ host = "0.0.0.0"
 port = 8210
 
 [server.mtls]
-tls_enabled = true
+tls_enabled = false
 verify_client = true
 cert_file = "certs/1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W.pem"
 key_file = "certs/1.2.156.3088.0001.00001.TXLOAR.K52MRC.1.0H7W.key"
@@ -39,6 +39,6 @@ FEEDBACK_AIC = "1.2.156.3088.0001.00001.MMOOJJ.E079YU.1.09FY"
 
 # Backward-compatible runtime section.
 [llm]
-model = "qwen-flash-character"
+model = "gui-plus-2026-02-26"
 temperature = 0.3
 max_tokens = 512

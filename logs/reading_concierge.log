@@ -1,13 +1,23 @@
-2026-04-13 15:29:01+0800 | WARNING | partner.recommendation_decision_agent | event=redis_client_unavailable fallback=local_file
-2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=index faiss=/root/WORK/DATA/processed/books_index.faiss als=data/als_model.npz hnswlib=data/user_sim.bin
-2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=llm model=qwen-plus temperature=0.4 max_tokens=300
-2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_override section=llm source=env var=RECOMMENDATION_ENGINE_LLM_MODEL model=glm-5
-2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=ranking confidence_penalty_threshold=0.6 penalty_multiplier=0.7 default_mmr_lambda=0.5
-2026-04-13 15:29:01+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=quality default_min_coverage=0.6
-2026-04-13 15:29:01+0800 | WARNING | partner.feedback_agent | event=redis_client_unavailable fallback=memory
-INFO:     Started server process [3987]
+[start] checking FAISS index...
+-rw-r--r-- 1 root root 1.9G Apr 13 05:52 /root/WORK/DATA/processed/books_index.faiss
+-rw-r--r-- 1 root root 167M Apr 13 05:52 /root/WORK/DATA/processed/books_index_meta.jsonl
+[start] launching reading_concierge on 0.0.0.0:8210 ...
+2026-04-15 00:38:40+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=index faiss=/root/WORK/DATA/processed/books_index.faiss als=data/als_model.npz hnswlib=data/user_sim.bin
+2026-04-15 00:38:40+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=llm model=qwen-plus temperature=0.4 max_tokens=300
+2026-04-15 00:38:40+0800 | INFO | partner.recommendation_engine_agent | event=config_override section=llm source=env var=RECOMMENDATION_ENGINE_LLM_MODEL model=glm-5
+2026-04-15 00:38:40+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=ranking confidence_penalty_threshold=0.6 penalty_multiplier=0.7 default_mmr_lambda=0.5
+2026-04-15 00:38:40+0800 | INFO | partner.recommendation_engine_agent | event=config_loaded section=quality default_min_coverage=0.6
+INFO:     Started server process [17213]
 INFO:     Waiting for application startup.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5728.63it/s]
+[1mBertModel LOAD REPORT[0m from: /root/WORK/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+2026-04-15 00:38:53+0800 | INFO | agent.reading_concierge | event=embedding_model_warm model=/root/WORK/all-MiniLM-L6-v2
+2026-04-15 00:38:53+0800 | INFO | agent.reading_concierge | event=startup_complete leader_id=reading_concierge_001 port=8210 books_cached=1378470
 INFO:     Application startup complete.
-ERROR:    [Errno 98] error while attempting to bind on address ('0.0.0.0', 8210): address already in use
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
+INFO:     Uvicorn running on http://0.0.0.0:8210 (Press CTRL+C to quit)
