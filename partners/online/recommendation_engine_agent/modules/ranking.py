@@ -38,7 +38,7 @@ def _normalize_weights(score_weights: Dict[str, Any]) -> Dict[str, float]:
 
 
 def _extract_vector(row: Dict[str, Any]) -> List[float]:
-    for key in ["_vector", "vector256", "vector", "content_vector", "embedding"]:
+    for key in ["_vector", "vector384", "vector_384", "vector256", "vector", "content_vector", "embedding"]:
         raw = row.get(key)
         if isinstance(raw, list):
             return [_safe_float(v) for v in raw]
@@ -56,7 +56,12 @@ def _recency_score(row: Dict[str, Any]) -> float:
     return max(0.0, min(1.0, (y - 1990) / 40.0))
 
 
-def score_round1(candidates: List[Dict[str, Any]], score_weights: Dict[str, Any], top_k: int = 50) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+def score_round1(
+    candidates: List[Dict[str, Any]],
+    score_weights: Dict[str, Any],
+    top_k: int = 50,
+    cold_start: bool = False,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     weights = _normalize_weights(score_weights or {})
     scored: List[Dict[str, Any]] = []
     genre_freq: Dict[str, int] = {}
@@ -69,9 +74,13 @@ def score_round1(candidates: List[Dict[str, Any]], score_weights: Dict[str, Any]
             if token:
                 genre_freq[token] = genre_freq.get(token, 0) + 1
 
-    for row in candidates:
+    total_candidates = max(1, len(candidates))
+    for idx, row in enumerate(candidates):
         content = _safe_float(row.get("content_sim"), 0.0)
-        cf = _safe_float(row.get("cf_score"), 0.0)
+        if cold_start:
+            rank_prior = max(0.0, 1.0 - (idx / total_candidates))
+            content = max(content, rank_prior)
+        cf = 0.0 if cold_start else _safe_float(row.get("cf_score"), 0.0)
         novelty = _safe_float(row.get("novelty_score"), max(0.0, 1.0 - content))
         raw_genres = row.get("genres")
         genres = raw_genres if isinstance(raw_genres, list) else []
@@ -124,6 +133,7 @@ def rerank_round2(
     mmr_lambda: float,
     confidence_penalty_threshold: float,
     penalty_multiplier: float,
+    cold_start: bool = False,
     top_k: int = 5,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     lam = max(0.0, min(1.0, _safe_float(mmr_lambda, 0.5)))
@@ -138,7 +148,7 @@ def rerank_round2(
         base = _safe_float(row.get("score_round1"), 0.0)
 
         adjusted = base
-        if conf < threshold:
+        if not cold_start and conf < threshold:
             adjusted = adjusted * penalty
             penalty_count += 1
 
@@ -184,6 +194,7 @@ def rerank_round2(
         "confidence_penalty_threshold": round(threshold, 6),
         "penalty_multiplier": round(penalty, 6),
         "penalty_applied_count": penalty_count,
+        "cold_start": bool(cold_start),
         "final_count": len(selected),
     }
     return selected, meta

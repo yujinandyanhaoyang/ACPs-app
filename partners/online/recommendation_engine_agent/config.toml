@@ -20,9 +20,15 @@ max_concurrent_tasks = 10
 level = "INFO"
 
 [index]
-FAISS_INDEX_PATH = "/root/WORK/DATA/processed/books_index.faiss"
-ALS_MODEL_PATH   = "data/als_model.npz"
-HNSWLIB_PATH     = "data/user_sim.bin"
+FAISS_INDEX_PATH         = "/root/WORK/DATA/processed/books_index_v2.faiss"
+FAISS_INDEX_META_PATH    = "/root/WORK/DATA/processed/books_index_meta_v2.jsonl"
+BOOK_RETRIEVAL_DATASET_PATH = "/root/WORK/DATA/processed/books_master_merged_v2.jsonl"
+CF_ITEM_FACTORS_PATH     = "/root/WORK/DATA/processed/cf_item_factors_v2.npy"
+CF_USER_FACTORS_PATH     = "/root/WORK/DATA/processed/cf_user_factors_v2.npy"
+CF_BOOK_INDEX_PATH       = "/root/WORK/DATA/processed/cf_book_id_index_v2.json"
+CF_USER_INDEX_PATH       = "/root/WORK/DATA/processed/cf_user_id_index_v2.json"
+ALS_MODEL_PATH           = "/root/WORK/DATA/processed/cf_item_factors_v2.npy"
+HNSWLIB_PATH             = "/root/WORK/DATA/processed/cf_user_factors_v2.npy"
 
 [llm]
 model       = "qwen-plus"

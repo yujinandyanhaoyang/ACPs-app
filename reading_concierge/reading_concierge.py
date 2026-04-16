@@ -691,6 +691,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
         "mmr_lambda": rda_data.get("mmr_lambda", 0.5),
         "strategy": rda_data.get("strategy", "balanced"),
         "candidates": content_outputs.get("content_vectors") or [],
+        "cold_start": bool(profile_data.get("cold_start", False)),
         "top_k": top_k,
     }
     if ablation_flags.get("disable_cf_path"):

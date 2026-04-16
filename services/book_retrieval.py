@@ -204,7 +204,7 @@ def _load_vector_meta(meta_path: str) -> List[Dict[str, Any]]:
 def _load_books_by_id() -> Dict[str, Dict[str, Any]]:
     """
     Build a lightweight book_id -> record map from the FAISS meta file
-    (books_index_meta.jsonl). This file is already loaded by _load_vector_meta()
+    (books_index_meta_v2.jsonl). This file is already loaded by _load_vector_meta()
     and contains book_id, title, source - enough for result enrichment without
     reading the 1.4 GB master file.
     """
@@ -214,7 +214,7 @@ def _load_books_by_id() -> Dict[str, Dict[str, Any]]:
     if env_meta:
         meta_path = Path(env_meta)
     else:
-        meta_path = get_processed_data_root() / "books_index_meta.jsonl"
+        meta_path = get_processed_data_root() / "books_index_meta_v2.jsonl"
 
     books: Dict[str, Dict[str, Any]] = {}
     if not meta_path.exists():
@@ -280,8 +280,8 @@ def retrieve_books_by_vector(
         from services.data_paths import get_processed_data_root
 
         proc_root = get_processed_data_root()
-        default_index_path = proc_root / "books_index.faiss"
-        default_meta_path = proc_root / "books_index_meta.jsonl"
+        default_index_path = proc_root / "books_index_v2.faiss"
+        default_meta_path = proc_root / "books_index_meta_v2.jsonl"
 
     resolved_index_path = Path(index_path) if index_path is not None else default_index_path
     resolved_meta_path = Path(meta_path) if meta_path is not None else default_meta_path

@@ -5,8 +5,8 @@ source .venv/bin/activate
 
 # Pre-flight check
 echo "[start] checking FAISS index..."
-ls -lh /root/WORK/DATA/processed/books_index.faiss
-ls -lh /root/WORK/DATA/processed/books_index_meta.jsonl
+ls -lh /root/WORK/DATA/processed/books_index_v2.faiss
+ls -lh /root/WORK/DATA/processed/books_index_meta_v2.jsonl
 
 echo "[start] launching reading_concierge on 0.0.0.0:8210 ..."
 exec .venv/bin/python -m uvicorn \

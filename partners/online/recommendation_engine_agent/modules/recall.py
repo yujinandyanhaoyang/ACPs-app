@@ -41,7 +41,7 @@ def _cosine(left: List[float], right: List[float]) -> float:
 
 
 def _extract_vector(row: Dict[str, Any]) -> List[float]:
-    for key in ["vector256", "vector", "content_vector", "embedding"]:
+    for key in ["vector384", "vector_384", "vector256", "vector", "content_vector", "embedding"]:
         raw = row.get(key)
         if isinstance(raw, list):
             return [_safe_float(v) for v in raw]
@@ -128,28 +128,43 @@ def _load_book_metadata() -> Dict[str, Dict[str, Any]]:
     if _BOOK_META_CACHE is not None:
         return _BOOK_META_CACHE
 
-    # Use the shared lightweight book_retrieval cache instead of
-    # loading the 1.4 GB master file directly.
+    # Preferred source: stream the configured books corpus and cache full
+    # metadata so author/genres/description remain available downstream.
     try:
-        from services.book_retrieval import _load_books_by_id
-        meta = _load_books_by_id()
+        from services.book_retrieval import iter_books
+
+        meta: Dict[str, Dict[str, Any]] = {}
+        for row in iter_books():
+            if not isinstance(row, dict):
+                continue
+            book_id = str(row.get("book_id") or "").strip()
+            if not book_id or book_id in meta:
+                continue
+            meta[book_id] = {
+                "book_id": book_id,
+                "title": str(row.get("title") or ""),
+                "author": str(row.get("author") or ""),
+                "genres": row.get("genres") if isinstance(row.get("genres"), list) else [],
+                "description": str(row.get("description") or row.get("blurb") or ""),
+                "source": str(row.get("source") or ""),
+            }
         if meta:
             _BOOK_META_CACHE = meta
             logger.info(
-                "event=metadata_loaded_via_shared_cache count=%d", len(meta)
+                "event=metadata_loaded_from_corpus count=%d", len(meta)
             )
             return _BOOK_META_CACHE
     except Exception as exc:
         logger.warning(
-            "event=metadata_load_via_shared_cache_failed error=%s", exc
+            "event=metadata_load_from_corpus_failed error=%s", exc
         )
 
-    # Hard fallback: read FAISS meta file directly (never load_books()).
+    # Hard fallback: read FAISS meta file directly.
     try:
         from services.data_paths import get_processed_data_root
         env_meta = str(os.getenv("FAISS_INDEX_META_PATH") or "").strip()
         meta_path = Path(env_meta) if env_meta else (
-            get_processed_data_root() / "books_index_meta.jsonl"
+            get_processed_data_root() / "books_index_meta_v2.jsonl"
         )
         meta: Dict[str, Dict[str, Any]] = {}
         if meta_path.exists():
@@ -215,36 +230,25 @@ def _cf_recall_fallback(
     candidates: List[Dict[str, Any]],
     profile_vector: List[float],
     top_k: int,
-    als_model_path: Path,
 ) -> List[Dict[str, Any]]:
     if np is None:
         return []
 
-    # Optional ALS item factor support. If unavailable, use candidate-provided cf score fallback.
-    item_index_path = als_model_path.parent / "cf_book_id_index.json"
-    index_map = _load_json(item_index_path)
-    item_factors_path = als_model_path.parent / "cf_item_factors.npy"
+    try:
+        from services.model_backends import load_cf_item_vectors
 
-    factors = None
-    if item_factors_path.exists():
-        try:
-            factors = np.load(item_factors_path, allow_pickle=False)
-        except Exception:
-            factors = None
+        cf_vectors = load_cf_item_vectors(force_reload=False)
+    except Exception:
+        cf_vectors = {}
 
     scored: List[Tuple[float, Dict[str, Any]]] = []
     for row in candidates:
         book_id = str(row.get("book_id") or "")
         cf_score = _safe_float(row.get("cf_score"), 0.0)
 
-        if factors is not None and isinstance(index_map, dict) and profile_vector:
-            try:
-                idx = int(index_map.get(book_id, -1))
-            except Exception:
-                idx = -1
-            if idx >= 0 and idx < int(factors.shape[0]):
-                item_vec = factors[idx].tolist()
-                cf_score = max(cf_score, max(0.0, _cosine(profile_vector, [_safe_float(v) for v in item_vec])))
+        item_vec = cf_vectors.get(book_id)
+        if item_vec and profile_vector:
+            cf_score = max(cf_score, max(0.0, _cosine(profile_vector, [_safe_float(v) for v in item_vec])))
 
         enriched = dict(row)
         enriched["cf_score"] = round(max(0.0, cf_score), 6)
@@ -312,6 +316,7 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
     candidates = _normalize_candidates(payload)
     ann_weight = _safe_float(payload.get("ann_weight"), 0.6)
     cf_weight = _safe_float(payload.get("cf_weight"), 0.4)
+    cold_start = bool(payload.get("cold_start", False))
 
     total = max(ann_weight + cf_weight, 1e-9)
     ann_weight = ann_weight / total
@@ -323,15 +328,25 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
     ann_top_k = int(cfg.get("ann_top_k") or 200)
     cf_top_k = int(cfg.get("cf_top_k") or 100)
 
-    als_model_path = Path(str(cfg.get("als_model_path") or "data/als_model.npz"))
-    if not als_model_path.is_absolute():
-        als_model_path = Path.cwd() / als_model_path
+    faiss_index_path = Path(str(cfg.get("faiss_index_path") or ""))
+    faiss_index_meta_path = Path(str(cfg.get("faiss_index_meta_path") or ""))
+    cf_item_factors_path = Path(str(cfg.get("cf_item_factors_path") or ""))
+    cf_book_index_path = Path(str(cfg.get("cf_book_index_path") or ""))
+    cf_user_factors_path = Path(str(cfg.get("cf_user_factors_path") or ""))
+    cf_user_index_path = Path(str(cfg.get("cf_user_index_path") or ""))
 
     ann_rows = _ann_recall_fallback(candidates, profile_vector, top_k=ann_top_k)
-    cf_rows = _cf_recall_fallback(candidates, profile_vector, top_k=cf_top_k, als_model_path=als_model_path)
+    cf_rows = [] if cold_start else _cf_recall_fallback(candidates, profile_vector, top_k=cf_top_k)
 
     merged = _merge_ann_cf(ann_rows, cf_rows, ann_weight=ann_weight, cf_weight=cf_weight)
+    if cold_start:
+        for row in merged:
+            row["cf_score"] = 0.0
+            row["merged_recall_score"] = round((ann_weight * _safe_float(row.get("content_sim"), 0.0)), 6)
     merged = _enrich_candidates_with_metadata(merged)
+
+    ann_mode = "vector_cosine" if faiss_index_path.exists() and faiss_index_meta_path.exists() else "fallback_vector_cosine"
+    cf_mode = "item_factor_similarity" if cf_item_factors_path.exists() and cf_book_index_path.exists() else "fallback_item_factor_similarity"
 
     meta = {
         "ann_top_k": ann_top_k,
@@ -342,15 +357,20 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
         "ann_weight": round(ann_weight, 6),
         "cf_weight": round(cf_weight, 6),
         "ann_runtime": {
-            "index_path": str(cfg.get("faiss_index_path") or ""),
+            "index_path": str(faiss_index_path or ""),
+            "meta_path": str(faiss_index_meta_path or ""),
+            "book_corpus_path": str(cfg.get("book_retrieval_dataset_path") or ""),
             "ef_search": int(cfg.get("ann_ef_search") or 100),
-            "mode": "fallback_vector_cosine",
+            "mode": ann_mode,
         },
         "cf_runtime": {
-            "als_model_path": str(als_model_path),
-            "user_sim_path": str(cfg.get("hnswlib_path") or ""),
-            "mode": "fallback_item_factor_similarity",
+            "item_factors_path": str(cf_item_factors_path or ""),
+            "book_index_path": str(cf_book_index_path or ""),
+            "user_factors_path": str(cf_user_factors_path or ""),
+            "user_index_path": str(cf_user_index_path or ""),
+            "mode": cf_mode,
             "similar_users_k": int(cfg.get("cf_sim_users") or 50),
         },
+        "cold_start": bool(cold_start),
     }
     return merged, meta

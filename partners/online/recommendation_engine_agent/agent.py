@@ -47,6 +47,12 @@ logger = get_agent_logger("partner.recommendation_engine_agent", "RECOMMENDATION
 class AgentConfig:
     port: int = 8214
     faiss_index_path: str = field(init=False)
+    faiss_index_meta_path: str = field(init=False)
+    book_retrieval_dataset_path: str = field(init=False)
+    cf_item_factors_path: str = field(init=False)
+    cf_user_factors_path: str = field(init=False)
+    cf_book_index_path: str = field(init=False)
+    cf_user_index_path: str = field(init=False)
     als_model_path: str = field(init=False)
     hnswlib_path: str = field(init=False)
     llm_model: str = field(init=False)
@@ -87,6 +93,14 @@ def _require_value(section_data: Dict[str, Any], section: str, key: str) -> Any:
     return value
 
 
+def _optional_str(section_data: Dict[str, Any], key: str, default: str = "") -> str:
+    value = section_data.get(key)
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text or default
+
+
 def _load_config() -> AgentConfig:
     cfg = AgentConfig()
     if not tomllib:
@@ -110,11 +124,27 @@ def _load_config() -> AgentConfig:
 
     index = _require_section(data, "index", "FAISS_INDEX_PATH")
     cfg.faiss_index_path = str(_require_value(index, "index", "FAISS_INDEX_PATH"))
+    cfg.faiss_index_meta_path = _optional_str(index, "FAISS_INDEX_META_PATH", str(os.getenv("FAISS_INDEX_META_PATH") or ""))
+    cfg.book_retrieval_dataset_path = _optional_str(
+        index,
+        "BOOK_RETRIEVAL_DATASET_PATH",
+        str(os.getenv("BOOK_RETRIEVAL_DATASET_PATH") or ""),
+    )
+    cfg.cf_item_factors_path = _optional_str(index, "CF_ITEM_FACTORS_PATH", str(os.getenv("CF_ITEM_FACTORS_PATH") or ""))
+    cfg.cf_user_factors_path = _optional_str(index, "CF_USER_FACTORS_PATH", str(os.getenv("CF_USER_FACTORS_PATH") or ""))
+    cfg.cf_book_index_path = _optional_str(index, "CF_BOOK_INDEX_PATH", str(os.getenv("CF_BOOK_INDEX_PATH") or ""))
+    cfg.cf_user_index_path = _optional_str(index, "CF_USER_INDEX_PATH", str(os.getenv("CF_USER_INDEX_PATH") or ""))
     cfg.als_model_path = str(_require_value(index, "index", "ALS_MODEL_PATH"))
     cfg.hnswlib_path = str(_require_value(index, "index", "HNSWLIB_PATH"))
     logger.info(
-        "event=config_loaded section=index faiss=%s als=%s hnswlib=%s",
+        "event=config_loaded section=index faiss=%s faiss_meta=%s corpus=%s cf_item=%s cf_user=%s cf_book_index=%s cf_user_index=%s als=%s hnswlib=%s",
         cfg.faiss_index_path,
+        cfg.faiss_index_meta_path,
+        cfg.book_retrieval_dataset_path,
+        cfg.cf_item_factors_path,
+        cfg.cf_user_factors_path,
+        cfg.cf_book_index_path,
+        cfg.cf_user_index_path,
         cfg.als_model_path,
         cfg.hnswlib_path,
     )
@@ -242,6 +272,12 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     recall_cfg = {
         "faiss_index_path": CFG.faiss_index_path,
+        "faiss_index_meta_path": CFG.faiss_index_meta_path,
+        "book_retrieval_dataset_path": CFG.book_retrieval_dataset_path,
+        "cf_item_factors_path": CFG.cf_item_factors_path,
+        "cf_user_factors_path": CFG.cf_user_factors_path,
+        "cf_book_index_path": CFG.cf_book_index_path,
+        "cf_user_index_path": CFG.cf_user_index_path,
         "als_model_path": CFG.als_model_path,
         "hnswlib_path": CFG.hnswlib_path,
         "ann_ef_search": 100,
@@ -251,7 +287,14 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
     recalled, recall_meta = recall_candidates(payload, recall_cfg)
 
-    preliminary, round1_meta = score_round1(recalled, score_weights=score_weights, top_k=max(20, top_k * 10))
+    cold_start = bool(payload.get("cold_start", False))
+
+    preliminary, round1_meta = score_round1(
+        recalled,
+        score_weights=score_weights,
+        top_k=max(20, top_k * 10),
+        cold_start=cold_start,
+    )
     confidence_list = assess_confidence(preliminary)
 
     final_ranked, round2_meta = rerank_round2(
@@ -260,6 +303,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
         mmr_lambda=mmr_lambda,
         confidence_penalty_threshold=threshold,
         penalty_multiplier=CFG.penalty_multiplier,
+        cold_start=cold_start,
         top_k=top_k,
     )
 
