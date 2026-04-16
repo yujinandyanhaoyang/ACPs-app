@@ -1900,13 +1900,30 @@
       }
     }
 
+    function rewardToEventType(reward) {
+      if (reward >= 1.0) return 'finish';
+      if (reward >= 0.8) return 'rate_5';
+      if (reward >= 0.3) return 'click';
+      if (reward >= 0.1) return 'rate_3';
+      if (reward >= -0.3) return 'skip';
+      return 'rate_1';
+    }
+
     async function sendFeedback(bookId, reward, rank) {
+      const currentQuery = el('query').value.trim();
+      const latestRda = state.latestResponse?.partner_results?.rda || {};
       const payload = {
         user_id: state.userId,
         session_id: state.sessionId || randomId(),
         book_id: bookId,
-        reward,
-        rank,
+        event_type: rewardToEventType(reward),
+        context_type: latestRda.context_type || null,
+        arm_action: latestRda.chosen_action || latestRda.strategy || null,
+        reward_override: reward,
+        metadata: {
+          rank,
+          query: currentQuery,
+        },
       };
 
       try {
