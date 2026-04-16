@@ -199,6 +199,7 @@ def _load_prompts() -> Dict[str, str]:
             'Based on your reading history and the characteristics of this book, '
             'we believe "{title}" by {author} may be of interest to you.'
         ),
+        "metadata_gap_fill": "",
     }
     if not tomllib or not PROMPTS_PATH.exists():
         return defaults
@@ -206,10 +207,13 @@ def _load_prompts() -> Dict[str, str]:
         data = tomllib.loads(PROMPTS_PATH.read_text(encoding="utf-8"))
         em = data.get("explanation_main") if isinstance(data, dict) else {}
         ef = data.get("explanation_fallback") if isinstance(data, dict) else {}
+        mg = data.get("metadata_gap_fill") if isinstance(data, dict) else {}
         if isinstance(em, dict) and em.get("template"):
             defaults["main"] = str(em.get("template"))
         if isinstance(ef, dict) and ef.get("template"):
             defaults["fallback"] = str(ef.get("template"))
+        if isinstance(mg, dict) and mg.get("template"):
+            defaults["metadata_gap_fill"] = str(mg.get("template"))
     except Exception as exc:
         logger.warning("event=prompt_parse_failed error=%s", exc)
     return defaults
@@ -320,6 +324,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
     recommendations: List[Dict[str, Any]] = []
     for row in final_ranked:
         book_id = str(row.get("book_id") or "")
+        explanation_row = explanation_by_id.get(book_id) or {}
         rec = {
             "rank": int(row.get("rank") or 0),
             "book_id": book_id,
@@ -330,8 +335,11 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
             "score_total": _safe_float(row.get("score_total"), 0.0),
             "recall_source": row.get("recall_source"),
             "score_parts": row.get("score_parts") or {},
-            "justification": (explanation_by_id.get(book_id) or {}).get("justification", ""),
+            "justification": explanation_row.get("justification", ""),
         }
+        for key in ("title_display", "author_display", "genre_tags_zh", "summary_zh", "metadata_gap_filled"):
+            if key in explanation_row:
+                rec[key] = explanation_row.get(key)
         recommendations.append(rec)
 
     observed_coverage = _coverage(preliminary, required_evidence_types)

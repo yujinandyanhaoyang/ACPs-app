@@ -202,6 +202,13 @@ class FeedbackRequest(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+def _detect_language_code(text: str) -> str:
+    sample = str(text or "")
+    if any("\u4e00" <= ch <= "\u9fff" for ch in sample):
+        return "zh"
+    return "en"
+
+
 def _resolve_partner(partner_key: str) -> Dict[str, Any]:
     remote_env = {
         "profile": "READER_PROFILE_RPC_URL",
@@ -452,7 +459,15 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
     template = INTENT_PROMPT["user_template"]
     user_prompt = template.format(query=query)
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
-        return {"intent": "recommend_books", "constraints": {}, "preferred_genres": [], "scenario_hint": "auto", "response_style": "concise"}
+        return {
+            "intent": "recommend_books",
+            "constraints": {},
+            "preferred_genres": [],
+            "scenario_hint": "auto",
+            "response_style": "concise",
+            "search_query": query,
+            "original_language": _detect_language_code(query),
+        }
 
     try:
         raw = await asyncio.wait_for(
@@ -469,11 +484,25 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
         )
         parsed = _safe_json_object(raw)
         if parsed:
+            if not str(parsed.get("search_query") or "").strip():
+                logger.warning("event=intent_search_query_missing fallback=original_query")
+                parsed["search_query"] = query
+            if not str(parsed.get("original_language") or "").strip():
+                parsed["original_language"] = _detect_language_code(query)
             return parsed
     except Exception as exc:
         logger.warning("event=intent_parse_failed error=%s", exc)
 
-    return {"intent": "recommend_books", "constraints": {}, "preferred_genres": [], "scenario_hint": "auto", "response_style": "concise"}
+    logger.warning("event=intent_parse_failed fallback=original_query")
+    return {
+        "intent": "recommend_books",
+        "constraints": {},
+        "preferred_genres": [],
+        "scenario_hint": "auto",
+        "response_style": "concise",
+        "search_query": query,
+        "original_language": _detect_language_code(query),
+    }
 
 
 def _normalize_book_row(row: Dict[str, Any], index: int) -> Dict[str, Any]:
@@ -504,7 +533,13 @@ def _catalog_index() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
     return normalized, by_id
 
 
-async def _derive_books_from_query(query: str, candidate_ids: List[str], top_k: int = 5) -> List[Dict[str, Any]]:
+async def _derive_books_from_query(
+    query: str,
+    candidate_ids: List[str],
+    top_k: int = 5,
+    *,
+    search_query: str | None = None,
+) -> List[Dict[str, Any]]:
     retrieval_size = max(20, min(120, max(1, int(top_k)) * 20))
     seen: set[str] = set()
     results: List[Dict[str, Any]] = []
@@ -529,7 +564,8 @@ async def _derive_books_from_query(query: str, candidate_ids: List[str], top_k: 
             seen.add(key)
 
     # Primary path: FAISS vector recall (books=None triggers the fast path).
-    for row in retrieve_books_by_query(query=query, books=None, top_k=retrieval_size):
+    effective_query = str(search_query or query or "").strip()
+    for row in retrieve_books_by_query(query=query, search_query=search_query, books=None, top_k=retrieval_size):
         normalized = _normalize_book_row(
             row if isinstance(row, dict) else {}, len(results)
         )
@@ -575,6 +611,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
     req_payload = req.model_dump()
 
     intent = await _parse_intent(req.query)
+    search_query = str(intent.get("search_query") or req.query or "").strip()
 
     constraints = req.constraints if isinstance(req.constraints, dict) else {}
     ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}
@@ -612,6 +649,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
             query=req.query,
             candidate_ids=req_candidate_ids if allow_deprecated_payload else [],
             top_k=top_k,
+            search_query=search_query,
         ),
         "candidate_ids": req_candidate_ids if allow_deprecated_payload else [],
         "declared_genres": intent.get("preferred_genres") or [],

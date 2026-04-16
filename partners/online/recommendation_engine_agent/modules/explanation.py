@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from base import call_openai_chat
+
+
+_METADATA_GAP_FILL_CACHE: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -36,6 +40,26 @@ def _clean_text_list(value: Any) -> List[str]:
 def _format_list(value: Any, *, empty: str = "not provided") -> str:
     items = _clean_text_list(value)
     return ", ".join(items) if items else empty
+
+
+def _extract_json_obj(raw: str) -> Dict[str, Any]:
+    text = str(raw or "").strip()
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        pass
+    left = text.find("{")
+    right = text.rfind("}")
+    if left >= 0 and right > left:
+        try:
+            parsed = json.loads(text[left : right + 1])
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return {}
 
 
 def _normalize_locale(value: Any) -> str:
@@ -154,6 +178,99 @@ def _fallback_rationale(
         return f'We recommend "{title}" by {author}.'
 
 
+def _needs_metadata_gap_fill(row: Dict[str, Any]) -> bool:
+    description = str(row.get("description") or "").strip()
+    author = str(row.get("author") or "").strip()
+    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
+    return (not author) or (not genres) or (len(description) < 20)
+
+
+def _fallback_gap_fill(row: Dict[str, Any]) -> Dict[str, Any]:
+    title = str(row.get("title") or row.get("book_id") or "")
+    author = str(row.get("author") or "佚名").strip() or "佚名"
+    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
+    genre_tags_zh = [str(g).strip() for g in genres if str(g).strip()]
+    if not genre_tags_zh:
+        genre_tags_zh = ["文学", "小说"]
+    description = str(row.get("description") or "").strip()
+    summary = description[:50] if description else f"围绕《{title}》的作品，风格与题材值得关注(AI推断)"
+    return {
+        "author_display": author,
+        "genre_tags_zh": genre_tags_zh[:2],
+        "summary_zh": summary if summary.endswith("(AI推断)") else f"{summary}(AI推断)" if not description else summary,
+        "title_zh": title,
+    }
+
+
+async def _gap_fill_metadata(
+    row: Dict[str, Any],
+    *,
+    gap_fill_template: str,
+    llm_model: str,
+    llm_temperature: float,
+    llm_max_tokens: int,
+    session_key: str,
+) -> Dict[str, Any]:
+    book_id = str(row.get("book_id") or "").strip()
+    if not book_id or not _needs_metadata_gap_fill(row):
+        return {
+            "metadata_gap_filled": False,
+            "author_display": str(row.get("author") or "佚名").strip() or "佚名",
+            "genre_tags_zh": row.get("genres") if isinstance(row.get("genres"), list) else [],
+            "summary_zh": str(row.get("description") or ""),
+            "title_zh": str(row.get("title") or book_id),
+        }
+
+    cache_key = (session_key, book_id)
+    cached = _METADATA_GAP_FILL_CACHE.get(cache_key)
+    if cached is not None:
+        return {**cached, "metadata_gap_filled": True}
+
+    prompt = gap_fill_template.format(
+        title=str(row.get("title") or book_id),
+        author=str(row.get("author") or ""),
+        description=str(row.get("description") or ""),
+    )
+    result: Dict[str, Any] = {}
+    if gap_fill_template.strip():
+        try:
+            raw = await call_openai_chat(
+                [
+                    {"role": "system", "content": "你是一个严格输出 JSON 的图书元数据补全助手。"},
+                    {"role": "user", "content": prompt},
+                ],
+                model=llm_model,
+                temperature=llm_temperature,
+                max_tokens=llm_max_tokens,
+            )
+            parsed = _extract_json_obj(raw)
+            if parsed:
+                result = parsed
+        except Exception:
+            result = {}
+
+    if not result:
+        result = _fallback_gap_fill(row)
+
+    author_display = str(result.get("author_display") or row.get("author") or "佚名").strip() or "佚名"
+    title_zh = str(result.get("title_zh") or row.get("title") or book_id).strip() or str(row.get("title") or book_id)
+    summary_zh = str(result.get("summary_zh") or row.get("description") or "").strip()
+    genre_tags_zh = result.get("genre_tags_zh") if isinstance(result.get("genre_tags_zh"), list) else []
+    genre_tags_zh = [str(item).strip() for item in genre_tags_zh if str(item).strip()]
+    if not genre_tags_zh:
+        genre_tags_zh = [str(item).strip() for item in (row.get("genres") if isinstance(row.get("genres"), list) else []) if str(item).strip()]
+
+    normalized = {
+        "metadata_gap_filled": True,
+        "author_display": author_display,
+        "genre_tags_zh": genre_tags_zh,
+        "summary_zh": summary_zh,
+        "title_zh": title_zh,
+    }
+    _METADATA_GAP_FILL_CACHE[cache_key] = normalized
+    return normalized
+
+
 async def _generate_one(
     row: Dict[str, Any],
     *,
@@ -168,15 +285,17 @@ async def _generate_one(
     llm_max_tokens: int,
 ) -> Dict[str, Any]:
     book_id = str(row.get("book_id") or "")
-    title = str(row.get("title") or book_id)
-    author = str(row.get("author") or "Unknown")
-    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
-    genre_tags = ", ".join(str(g) for g in genres if str(g).strip()) or "N/A"
+    title = str(row.get("title_display") or row.get("title") or book_id)
+    author = str(row.get("author_display") or row.get("author") or "佚名")
+    genres = row.get("genre_tags_zh") if isinstance(row.get("genre_tags_zh"), list) and row.get("genre_tags_zh") else (
+        row.get("genres") if isinstance(row.get("genres"), list) else []
+    )
+    genre_tags = ", ".join(str(g) for g in genres if str(g).strip()) or "题材待补全"
     content_similarity = _safe_float(row.get("content_sim"), 0.0)
     cf_evidence = "available" if _safe_float(row.get("cf_score"), 0.0) > 0 else "not available"
     matched = row.get("matched_prefs") if isinstance(row.get("matched_prefs"), list) else []
     matched_preferences = ", ".join(str(m) for m in matched if str(m).strip()) or "N/A"
-    description_text = str(description or "No description available.")
+    description_text = str(description or "暂无简介")
     query_text = str(user_query or "")
     prompt_context = _extract_prompt_context(payload, row, description_text)
 
@@ -234,6 +353,7 @@ async def generate_rationale(
         prompts.get("fallback")
         or 'Because your preferred genres are {preferred_genres} and your reading history includes {reading_history}, "{title}" by {author} is a strong match for {genre_tags}. {description}'
     )
+    gap_fill_template = str(prompts.get("metadata_gap_fill") or "")
 
     _llm_key = (
         os.getenv("OPENAI_API_KEY")
@@ -243,6 +363,31 @@ async def generate_rationale(
     )
     use_llm = bool(_llm_key.strip()) and bool(main_template.strip())
     user_query = str((payload or {}).get("query") or "")
+    session_key = str((payload or {}).get("session_id") or "__default__")
+
+    enriched_rows: List[Dict[str, Any]] = []
+    gap_fill_tasks = [
+        _gap_fill_metadata(
+            row,
+            gap_fill_template=gap_fill_template,
+            llm_model=llm_model,
+            llm_temperature=llm_temperature,
+            llm_max_tokens=llm_max_tokens,
+            session_key=session_key,
+        )
+        for row in final_list
+    ]
+    gap_fill_results = await asyncio.gather(*gap_fill_tasks) if gap_fill_tasks else []
+
+    for row, gap_fill in zip(final_list, gap_fill_results):
+        enriched = dict(row)
+        enriched["title_display"] = str(gap_fill.get("title_zh") or enriched.get("title") or enriched.get("book_id") or "")
+        enriched["author_display"] = str(gap_fill.get("author_display") or enriched.get("author") or "佚名")
+        enriched["genre_tags_zh"] = gap_fill.get("genre_tags_zh") if isinstance(gap_fill.get("genre_tags_zh"), list) else []
+        enriched["summary_zh"] = str(gap_fill.get("summary_zh") or enriched.get("description") or "")
+        enriched["metadata_gap_filled"] = bool(gap_fill.get("metadata_gap_filled"))
+        enriched_rows.append(enriched)
+
     tasks = [
         _generate_one(
             row,
@@ -256,8 +401,21 @@ async def generate_rationale(
             llm_temperature=llm_temperature,
             llm_max_tokens=llm_max_tokens,
         )
-        for row in final_list
+        for row in enriched_rows
     ]
     if not tasks:
         return []
-    return await asyncio.gather(*tasks)
+    explanations = await asyncio.gather(*tasks)
+    merged: List[Dict[str, Any]] = []
+    for row, explanation in zip(enriched_rows, explanations):
+        merged.append(
+            {
+                **explanation,
+                "title_display": row.get("title_display") or row.get("title") or row.get("book_id"),
+                "author_display": row.get("author_display") or row.get("author") or "佚名",
+                "genre_tags_zh": row.get("genre_tags_zh") if isinstance(row.get("genre_tags_zh"), list) else [],
+                "summary_zh": row.get("summary_zh") or "",
+                "metadata_gap_filled": bool(row.get("metadata_gap_filled")),
+            }
+        )
+    return merged

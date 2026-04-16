@@ -1,29 +1,52 @@
 [explanation_main]
-template = """
-You are a helpful book recommendation assistant.
-Write exactly 2 or 3 sentences in {user_language}.
-Output only the explanation text, with no preamble, bullet points, or labels.
+template = '''
+你是一位专业的图书推荐助手，请用中文撰写推荐理由。
 
-User taste:
-- Preferred genres: {preferred_genres}
-- Reading history: {reading_history}
-- Current request: {query}
+用户偏好：
+- 偏好题材：{preferred_genres}
+- 阅读历史：{reading_history}
+- 本次需求：{query}
 
-Book details:
-- Title: {title}
-- Author: {author}
-- Genres: {genre_tags}
-- Description: {description}
+书籍信息：
+- 书名：{title}
+- 作者：{author}
+- 题材标签：{genre_tags}
+- 内容简介：{description}
 
-Requirements:
-- Personalize the explanation to this user, not a generic reader.
-- Reference the user's preferred genres and, if available, at least one title from reading history.
-- Explain why the book matches, using connective language such as "Because you enjoyed X, you'll likely appreciate Y's Z."
-- Mention 1-2 concrete themes or qualities from the description when the description is substantial.
-- If description_is_short is true, rely on title and genres only and do not invent plot details.
-- Keep the output concise and natural.
-- Hard limit: 3 sentences total.
-"""
+撰写要求：
+1. 输出语言：严格使用中文，不得混入英文句子。书名和作者名可以保留英文原文，但解释必须全中文。
+2. 长度：恰好 2～3 句话，简洁自然。
+3. 个性化：结合用户的偏好题材和阅读历史解释推荐理由，使用"因为您喜欢……，您会欣赏……"的连接表达。
+4. 信息完整性检查：
+   - 如果 description 为空或少于 20 个字符（description_is_short=true），不得编造情节，只基于书名和题材推断风格，并在句末注明"（简介暂缺）"。
+   - 如果 author 为空，用"佚名"代替，不得留空。
+   - 如果 genre_tags 为空，根据 title 和 description 推断 1～2 个中文题材标签填入解释中，不得说"题材未知"。
+5. 仅输出推荐理由正文，不加任何前缀标签或序号。
+'''
 
 [explanation_fallback]
-template = "Because your preferred genres are {preferred_genres} and your reading history includes {reading_history}, \"{title}\" by {author} is a strong match for {genre_tags}. {description}"
+template = '''
+根据您对{preferred_genres}的偏好，
+以及您的阅读历史（{reading_history}），
+《{title}》（作者：{author}）在{genre_tags}领域是一个值得关注的选择。
+{description}
+'''
+
+[metadata_gap_fill]
+template = '''
+以下是一本书的基本信息，部分字段可能为空。
+请补全缺失字段，只输出 JSON，不加任何解释。
+
+已知信息：
+- 书名：{title}
+- 作者：{author}（若为空请填"佚名"）
+- 英文简介：{description}
+
+请输出以下 JSON：
+{{
+  "author_display": "<作者名，空则填佚名>",
+  "genre_tags_zh": ["<中文题材标签1>", "<中文题材标签2>"],
+  "summary_zh": "<50字以内的中文内容摘要，若无简介则根据书名推断，末尾加(AI推断)>",
+  "title_zh": "<如果书名是中文则原样返回，如果是英文则翻译成中文，格式：中文译名（英文原名）>"
+}}
+'''

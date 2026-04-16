@@ -327,17 +327,21 @@ def retrieve_books_by_vector(
 
 def retrieve_books_by_query(
     query: str,
+    search_query: str | None = None,
     books: Sequence[Dict[str, Any]] | None = None,
     top_k: int = 8,
 ) -> List[Dict[str, Any]]:
     # Fast path: if we have a FAISS index and can embed the query, use vector recall
     # instead of a full-corpus keyword scan.
+    effective_query = str(search_query or query or "").strip()
     if query and books is None:
         try:
             from services.model_backends import generate_text_embeddings, _DEFAULT_OFFLINE_EMBED_MODEL
 
             model_name = os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or _DEFAULT_OFFLINE_EMBED_MODEL
-            vectors, meta = generate_text_embeddings([query], model_name)
+            if (not search_query or not str(search_query).strip()) and any("\u4e00" <= ch <= "\u9fff" for ch in str(query or "")):
+                logger.warning("event=query_translation_missing fallback=original_query")
+            vectors, meta = generate_text_embeddings([effective_query or query], model_name)
             if vectors and vectors[0]:
                 results = retrieve_books_by_vector(vectors[0], top_k=top_k)
                 if results:
@@ -349,11 +353,11 @@ def retrieve_books_by_query(
     if not pool:
         return []
 
-    q_tokens = _tokenize(query or "")
+    q_tokens = _tokenize(effective_query or query or "")
     if not q_tokens:
         return [dict(item) for item in pool[: max(1, top_k)]]
 
-    query_seed = sum(ord(ch) for ch in query or "")
+    query_seed = sum(ord(ch) for ch in effective_query or query or "")
     scored: List[tuple[float, Dict[str, Any]]] = []
     for idx, book in enumerate(pool):
         tokens = _tokenize(_book_text(book))
