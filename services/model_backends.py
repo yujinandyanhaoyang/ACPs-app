@@ -117,16 +117,20 @@ def load_cf_item_vectors(force_reload: bool = False) -> Dict[str, List[float]]:
 
 
 def _resolve_embedding_model_name(model_name: str) -> str:
-        configured_path = str(os.getenv(_LOCAL_EMBED_MODEL_ENV) or "").strip()
-        if configured_path:
-                local_path = Path(configured_path).expanduser()
-                if local_path.exists():
-                        return str(local_path)
-                _LOGGER.info(
-                        "event=local_embed_model_missing path=%s fallback=remote-hf",
-                        configured_path,
-                )
-        return str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
+	configured_path = str(os.getenv(_LOCAL_EMBED_MODEL_ENV) or "").strip()
+	if configured_path:
+		local_path = Path(configured_path).expanduser()
+		if local_path.exists():
+			return str(local_path)
+		_LOGGER.info(
+			"event=local_embed_model_missing path=%s fallback=model_name",
+			configured_path,
+		)
+
+	configured_name = str(os.getenv("BOOK_CONTENT_EMBED_MODEL") or "").strip()
+	if configured_name:
+		return configured_name
+	return str(model_name or "").strip() or _DEFAULT_OFFLINE_EMBED_MODEL
 
 
 def _resolve_sentence_transformer(model_name: str):

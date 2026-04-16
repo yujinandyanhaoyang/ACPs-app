@@ -3,12 +3,15 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sqlite3
 from typing import Any, Dict, List, Tuple
+from pathlib import Path
 
 from base import call_openai_chat
 
 
 _METADATA_GAP_FILL_CACHE: Dict[Tuple[str, str], Dict[str, Any]] = {}
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -83,6 +86,63 @@ def _normalize_locale(value: Any) -> str:
     return mapping.get(prefix, text)
 
 
+def _load_reading_history_titles(user_id: str, limit: int = 10) -> List[str]:
+    uid = str(user_id or "").strip()
+    if not uid:
+        return []
+
+    db_path = _PROJECT_ROOT / "data" / "recommendation_runtime.db"
+    if not db_path.exists():
+        return []
+
+    book_ids: List[str] = []
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """
+                SELECT book_id, rating, created_at
+                FROM user_behavior_events
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (uid, max(1, int(limit))),
+            ).fetchall()
+        for row in rows:
+            try:
+                rating = float(row["rating"]) if row["rating"] is not None else 0.0
+            except Exception:
+                rating = 0.0
+            if rating >= 4.0:
+                book_id = str(row["book_id"] or "").strip()
+                if book_id:
+                    book_ids.append(book_id)
+    except Exception:
+        return []
+
+    if not book_ids:
+        return []
+
+    try:
+        from services.book_retrieval import _load_books_by_id
+
+        books_by_id = _load_books_by_id()
+    except Exception:
+        books_by_id = {}
+
+    titles: List[str] = []
+    seen: set[str] = set()
+    for book_id in book_ids:
+        if book_id in seen:
+            continue
+        seen.add(book_id)
+        title = str((books_by_id.get(book_id) or {}).get("title") or book_id).strip()
+        if title:
+            titles.append(title)
+    return titles[: max(1, int(limit))]
+
+
 def _extract_prompt_context(payload: Dict[str, Any] | None, row: Dict[str, Any], description: str) -> Dict[str, Any]:
     payload = payload or {}
     user_profile = payload.get("user_profile") if isinstance(payload.get("user_profile"), dict) else {}
@@ -102,21 +162,12 @@ def _extract_prompt_context(payload: Dict[str, Any] | None, row: Dict[str, Any],
         or user_profile.get("history")
         or []
     )
-    user_language = (
-        _normalize_locale(payload.get("user_language"))
-        or _normalize_locale(payload.get("preferred_language"))
-        or _normalize_locale(payload.get("language"))
-        or _normalize_locale(payload.get("locale"))
-        or _normalize_locale(user_profile.get("language"))
-        or _normalize_locale(user_profile.get("preferred_language"))
-        or "English"
-    )
-
+    if not reading_history:
+        reading_history = _load_reading_history_titles(str(payload.get("user_id") or ""), limit=10)
     description_text = _clean_text(description)
     return {
         "preferred_genres": _format_list(preferred_genres),
         "reading_history": _format_list(reading_history),
-        "user_language": user_language,
         "description_is_short": len(description_text) < 80,
     }
 
@@ -313,15 +364,14 @@ async def _generate_one(
             query=query_text,
             preferred_genres=prompt_context["preferred_genres"],
             reading_history=prompt_context["reading_history"],
-            user_language=prompt_context["user_language"],
             description_is_short="true" if prompt_context["description_is_short"] else "false",
         )
         try:
             raw = await call_openai_chat(
                 [
-                    {"role": "system", "content": "You generate concise personalized recommendation rationales."},
-                    {"role": "user", "content": prompt},
-                ],
+                {"role": "system", "content": "你是专业图书推荐助手，请严格用中文输出推荐理由。"},
+                {"role": "user", "content": prompt},
+            ],
                 model=llm_model,
                 temperature=llm_temperature,
                 max_tokens=llm_max_tokens,

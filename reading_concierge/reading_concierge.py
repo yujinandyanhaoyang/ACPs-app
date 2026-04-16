@@ -37,7 +37,7 @@ from partners.online.recommendation_decision_agent import agent as recommendatio
 from partners.online.recommendation_engine_agent import agent as recommendation_engine
 from services.book_retrieval import retrieve_books_by_query
 
-load_dotenv()
+load_dotenv(_PROJECT_ROOT / ".env")
 
 CONFIG_PATH = _CURRENT_DIR / "config.toml"
 PROMPTS_PATH = _CURRENT_DIR / "prompts.toml"
@@ -520,6 +520,64 @@ def _normalize_book_row(row: Dict[str, Any], index: int) -> Dict[str, Any]:
     }
 
 
+def _load_reading_history_titles(user_id: str, limit: int = 10) -> List[str]:
+    uid = str(user_id or "").strip()
+    if not uid:
+        return []
+
+    recent_book_ids: List[str] = []
+    try:
+        import sqlite3
+
+        db_path = _PROJECT_ROOT / "data" / "recommendation_runtime.db"
+        if db_path.exists():
+            with sqlite3.connect(str(db_path)) as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    """
+                    SELECT book_id, rating, created_at
+                    FROM user_behavior_events
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                    """,
+                    (uid, max(1, int(limit))),
+                ).fetchall()
+            for row in rows:
+                try:
+                    rating = float(row["rating"]) if row["rating"] is not None else 0.0
+                except Exception:
+                    rating = 0.0
+                if rating >= 4.0:
+                    book_id = str(row["book_id"] or "").strip()
+                    if book_id:
+                        recent_book_ids.append(book_id)
+    except Exception:
+        return []
+
+    if not recent_book_ids:
+        return []
+
+    try:
+        from services.book_retrieval import _load_books_by_id
+
+        by_id = _load_books_by_id()
+    except Exception:
+        by_id = {}
+
+    titles: List[str] = []
+    seen: set[str] = set()
+    for book_id in recent_book_ids:
+        if book_id in seen:
+            continue
+        seen.add(book_id)
+        row = by_id.get(book_id) or {}
+        title = str(row.get("title") or book_id).strip()
+        if title:
+            titles.append(title)
+    return titles[: max(1, int(limit))]
+
+
 @lru_cache(maxsize=1)
 def _catalog_index() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]]]:
     """
@@ -670,6 +728,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
 
     # 3) Forward proposals to RDA arbitration.
     content_outputs = content_data.get("outputs") if isinstance(content_data.get("outputs"), dict) else {}
+    reading_history = _load_reading_history_titles(req.user_id, limit=10)
     rda_payload = {
         "performative": "request",
         "action": "rda.arbitrate",
@@ -721,6 +780,9 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
         "session_id": session_id,
         "user_id": req.user_id,
         "query": req.query,
+        "reading_history": reading_history,
+        "history": reading_history,
+        "user_profile": {"reading_history": reading_history},
         "intent": intent,
         "profile_vector": (rda_payload.get("profile_proposal") or {}).get("profile_vector") or [],
         "ann_weight": rda_data.get("final_weights", {}).get("ann_weight", 0.6),
@@ -731,6 +793,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
         "candidates": content_outputs.get("content_vectors") or [],
         "cold_start": bool(profile_data.get("cold_start", False)),
         "top_k": top_k,
+        "reading_history": reading_history,
     }
     if ablation_flags.get("disable_cf_path"):
         engine_payload["cf_weight"] = 0.0

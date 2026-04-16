@@ -30,7 +30,7 @@ try:
 except Exception:  # pragma: no cover
     tomllib = None
 
-load_dotenv()
+load_dotenv(_PROJECT_ROOT / ".env")
 
 ACS_PATH = _CURRENT_DIR / "acs.json"
 CONFIG_PATH = _CURRENT_DIR / "config.toml"
