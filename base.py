@@ -24,12 +24,8 @@ def _get_async_openai_client() -> Any:
     if _async_client_init_failed:
         return None
     if _async_client is None and openai is not None:
-        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("DASHSCOPE_API_KEY")
-        base_url = (
-            os.getenv("RECOMMENDATION_ENGINE_LLM_BASE_URL")
-            or os.getenv("DASHSCOPE_BASE_URL")
-            or os.getenv("OPENAI_BASE_URL")
-        )
+        api_key = os.getenv("OPENAI_API_KEY") or ""
+        base_url = os.getenv("OPENAI_BASE_URL") or ""
         if not api_key or not base_url:
             return None
 
@@ -181,7 +177,7 @@ async def call_openai_chat(
     try:
         chat_completion = await asyncio.wait_for(
             client.chat.completions.create(**kwargs),
-            timeout=6.0,
+            timeout=12.0,
         )
     except timeout_errors as exc:
         logging.getLogger("agent.base").warning(
@@ -197,7 +193,7 @@ async def call_openai_chat(
                     messages=messages,
                     model=model,
                 ),
-                timeout=6.0,
+                timeout=12.0,
             )
         except timeout_errors as exc:
             logging.getLogger("agent.base").warning(

@@ -405,12 +405,7 @@ async def generate_rationale(
     )
     gap_fill_template = str(prompts.get("metadata_gap_fill") or "")
 
-    _llm_key = (
-        os.getenv("OPENAI_API_KEY")
-        or os.getenv("DASHSCOPE_API_KEY")
-        or os.getenv("LLM_API_KEY")
-        or ""
-    )
+    _llm_key = os.getenv("OPENAI_API_KEY") or ""
     use_llm = bool(_llm_key.strip()) and bool(main_template.strip())
     user_query = str((payload or {}).get("query") or "")
     session_key = str((payload or {}).get("session_id") or "__default__")

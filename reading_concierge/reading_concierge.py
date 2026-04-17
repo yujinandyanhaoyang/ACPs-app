@@ -728,7 +728,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
     ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}
     scoring_weights = constraints.get("scoring_weights") if isinstance(constraints.get("scoring_weights"), dict) else {}
     requested_top_k = int(constraints.get("top_k") or 5)
-    top_k = max(1, min(requested_top_k, 10))
+    top_k = max(1, min(requested_top_k, 5))
 
     # 1) Notify RDA to stand by.
     rda_standby_payload = {
