@@ -1,11 +1,3 @@
-[llm.fast]
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "kimi-k2.5"
-
-[llm.default]
-base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-model = "glm-5"
-
 [server]
 host = "0.0.0.0"
 port = 8210
@@ -37,8 +29,7 @@ RDA_AIC = "1.2.156.3088.0001.00001.RAJK1J.AZ6XR1.1.0JLV"
 ENGINE_AIC = "1.2.156.3088.0001.00001.4JLCAO.3D3JV0.1.11WY"
 FEEDBACK_AIC = "1.2.156.3088.0001.00001.MMOOJJ.E079YU.1.09FY"
 
-# Backward-compatible runtime section.
 [llm]
-model = "gui-plus-2026-02-26"
-temperature = 0.3
-max_tokens = 512
+model = "MiniMax-M2.5"
+temperature = 0.2
+max_tokens = 200

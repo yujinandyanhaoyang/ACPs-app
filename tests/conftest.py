@@ -30,7 +30,6 @@ china_hotel = _optional_import("china_hotel.china_hotel")
 china_transport = _optional_import("china_transport.china_transport")
 reader_profile_agent = _optional_import("agents.reader_profile_agent.profile_agent")
 book_content_agent = _optional_import("agents.book_content_agent.book_content_agent")
-rec_ranking_agent = _optional_import("agents.rec_ranking_agent.rec_ranking_agent")
 reading_concierge = _optional_import("reading_concierge.reading_concierge")
 
 from acps_aip.aip_base_model import Message, TextDataItem, TaskCommand
@@ -161,13 +160,6 @@ def client_book_content():
 
 
 @pytest.fixture(scope="session")
-def client_rec_ranking():
-    if not rec_ranking_agent:
-        pytest.skip("rec_ranking_agent module unavailable in this workspace")
-    return TestClient(rec_ranking_agent.app)
-
-
-@pytest.fixture(scope="session")
 def client_reading_concierge():
     if not reading_concierge:
         pytest.skip("reading_concierge module unavailable in this workspace")
@@ -235,12 +227,6 @@ def patch_embeddings_384d(monkeypatch):
     if book_content_agent is not None:
         monkeypatch.setattr(
             book_content_agent,
-            "generate_text_embeddings_async",
-            _fake_generate_text_embeddings_async,
-        )
-    if rec_ranking_agent is not None:
-        monkeypatch.setattr(
-            rec_ranking_agent,
             "generate_text_embeddings_async",
             _fake_generate_text_embeddings_async,
         )

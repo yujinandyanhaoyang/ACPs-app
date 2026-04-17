@@ -35,7 +35,7 @@ def test_reader_profile_acs_conformance(client_reader_profile):
 def test_book_content_acs_conformance(client_book_content):
     _assert_acs(client_book_content)
 
-# rec_ranking was deprecated but the test fixture probably still exists in conftest.
+# Deprecated ranking fixtures may still exist in conftest for legacy tests.
 # Actually let's just test RC and friends.
 def test_reading_concierge_acs_conformance(client_reading_concierge):
     _assert_acs(client_reading_concierge)

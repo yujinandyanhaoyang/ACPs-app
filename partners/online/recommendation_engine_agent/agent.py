@@ -160,15 +160,6 @@ def _load_config() -> AgentConfig:
         cfg.llm_temperature,
         cfg.llm_max_tokens,
     )
-    env_llm_model = str(os.getenv("RECOMMENDATION_ENGINE_LLM_MODEL") or "").strip()
-    if env_llm_model:
-        cfg.llm_model = env_llm_model
-        if cfg.llm_model != configured_llm_model:
-            logger.info(
-                "event=config_override section=llm source=env var=RECOMMENDATION_ENGINE_LLM_MODEL model=%s",
-                cfg.llm_model,
-            )
-
     ranking = _require_section(data, "ranking", "CONFIDENCE_PENALTY_THRESHOLD")
     cfg.confidence_penalty_threshold = _safe_float(
         _require_value(ranking, "ranking", "CONFIDENCE_PENALTY_THRESHOLD")

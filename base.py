@@ -1,6 +1,7 @@
 """Common utilities for Agents (logging, helpers, LLM calls)."""
 
 from __future__ import annotations
+import asyncio
 import logging
 import os
 import json
@@ -29,6 +30,8 @@ def _get_async_openai_client() -> Any:
             or os.getenv("DASHSCOPE_BASE_URL")
             or os.getenv("OPENAI_BASE_URL")
         )
+        if not api_key or not base_url:
+            return None
 
         # DashScope compatible-mode needs an extra proxy header; keep it optional for plain OpenAI.
         default_headers: Optional[Dict[str, str]] = None
@@ -38,8 +41,7 @@ def _get_async_openai_client() -> Any:
         # Avoid inheriting SOCKS proxy env from host shell by default, which can
         # break client init when optional socks deps are not installed.
         trust_env = str(os.getenv("OPENAI_TRUST_ENV", "0")).strip().lower() in {"1", "true", "yes", "on"}
-        timeout_s = float(os.getenv("OPENAI_HTTP_TIMEOUT", "30"))
-        http_client = httpx.AsyncClient(timeout=httpx.Timeout(timeout_s), trust_env=trust_env)
+        http_client = httpx.AsyncClient(timeout=15, trust_env=trust_env)
         try:
             _async_client = openai.AsyncOpenAI(
                 api_key=api_key,
@@ -172,12 +174,15 @@ async def call_openai_chat(
         kwargs["temperature"] = temperature
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
-    timeout_errors: tuple[type[BaseException], ...] = (httpx.TimeoutException,)
+    timeout_errors: tuple[type[BaseException], ...] = (TimeoutError, httpx.TimeoutException)
     api_timeout_error = getattr(openai, "APITimeoutError", None) if openai is not None else None
     if isinstance(api_timeout_error, type):
         timeout_errors = timeout_errors + (api_timeout_error,)
     try:
-        chat_completion = await client.chat.completions.create(**kwargs)
+        chat_completion = await asyncio.wait_for(
+            client.chat.completions.create(**kwargs),
+            timeout=6.0,
+        )
     except timeout_errors as exc:
         logging.getLogger("agent.base").warning(
             "event=openai_chat_timeout model=%s error=%s",
@@ -187,9 +192,12 @@ async def call_openai_chat(
         return ""
     except TypeError:
         try:
-            chat_completion = await client.chat.completions.create(
-                messages=messages,
-                model=model,
+            chat_completion = await asyncio.wait_for(
+                client.chat.completions.create(
+                    messages=messages,
+                    model=model,
+                ),
+                timeout=6.0,
             )
         except timeout_errors as exc:
             logging.getLogger("agent.base").warning(

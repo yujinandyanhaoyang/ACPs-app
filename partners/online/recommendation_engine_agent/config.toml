@@ -31,9 +31,9 @@ ALS_MODEL_PATH           = "/root/WORK/DATA/processed/cf_item_factors_v2.npy"
 HNSWLIB_PATH             = "/root/WORK/DATA/processed/cf_user_factors_v2.npy"
 
 [llm]
-model       = "qwen-plus"
+model       = "MiniMax-M2.5"
 temperature = 0.4
-max_tokens  = 300
+max_tokens  = 150
 
 [ranking]
 CONFIDENCE_PENALTY_THRESHOLD = 0.6

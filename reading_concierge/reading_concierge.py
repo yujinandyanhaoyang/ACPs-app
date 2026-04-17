@@ -107,7 +107,6 @@ def _load_runtime_config() -> RuntimeConfig:
         except Exception as exc:
             logger.warning("event=config_parse_failed error=%s", exc)
 
-    cfg.llm_model = str(os.getenv("READING_LLM_MODEL") or os.getenv("OPENAI_MODEL") or cfg.llm_model)
     return cfg
 
 
@@ -292,7 +291,7 @@ def _resolve_partner(partner_key: str) -> Dict[str, Any]:
         },
     }
     item = dict(local_map[partner_key])
-    discovered_remote = _discover_partner_rpc_url(partner_key)
+    discovered_remote = _discover_partner_rpc_url(partner_key) if DISCOVERY_ENABLED else None
     env_remote = str(os.getenv(remote_env[partner_key]) or "").strip() or None
     item["remote_url"] = discovered_remote or env_remote
     item["discovery"] = "adp" if discovered_remote else ("env" if env_remote else "local")
