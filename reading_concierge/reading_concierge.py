@@ -209,6 +209,53 @@ def _detect_language_code(text: str) -> str:
     return "en"
 
 
+def _translate_query_local(query: str) -> Dict[str, Any]:
+    text = str(query or "").strip()
+    lower = text.lower()
+    if not text:
+        return {
+            "search_query": "",
+            "preferred_genres": [],
+            "scenario_hint": "auto",
+            "response_style": "concise",
+        }
+
+    if any(keyword in text for keyword in ("悬疑", "推理", "犯罪", "侦探", "谋杀")):
+        return {
+            "search_query": "mystery detective crime thriller novels",
+            "preferred_genres": ["mystery", "crime", "thriller", "detective"],
+            "scenario_hint": "cold_start",
+            "response_style": "concise",
+        }
+    if any(keyword in text for keyword in ("太空歌剧", "科幻", "未来", "宇宙", "星际")):
+        return {
+            "search_query": "space opera science fiction novels",
+            "preferred_genres": ["science fiction", "space opera", "sci-fi"],
+            "scenario_hint": "explore",
+            "response_style": "concise",
+        }
+    if any(keyword in text for keyword in ("传记", "历史", "人物")) or "20世纪" in text or "欧洲" in text:
+        return {
+            "search_query": "20th century european biography and history books",
+            "preferred_genres": ["biography", "history", "historical biography"],
+            "scenario_hint": "warm",
+            "response_style": "concise",
+        }
+    if lower:
+        return {
+            "search_query": text,
+            "preferred_genres": [],
+            "scenario_hint": "auto",
+            "response_style": "concise",
+        }
+    return {
+        "search_query": query,
+        "preferred_genres": [],
+        "scenario_hint": "auto",
+        "response_style": "concise",
+    }
+
+
 def _resolve_partner(partner_key: str) -> Dict[str, Any]:
     remote_env = {
         "profile": "READER_PROFILE_RPC_URL",
@@ -458,6 +505,16 @@ def _safe_json_object(raw: str) -> Dict[str, Any]:
 async def _parse_intent(query: str) -> Dict[str, Any]:
     template = INTENT_PROMPT["user_template"]
     user_prompt = template.format(query=query)
+    if _detect_language_code(query) == "zh":
+        parsed = {
+            "intent": "recommend_books",
+            "constraints": {},
+            **_translate_query_local(query),
+            "original_language": "zh",
+        }
+        if not str(parsed.get("search_query") or "").strip():
+            parsed["search_query"] = query
+        return parsed
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
         return {
             "intent": "recommend_books",
@@ -497,10 +554,7 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
     return {
         "intent": "recommend_books",
         "constraints": {},
-        "preferred_genres": [],
-        "scenario_hint": "auto",
-        "response_style": "concise",
-        "search_query": query,
+        **_translate_query_local(query),
         "original_language": _detect_language_code(query),
     }
 

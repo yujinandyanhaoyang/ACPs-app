@@ -156,7 +156,7 @@ def warmup_embedding_model(model_name: str | None = None) -> str:
 	"""Load the sentence-transformer model into _SENTENCE_MODEL_CACHE.
 	Safe to call at startup from run_in_executor."""
 	effective = _resolve_embedding_model_name(
-		model_name or os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or _DEFAULT_OFFLINE_EMBED_MODEL
+		model_name or _DEFAULT_OFFLINE_EMBED_MODEL
 	)
 	model = _resolve_sentence_transformer(effective)
 	if model is not None:
@@ -243,6 +243,11 @@ async def generate_text_embeddings_async(
 	text_list = [str(text or "") for text in texts]
 	if not text_list:
 		return [], {"backend": "none", "model": None, "vector_dim": 0}
+
+	embed_backend = str(os.getenv("EMBED_BACKEND") or "").strip().lower()
+	if embed_backend == "local":
+		_LOGGER.info("event=embed_backend_forced_local model=%s", model_name)
+		return await asyncio.to_thread(generate_text_embeddings, text_list, model_name, fallback_dim)
 
 	api_key = os.getenv("OPENAI_API_KEY") or ""
 	base_url = os.getenv("OPENAI_BASE_URL") or ""
