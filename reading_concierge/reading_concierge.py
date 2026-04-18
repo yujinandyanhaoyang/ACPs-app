@@ -71,6 +71,7 @@ class RuntimeConfig(BaseModel):
     llm_model: str = "gui-plus-2026-02-26"
     llm_temperature: float = 0.3
     llm_max_tokens: int = 1024
+    llm_intent_max_tokens: int = 128
     partner_aics: Dict[str, str] = Field(default_factory=dict)
 
 
@@ -95,6 +96,9 @@ def _load_runtime_config() -> RuntimeConfig:
                     cfg.llm_temperature = float(llm["temperature"])
                 if llm.get("max_tokens") is not None:
                     cfg.llm_max_tokens = int(llm["max_tokens"])
+                intent_cfg = llm.get("intent") if isinstance(llm.get("intent"), dict) else {}
+                if intent_cfg.get("max_tokens") is not None:
+                    cfg.llm_intent_max_tokens = int(intent_cfg["max_tokens"])
             if isinstance(agents, dict):
                 mapping = {
                     "profile": str(agents.get("RPA_AIC") or "").strip(),
@@ -112,8 +116,8 @@ def _load_runtime_config() -> RuntimeConfig:
 
 def _load_intent_prompt() -> Dict[str, str]:
     defaults = {
-        "system": "Parse reading query into structured intent JSON.",
-        "user_template": "User query: {query}. Return strict JSON with keys intent,constraints,preferred_genres,scenario_hint,response_style.",
+        "system": "You are a book search intent parser. Output ONLY a single-line JSON object with exactly these 3 keys: {\"search_query\": \"<English phrase>\", \"original_language\": \"<2-letter code>\", \"preferred_genres\": []}. No extras.",
+        "user_template": "Query: {query}",
     }
     if not tomllib or not PROMPTS_PATH.exists():
         return defaults
@@ -455,46 +459,64 @@ def _safe_json_object(raw: str) -> Dict[str, Any]:
 
 
 async def _parse_intent(query: str) -> Dict[str, Any]:
+    """Parse user query into structured intent. Never raises - always returns a valid dict."""
     query = str(query or "").strip()
+    def _fallback(reason: str) -> Dict[str, Any]:
+        logger.warning("event=intent_parsing_fallback query=%r reason=%s", query, reason)
+        return {
+            "search_query": query,
+            "original_language": _detect_language_code(query),
+            "intent": "book_recommendation",
+            "preferred_genres": [],
+            "constraints": {},
+            "scenario_hint": "",
+            "response_style": "detailed",
+        }
+
     if not query:
-        raise RuntimeError("_parse_intent called with empty query")
+        return _fallback("empty_query")
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
-        raise RuntimeError(
-            "OPENAI_API_KEY is not configured. "
-            "Intent parsing requires LLM. Please check your environment configuration."
+        return _fallback("no_api_key")
+
+    try:
+        raw = await asyncio.wait_for(
+            call_openai_chat(
+                [
+                    {"role": "system", "content": INTENT_PROMPT["system"]},
+                    {"role": "user", "content": INTENT_PROMPT["user_template"].format(query=query)},
+                ],
+                model=RUNTIME.llm_model,
+                temperature=0.0,
+                max_tokens=RUNTIME.llm_intent_max_tokens,
+                timeout_s=25.0,
+            ),
+            timeout=25.0,
         )
-    raw = await asyncio.wait_for(
-        call_openai_chat(
-            [
-                {"role": "system", "content": INTENT_PROMPT["system"]},
-                {"role": "user", "content": INTENT_PROMPT["user_template"].format(query=query)},
-            ],
-            model=RUNTIME.llm_model,
-            temperature=RUNTIME.llm_temperature,
-            max_tokens=min(384, int(RUNTIME.llm_max_tokens or 384)),
-            timeout_s=30.0,
-        ),
-        timeout=30.0,
-    )
+    except Exception as exc:
+        return _fallback(f"llm_call_failed: {exc}")
+
     parsed = _safe_json_object(raw)
     if not parsed:
-        raise RuntimeError(
-            f"LLM returned invalid or empty JSON for intent parsing. raw_response={raw!r}"
-        )
+        return _fallback(f"invalid_json: raw={raw!r}")
 
-    if not str(parsed.get("search_query") or "").strip():
-        raise RuntimeError(
-            f"LLM intent parsing returned empty search_query. parsed={parsed!r}"
-        )
+    sq = str(parsed.get("search_query") or "").strip()
+    if not sq:
+        return _fallback("empty_search_query")
 
-    sq = str(parsed.get("search_query") or "")
     if any("\u4e00" <= ch <= "\u9fff" for ch in sq):
-        raise RuntimeError(
-            f"LLM failed to translate query to English. search_query still contains Chinese: {sq!r}"
+        logger.warning(
+            "event=intent_search_query_not_translated query=%r sq=%r, using original query",
+            query,
+            sq,
         )
+        parsed["search_query"] = query
 
-    if not str(parsed.get("original_language") or "").strip():
-        parsed["original_language"] = _detect_language_code(query)
+    parsed.setdefault("original_language", _detect_language_code(query))
+    parsed.setdefault("intent", "book_recommendation")
+    parsed.setdefault("preferred_genres", [])
+    parsed.setdefault("constraints", {})
+    parsed.setdefault("scenario_hint", "")
+    parsed.setdefault("response_style", "detailed")
     return parsed
 
 

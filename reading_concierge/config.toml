@@ -32,4 +32,7 @@ FEEDBACK_AIC = "1.2.156.3088.0001.00001.MMOOJJ.E079YU.1.09FY"
 [llm]
 model = "MiniMax-M2.5"
 temperature = 0.2
-max_tokens = 256
+max_tokens = 384
+
+[llm.intent]
+max_tokens = 128
