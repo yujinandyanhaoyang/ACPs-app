@@ -71,7 +71,7 @@ class RuntimeConfig(BaseModel):
     llm_model: str = "MiniMax-M2.5"
     llm_temperature: float = 0.2
     llm_max_tokens: int = 384
-    llm_intent_max_tokens: int = 128
+    llm_intent_max_tokens: int = 200
     partner_aics: Dict[str, str] = Field(default_factory=dict)
 
 
@@ -674,6 +674,10 @@ def _normalize_recommendations_for_frontend(
         item["diversity_score"] = float(row.get("diversity_score") or 0.0)
         item["score_parts"] = row.get("score_parts") if isinstance(row.get("score_parts"), dict) else {}
         item["justification"] = str(row.get("justification") or explanation.get("justification") or "")
+        title_display = str(row.get("title_display") or row.get("title") or "")
+        title_key = title_display.replace(" ", "").replace(":", "").replace("-", "")
+        item["title_display"] = title_display
+        item["title_zh"] = "" if title_display and title_key and all(ord(c) < 128 for c in title_key) else title_display
         normalized.append(item)
     return normalized
 
@@ -685,6 +689,35 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
 
     intent = await _parse_intent(req.query)
     search_query = str(intent.get("search_query") or req.query or "").strip()
+    if any("\u4e00" <= ch <= "\u9fff" for ch in search_query):
+        try:
+            translated = await asyncio.wait_for(
+                call_openai_chat(
+                    [
+                        {
+                            "role": "system",
+                            "content": "Translate the following Chinese text to a short English book search phrase. Output only the English phrase, no explanation.",
+                        },
+                        {"role": "user", "content": search_query},
+                    ],
+                    model=RUNTIME.llm_model,
+                    temperature=0.0,
+                    max_tokens=40,
+                    timeout_s=10.0,
+                ),
+                timeout=10.0,
+            )
+            translated = str(translated or "").strip()
+            if translated and not any("\u4e00" <= ch <= "\u9fff" for ch in translated):
+                logger.info(
+                    "event=search_query_rescue original=%r translated=%r",
+                    search_query,
+                    translated,
+                )
+                search_query = translated
+                intent["search_query"] = translated
+        except Exception as exc:
+            logger.warning("event=search_query_rescue_failed error=%s", exc)
 
     constraints = req.constraints if isinstance(req.constraints, dict) else {}
     ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}

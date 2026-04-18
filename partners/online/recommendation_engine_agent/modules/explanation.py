@@ -212,14 +212,32 @@ def _fallback_rationale(
     fallback_template: str,
     prompt_context: Dict[str, Any] | None = None,
 ) -> str:
-    summary_zh = str(item.get("summary_zh") or "").strip()
-    if summary_zh:
-        return summary_zh
-    title = str(item.get("title_display") or item.get("title") or item.get("book_id") or "")
-    author = str(item.get("author_display") or item.get("author") or "")
+    return _make_fallback_justification(item, str((prompt_context or {}).get("query") or ""))
+
+
+def _make_fallback_justification(item: Dict[str, Any], query: str) -> str:
+    title = str(item.get("title_display") or item.get("title") or item.get("book_id") or "").strip()
+    author = str(item.get("author_display") or item.get("author") or "").strip()
+    genres = item.get("genres") or item.get("genre_tags_zh") or []
+    genre_list = []
+    if isinstance(genres, list):
+        genre_list = [str(g).strip() for g in genres if str(g).strip()]
+    genre_str = "、".join(genre_list[:3]) if genre_list else ""
+
+    parts: List[str] = []
+    if title:
+        parts.append(f"《{title}》")
     if author:
-        return f"《{title}》 · {author}"
-    return f"《{title}》"
+        parts.append(f"作者：{author}")
+    if genre_str:
+        parts.append(f"类型：{genre_str}")
+    if query and any("\u4e00" <= ch <= "\u9fff" for ch in query):
+        parts.append("与您的阅读偏好相关。")
+    elif query:
+        parts.append("与您的阅读需求相契合。")
+    else:
+        parts.append("与您的阅读偏好相关。")
+    return "，".join(parts) if parts else "与您的阅读偏好相关。"
 
 
 def _needs_metadata_gap_fill(row: Dict[str, Any]) -> bool:
@@ -377,7 +395,7 @@ async def _generate_one(
     query_text = str(user_query or "")
     prompt_context = _extract_prompt_context(payload, row, description_text)
 
-    rationale = _fallback_rationale(row, fallback_template, prompt_context)
+    rationale = _make_fallback_justification(row, query_text)
     source = "fallback"
     if use_llm and main_template.strip():
         prompt = main_template.format(
