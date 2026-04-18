@@ -37,7 +37,14 @@ def _get_async_openai_client() -> Any:
         # Avoid inheriting SOCKS proxy env from host shell by default, which can
         # break client init when optional socks deps are not installed.
         trust_env = str(os.getenv("OPENAI_TRUST_ENV", "0")).strip().lower() in {"1", "true", "yes", "on"}
-        http_client = httpx.AsyncClient(timeout=15, trust_env=trust_env)
+        try:
+            http_timeout = float(os.getenv("OPENAI_HTTP_TIMEOUT", "75"))
+        except Exception:
+            http_timeout = 75.0
+        http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(http_timeout, connect=min(10.0, http_timeout)),
+            trust_env=trust_env,
+        )
         try:
             _async_client = openai.AsyncOpenAI(
                 api_key=api_key,
@@ -156,6 +163,7 @@ async def call_openai_chat(
     model: str,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    timeout_s: float | None = None,
 ) -> str:
     """Call OpenAI-compatible chat completion API using the async client.
 
@@ -164,12 +172,16 @@ async def call_openai_chat(
     """
     client = _get_async_openai_client()
     if client is None:  # pragma: no cover
-        return ""
+        raise RuntimeError(
+            f"OpenAI client is unavailable for model={model!r}. "
+            "Check OPENAI_API_KEY and OPENAI_BASE_URL."
+        )
     kwargs: dict = {"messages": messages, "model": model}
     if temperature is not None:
         kwargs["temperature"] = temperature
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
+    effective_timeout = float(timeout_s if timeout_s is not None else os.getenv("OPENAI_CHAT_TIMEOUT", "30"))
     timeout_errors: tuple[type[BaseException], ...] = (TimeoutError, httpx.TimeoutException)
     api_timeout_error = getattr(openai, "APITimeoutError", None) if openai is not None else None
     if isinstance(api_timeout_error, type):
@@ -177,15 +189,8 @@ async def call_openai_chat(
     try:
         chat_completion = await asyncio.wait_for(
             client.chat.completions.create(**kwargs),
-            timeout=12.0,
+            timeout=effective_timeout,
         )
-    except timeout_errors as exc:
-        logging.getLogger("agent.base").warning(
-            "event=openai_chat_timeout model=%s error=%s",
-            model,
-            exc,
-        )
-        return ""
     except TypeError:
         try:
             chat_completion = await asyncio.wait_for(
@@ -193,16 +198,42 @@ async def call_openai_chat(
                     messages=messages,
                     model=model,
                 ),
-                timeout=12.0,
+                timeout=effective_timeout,
             )
         except timeout_errors as exc:
-            logging.getLogger("agent.base").warning(
-                "event=openai_chat_timeout model=%s error=%s",
-                model,
-                exc,
-            )
-            return ""
-    return getattr(chat_completion.choices[0].message, "content", "") or ""
+            raise RuntimeError(
+                f"LLM call timed out for model={model!r}: {exc}"
+            ) from exc
+        except Exception as exc:
+            raise RuntimeError(
+                f"LLM call failed for model={model!r}: {exc}"
+            ) from exc
+    except timeout_errors as exc:
+        raise RuntimeError(
+            f"LLM call timed out for model={model!r}: {exc}"
+        ) from exc
+    except Exception as exc:
+        raise RuntimeError(
+            f"LLM call failed for model={model!r}: {exc}"
+        ) from exc
+    if not getattr(chat_completion, "choices", None):
+        raise RuntimeError(
+            f"LLM returned no choices for model={model!r}. response={chat_completion!r}"
+        )
+    message = chat_completion.choices[0].message
+    content = getattr(message, "content", None)
+    if content is None:
+        raise RuntimeError(
+            f"LLM returned None content for model={model!r}. "
+            f"finish_reason={getattr(chat_completion.choices[0], 'finish_reason', None)!r}"
+        )
+    text = str(content).strip()
+    if not text:
+        raise RuntimeError(
+            f"LLM returned empty content for model={model!r}. "
+            f"finish_reason={getattr(chat_completion.choices[0], 'finish_reason', None)!r}"
+        )
+    return text
 
 
 def _normalize_acs_skills(skills: Any) -> List[Dict[str, str]]:

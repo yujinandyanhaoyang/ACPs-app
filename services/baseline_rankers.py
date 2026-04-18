@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import os
@@ -11,8 +12,14 @@ from base import call_openai_chat
 from services.book_retrieval import load_books, retrieve_books_by_query
 from services.data_paths import get_processed_data_path
 
+try:
+    import tomllib
+except Exception:  # pragma: no cover
+    tomllib = None
+
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_ENGINE_CONFIG_PATH = _PROJECT_ROOT / "partners" / "online" / "recommendation_engine_agent" / "config.toml"
 _INTERACTIONS_TRAIN_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 _POPULARITY_COUNTS_CACHE: Dict[str, int] | None = None
 
@@ -65,6 +72,37 @@ def _safe_json_loads(raw: str) -> Dict[str, Any]:
         return {}
 
 
+def _load_llm_config() -> Dict[str, Any]:
+    if not tomllib or not _ENGINE_CONFIG_PATH.exists():
+        raise RuntimeError(
+            f"Missing llm config file for baseline_rankers: {_ENGINE_CONFIG_PATH}"
+        )
+    try:
+        data = tomllib.loads(_ENGINE_CONFIG_PATH.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Failed to parse llm config for baseline_rankers: {exc}") from exc
+    llm = data.get("llm") if isinstance(data, dict) else {}
+    if not isinstance(llm, dict):
+        raise RuntimeError(
+            f"[llm] section missing in {_ENGINE_CONFIG_PATH} for baseline_rankers"
+        )
+    model = str(llm.get("model") or "").strip()
+    if not model:
+        raise RuntimeError(
+            "model not configured in config.toml for baseline_rankers. "
+            "Please add [llm] section with model = 'MiniMax-M2.5'."
+        )
+    try:
+        temperature = float(llm.get("temperature") or 0.2)
+    except Exception as exc:
+        raise RuntimeError(f"Invalid llm.temperature in {_ENGINE_CONFIG_PATH}: {exc}") from exc
+    try:
+        max_tokens = int(llm.get("max_tokens") or 1024)
+    except Exception as exc:
+        raise RuntimeError(f"Invalid llm.max_tokens in {_ENGINE_CONFIG_PATH}: {exc}") from exc
+    return {"model": model, "temperature": temperature, "max_tokens": max_tokens}
+
+
 def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_k: int) -> List[str]:
     if not query.strip() or not candidates:
         return []
@@ -72,7 +110,8 @@ def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_
         raise RuntimeError(
             "OPENAI_API_KEY is not configured. LLM-based candidate selection requires LLM."
         )
-    model = os.getenv("OPENAI_MODEL", "qwen-plus")
+    llm_cfg = _load_llm_config()
+    model = str(llm_cfg["model"])
     rows = []
     for book in candidates[:40]:
         rows.append(
@@ -101,8 +140,8 @@ def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_
                     {"role": "user", "content": prompt},
                 ],
                 model=model,
-                temperature=0.1,
-                max_tokens=256,
+                temperature=float(llm_cfg["temperature"]),
+                max_tokens=int(llm_cfg["max_tokens"]),
             )
         )
     else:

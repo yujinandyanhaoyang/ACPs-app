@@ -70,7 +70,7 @@ class RuntimeConfig(BaseModel):
     redis_url: str = "redis://localhost:6379/0"
     llm_model: str = "gui-plus-2026-02-26"
     llm_temperature: float = 0.3
-    llm_max_tokens: int = 512
+    llm_max_tokens: int = 1024
     partner_aics: Dict[str, str] = Field(default_factory=dict)
 
 
@@ -455,6 +455,9 @@ def _safe_json_object(raw: str) -> Dict[str, Any]:
 
 
 async def _parse_intent(query: str) -> Dict[str, Any]:
+    query = str(query or "").strip()
+    if not query:
+        raise RuntimeError("_parse_intent called with empty query")
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
         raise RuntimeError(
             "OPENAI_API_KEY is not configured. "
@@ -469,8 +472,9 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
             model=RUNTIME.llm_model,
             temperature=RUNTIME.llm_temperature,
             max_tokens=RUNTIME.llm_max_tokens,
+            timeout_s=60.0,
         ),
-        timeout=10.0,
+        timeout=60.0,
     )
     parsed = _safe_json_object(raw)
     if not parsed:
@@ -857,7 +861,12 @@ async def demo_status() -> Dict[str, Any]:
         "partner_mode": PARTNER_MODE,
         "redis_url": RUNTIME.redis_url,
         "llm_model": RUNTIME.llm_model,
+        "llm_max_tokens": RUNTIME.llm_max_tokens,
+        "embed_backend": str(os.getenv("EMBED_BACKEND") or "not_set"),
+        "embed_model_path": str(os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or "not_set"),
         "demo_page_available": DEMO_HTML_PATH.exists(),
+        "openai_api_key_set": bool(str(os.getenv("OPENAI_API_KEY") or "").strip()),
+        "openai_base_url": str(os.getenv("OPENAI_BASE_URL") or "not_set"),
     }
 
 
@@ -866,14 +875,14 @@ async def user_api(req: UserRequest):
     if not str(req.user_id or "").strip():
         raise HTTPException(status_code=422, detail="user_id is required for /user_api")
     if not str(req.query or "").strip():
-        raise HTTPException(status_code=400, detail="query is required")
+        raise HTTPException(status_code=400, detail="query must not be empty or blank")
     return await _orchestrate(req, allow_deprecated_payload=False)
 
 
 @app.post("/user_api_debug")
 async def user_api_debug(req: UserRequest):
     if not str(req.query or "").strip():
-        raise HTTPException(status_code=400, detail="query is required")
+        raise HTTPException(status_code=400, detail="query must not be empty or blank")
     if not str(req.user_id or "").strip():
         req.user_id = f"anon-{uuid.uuid4()}"
     return await _orchestrate(req, allow_deprecated_payload=True)

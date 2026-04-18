@@ -32,8 +32,8 @@ HNSWLIB_PATH             = "/root/WORK/DATA/processed/cf_user_factors_v2.npy"
 
 [llm]
 model       = "MiniMax-M2.5"
-temperature = 0.4
-max_tokens  = 150
+temperature = 0.2
+max_tokens  = 1024
 
 [ranking]
 CONFIDENCE_PENALTY_THRESHOLD = 0.6

@@ -247,9 +247,10 @@ async def _fetch_description_via_llm(
             ],
             model=llm_model,
             temperature=llm_temperature,
-            max_tokens=200,
+            max_tokens=llm_max_tokens,
+            timeout_s=60.0,
         ),
-        timeout=8.0,
+        timeout=60.0,
     )
     text = str(raw or "").strip()
     if not text:
@@ -299,6 +300,7 @@ async def _gap_fill_metadata(
         model=llm_model,
         temperature=llm_temperature,
         max_tokens=llm_max_tokens,
+        timeout_s=60.0,
     )
     result = _extract_json_obj(raw)
     if not result:
@@ -385,6 +387,7 @@ async def _generate_one(
             model=llm_model,
             temperature=llm_temperature,
             max_tokens=llm_max_tokens,
+            timeout_s=60.0,
         )
         text = str(raw or "").strip()
         if not text:

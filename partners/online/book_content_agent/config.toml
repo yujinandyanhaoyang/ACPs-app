@@ -19,6 +19,11 @@ max_concurrent_tasks = 10
 [log]
 level = "INFO"
 
+[llm]
+model = "MiniMax-M2.5"
+temperature = 0.2
+max_tokens = 1024
+
 [model]
 ENCODER_MODEL = "all-MiniLM-L6-v2"
 PROJ_MATRIX_PATH = "proj_matrix.npy"

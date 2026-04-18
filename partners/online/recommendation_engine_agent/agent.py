@@ -357,6 +357,8 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
         },
         "quality": quality_flags,
         "latency_ms": round((time.perf_counter() - dispatch_start) * 1000, 3),
+        "embed_backend": str(recall_meta.get("embed_backend") or ""),
+        "vector_dim": int(recall_meta.get("vector_dim") or 0),
     }
 
     return {

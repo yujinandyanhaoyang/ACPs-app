@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import uuid
+import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -53,6 +54,9 @@ class AgentConfig:
     lambda_decay: float = 0.05
     warm_threshold: int = 20
     vector_dim: int = 256
+    llm_model: str = ""
+    llm_temperature: float = 0.2
+    llm_max_tokens: int = 1024
 
 
 def _load_config() -> AgentConfig:
@@ -68,6 +72,7 @@ def _load_config() -> AgentConfig:
     server = data.get("server") if isinstance(data, dict) else {}
     database = data.get("database") if isinstance(data, dict) else {}
     model = data.get("model") if isinstance(data, dict) else {}
+    llm = data.get("llm") if isinstance(data, dict) else {}
 
     try:
         if isinstance(server, dict) and server.get("port"):
@@ -88,6 +93,21 @@ def _load_config() -> AgentConfig:
             cfg.vector_dim = int(model["VECTOR_DIM"])
     except Exception:
         pass
+    if isinstance(llm, dict):
+        cfg.llm_model = str(llm.get("model") or "").strip()
+        try:
+            cfg.llm_temperature = float(llm.get("temperature") or cfg.llm_temperature)
+        except Exception:
+            pass
+        try:
+            cfg.llm_max_tokens = int(llm.get("max_tokens") or cfg.llm_max_tokens)
+        except Exception:
+            pass
+    if not cfg.llm_model:
+        raise RuntimeError(
+            "[llm] model not configured in config.toml for reader_profile_agent. "
+            "Please add [llm] section with model = 'MiniMax-M2.5'."
+        )
     return cfg
 
 
@@ -308,6 +328,9 @@ def _extract_json_obj(text: str) -> Dict[str, Any]:
     raw = str(text or "").strip()
     if not raw:
         return {}
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, flags=re.DOTALL)
+    if fenced:
+        raw = fenced.group(1).strip()
     try:
         parsed = json.loads(raw)
         return parsed if isinstance(parsed, dict) else {}
@@ -337,6 +360,12 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
         raise RuntimeError(
             "semantic_preference_induction prompt is empty. Please check prompts.toml."
         )
+    model_name = str(CFG.llm_model or "").strip()
+    if not model_name:
+        raise RuntimeError(
+            "[llm] model not configured in config.toml for reader_profile_agent. "
+            "Please add [llm] section with model = 'MiniMax-M2.5'."
+        )
     user_prompt = template.format(
         user_id=user_id,
         window_days=window_days,
@@ -345,26 +374,56 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
     # Keep explicit baseline in-context so LLM extraction remains anchored.
     user_prompt += f"\nBaseline behavior_genres: {json.dumps(baseline, ensure_ascii=False)}"
 
-    raw = await call_openai_chat(
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        model=os.getenv("READER_PROFILE_LLM_MODEL", os.getenv("OPENAI_MODEL", "qwen3.5-35b-a3b")),
-        temperature=0.1,
-        max_tokens=180,
-    )
+    try:
+        raw = await call_openai_chat(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            model=model_name,
+            temperature=CFG.llm_temperature,
+            max_tokens=CFG.llm_max_tokens,
+        )
+    except Exception as exc:
+        if baseline:
+            logger.warning(
+                "event=genre_inference_llm_failed_fallback user_id=%s error=%s baseline=%s",
+                user_id,
+                exc,
+                baseline,
+            )
+            return list(dict.fromkeys([str(x).strip().lower() for x in baseline if str(x).strip()]))[:10]
+        raise
     parsed = _extract_json_obj(raw)
     latent = parsed.get("latent_genres")
     if not isinstance(latent, list):
+        if baseline:
+            logger.warning(
+                "event=genre_inference_invalid_json_fallback user_id=%s baseline=%s raw=%s",
+                user_id,
+                baseline,
+                raw,
+            )
+            return list(dict.fromkeys([str(x).strip().lower() for x in baseline if str(x).strip()]))[:10]
         raise RuntimeError(
             f"LLM returned invalid JSON for genre inference. user_id={user_id!r} raw={raw!r}"
         )
     cleaned = [str(x).strip().lower() for x in latent if str(x).strip()]
     if not cleaned:
-        raise RuntimeError(
-            f"LLM returned empty latent_genres for user_id={user_id!r} raw={raw!r}"
+        if baseline:
+            logger.warning(
+                "event=genre_inference_empty_baseline user_id=%s baseline=%s raw=%s",
+                user_id,
+                baseline,
+                raw,
+            )
+            return list(dict.fromkeys([str(x).strip().lower() for x in baseline if str(x).strip()]))[:10]
+        logger.warning(
+            "event=genre_inference_empty_no_baseline user_id=%s raw=%s",
+            user_id,
+            raw,
         )
+        return []
     return cleaned[:10]
 
 

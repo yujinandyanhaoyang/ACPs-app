@@ -14,11 +14,17 @@ import faiss  # type: ignore
 from services.book_retrieval import retrieve_books_by_vector
 from services.model_backends import generate_text_embeddings
 
+try:
+    import tomllib
+except Exception:  # pragma: no cover
+    tomllib = None
+
 SMOKE_INDEX_PATH = Path(os.environ.get("SMOKE_INDEX_PATH", "/root/WORK/DATA/processed/books_index.faiss"))
 SMOKE_META_PATH = Path(os.environ.get("SMOKE_META_PATH", "/root/WORK/DATA/processed/books_index_meta.jsonl"))
 MASTER_PATH = Path("/root/WORK/DATA/processed/books_master_merged.jsonl")
 QUERY = "a mystery novel with psychological thriller elements"
 TOP_K = 20
+ENGINE_CONFIG_PATH = PROJECT_ROOT / "partners" / "online" / "recommendation_engine_agent" / "config.toml"
 
 
 def _load_index_ntotal(index_path: Path) -> int:
@@ -33,6 +39,21 @@ def _load_index_ntotal(index_path: Path) -> int:
 
 def _safe_str(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _load_llm_config() -> Dict[str, Any]:
+    if not tomllib or not ENGINE_CONFIG_PATH.exists():
+        raise RuntimeError(f"missing config file: {ENGINE_CONFIG_PATH}")
+    data = tomllib.loads(ENGINE_CONFIG_PATH.read_text(encoding="utf-8"))
+    llm = data.get("llm") if isinstance(data, dict) else {}
+    if not isinstance(llm, dict):
+        raise RuntimeError(f"[llm] section missing in {ENGINE_CONFIG_PATH}")
+    model = _safe_str(llm.get("model"))
+    if not model:
+        raise RuntimeError(f"llm model missing in {ENGINE_CONFIG_PATH}")
+    temperature = float(llm.get("temperature") or 0.2)
+    max_tokens = int(llm.get("max_tokens") or 1024)
+    return {"model": model, "temperature": temperature, "max_tokens": max_tokens}
 
 
 def _load_master_by_id(path: Path) -> Dict[str, Dict[str, Any]]:
@@ -222,13 +243,15 @@ def main() -> int:
     except Exception:
         _prompts = {"main": "", "fallback": ""}
 
+    llm_cfg = _load_llm_config()
+
     explanations = _asyncio.run(generate_rationale(
         final_list=final_ranked,
         payload=rea_payload,
         prompts=_prompts,
-        llm_model="qwen-plus",
-        llm_temperature=0.4,
-        llm_max_tokens=300,
+        llm_model=str(llm_cfg["model"]),
+        llm_temperature=float(llm_cfg["temperature"]),
+        llm_max_tokens=int(llm_cfg["max_tokens"]),
     ))
 
     _okfail(len(final_ranked) == 5, f"final_ranked has 5 items (got {len(final_ranked)})")
