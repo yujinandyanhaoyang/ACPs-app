@@ -51,7 +51,7 @@ LOG_LEVEL = str(os.getenv("READING_CONCIERGE_LOG_LEVEL", "INFO")).upper()
 DISCOVERY_BASE_URL = str(os.getenv("DISCOVERY_BASE_URL", "http://127.0.0.1:8005")).rstrip("/")
 DISCOVERY_ENABLED = str(os.getenv("READING_DISCOVERY_ENABLED", "true")).strip().lower() in {"1", "true", "yes", "on"}
 DISCOVERY_TIMEOUT = float(str(os.getenv("READING_DISCOVERY_TIMEOUT", "5")))
-PARTNER_TIMEOUT = float(str(os.getenv("PARTNER_TIMEOUT", "60")))
+PARTNER_TIMEOUT = float(str(os.getenv("PARTNER_TIMEOUT", "90")))
 
 logger = get_agent_logger("agent.reading_concierge", "READING_CONCIERGE_LOG_LEVEL", LOG_LEVEL)
 
@@ -471,10 +471,10 @@ async def _parse_intent(query: str) -> Dict[str, Any]:
             ],
             model=RUNTIME.llm_model,
             temperature=RUNTIME.llm_temperature,
-            max_tokens=RUNTIME.llm_max_tokens,
-            timeout_s=60.0,
+            max_tokens=min(384, int(RUNTIME.llm_max_tokens or 384)),
+            timeout_s=30.0,
         ),
-        timeout=60.0,
+        timeout=30.0,
     )
     parsed = _safe_json_object(raw)
     if not parsed:
@@ -912,7 +912,14 @@ async def api_profile(user_id: str = ""):
         "action": "uma.build_profile",
         "user_id": uid,
     }
-    profile_resp, _ = await _invoke_partner("profile", payload)
+    try:
+        profile_resp, _ = await asyncio.wait_for(_invoke_partner("profile", payload), timeout=85.0)
+    except (asyncio.TimeoutError, Exception) as exc:
+        logger.warning("event=profile_api_failed user_id=%s error=%s", uid, exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"画像サービス暂时不可用，请稍后重试。error={exc}",
+        ) from exc
     if _state(profile_resp) in {"failed", "rejected", "canceled"}:
         raise HTTPException(status_code=503, detail="profile agent unavailable")
 

@@ -250,9 +250,9 @@ async def _fetch_description_via_llm(
             model=llm_model,
             temperature=llm_temperature,
             max_tokens=llm_max_tokens,
-            timeout_s=60.0,
+            timeout_s=30.0,
         ),
-        timeout=60.0,
+        timeout=30.0,
     )
     text = str(raw or "").strip()
     if not text:
@@ -302,7 +302,7 @@ async def _gap_fill_metadata(
         model=llm_model,
         temperature=llm_temperature,
         max_tokens=llm_max_tokens,
-        timeout_s=60.0,
+        timeout_s=30.0,
     )
     result = _extract_json_obj(raw)
     if not result:
@@ -311,13 +311,7 @@ async def _gap_fill_metadata(
             book_id,
             raw,
         )
-        return {
-            "metadata_gap_filled": False,
-            "author_display": str(row.get("author") or "佚名").strip() or "佚名",
-            "genre_tags_zh": row.get("genres") if isinstance(row.get("genres"), list) else [],
-            "summary_zh": str(row.get("description") or ""),
-            "title_zh": str(row.get("title") or book_id),
-        }
+        return {}
 
     author_display = str(result.get("author_display") or row.get("author") or "佚名").strip() or "佚名"
     title_zh = str(result.get("title_zh") or row.get("title") or book_id).strip() or str(row.get("title") or book_id)
@@ -403,7 +397,7 @@ async def _generate_one(
             model=llm_model,
             temperature=llm_temperature,
             max_tokens=llm_max_tokens,
-            timeout_s=60.0,
+            timeout_s=45.0,
         )
         text = str(raw or "").strip()
         if not text:

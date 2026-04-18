@@ -7,6 +7,7 @@ import sys
 import time
 import uuid
 import re
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -324,6 +325,26 @@ def _event_summary(events: List[Dict[str, Any]]) -> str:
     return "\n".join(lines) or "no events"
 
 
+def _extract_event_genres(event: Dict[str, Any]) -> List[str]:
+    raw_candidates: List[Any] = []
+    for key in ("genres", "genre_tags", "genre_tags_zh", "genre"):
+        value = event.get(key)
+        if isinstance(value, list):
+            raw_candidates.extend(value)
+        elif isinstance(value, str) and value.strip():
+            raw_candidates.append(value)
+    if not raw_candidates:
+        fallback = str(event.get("event_type") or "").strip()
+        if fallback:
+            raw_candidates.append(fallback)
+    out: List[str] = []
+    for item in raw_candidates:
+        text = str(item or "").strip().lower()
+        if text:
+            out.append(text)
+    return out
+
+
 def _extract_json_obj(text: str) -> Dict[str, Any]:
     raw = str(text or "").strip()
     if not raw:
@@ -367,6 +388,12 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
         raise RuntimeError(
             "OPENAI_API_KEY is not configured. Reader profile genre inference requires LLM."
         )
+    genre_counter: Counter[str] = Counter()
+    for event in events:
+        for genre in _extract_event_genres(event):
+            genre_counter[genre] += 1
+    if len(genre_counter) >= 2 and len(events) >= 5:
+        return [genre for genre, _ in genre_counter.most_common(5)]
     prompt_cfg = PROMPTS.get("semantic_preference_induction") or {}
     system_prompt = str(prompt_cfg.get("system") or "")
     template = str(prompt_cfg.get("user_template") or "")

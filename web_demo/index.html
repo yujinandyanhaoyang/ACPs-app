@@ -2168,22 +2168,15 @@
     function applyFeedbackResponse(bookId, reward, resp) {
       applyFeedbackLocally(bookId, reward);
 
-      if (resp?.rda_arm_updated && resp.rda_arm_updated.arm_name) {
-        showToast(`RDA 分支已更新：${resp.rda_arm_updated.arm_name}`, 'success');
-      } else if (resp?.cf_retrain_triggered) {
+      const triggers = resp?.triggers || {};
+      if (triggers.rda_reward_updated) {
+        showToast('RDA 奖励已更新。', 'success');
+      }
+      if (triggers.cf_retrain_triggered) {
         showToast('累计反馈已触发 CF 重新训练。', 'warning');
-      } else if (resp?.profile_updated && resp.new_profile) {
-        renderProfile({
-          user_id: state.userId,
-          confidence: resp.new_profile.confidence,
-          behavior_genres: resp.new_profile.behavior_genres,
-          strategy_suggestion: resp.new_profile.strategy_suggestion,
-          profile_vector: resp.new_profile.profile_vector || [],
-          final_weights: resp.new_profile.final_weights || {},
-          score_weights: resp.new_profile.score_weights || {},
-          mmr_lambda: resp.new_profile.mmr_lambda,
-          strategy: resp.new_profile.strategy,
-        });
+      }
+      if (triggers.profile_updated) {
+        refreshProfile().catch(() => {});
         showToast('用户画像已根据反馈刷新。', 'success');
       }
 
