@@ -128,22 +128,6 @@ def _load_prompts() -> Dict[str, Dict[str, str]]:
 PROMPTS = _load_prompts()
 
 
-def _llm_available() -> bool:
-    if not str(os.getenv("OPENAI_API_KEY") or "").strip():
-        return False
-    proxy_candidates = [
-        str(os.getenv("HTTP_PROXY") or ""),
-        str(os.getenv("HTTPS_PROXY") or ""),
-        str(os.getenv("ALL_PROXY") or ""),
-    ]
-    uses_socks = any(p.lower().startswith("socks") for p in proxy_candidates if p)
-    if uses_socks:
-        try:
-            import socksio  # type: ignore  # noqa: F401
-        except Exception:
-            return False
-    return True
-
 app = FastAPI(
     title="Reader Profile Agent (Phase 2)",
     description="Negotiation-ready reader profile partner with decay-weighted behavior modeling.",
@@ -342,11 +326,17 @@ def _extract_json_obj(text: str) -> Dict[str, Any]:
 
 
 async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Dict[str, Any]], baseline: List[str]) -> List[str]:
-    if not _llm_available():
-        return baseline
+    if not str(os.getenv("OPENAI_API_KEY") or "").strip():
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. Reader profile genre inference requires LLM."
+        )
     prompt_cfg = PROMPTS.get("semantic_preference_induction") or {}
     system_prompt = str(prompt_cfg.get("system") or "")
     template = str(prompt_cfg.get("user_template") or "")
+    if not system_prompt.strip() or not template.strip():
+        raise RuntimeError(
+            "semantic_preference_induction prompt is empty. Please check prompts.toml."
+        )
     user_prompt = template.format(
         user_id=user_id,
         window_days=window_days,
@@ -355,25 +345,27 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
     # Keep explicit baseline in-context so LLM extraction remains anchored.
     user_prompt += f"\nBaseline behavior_genres: {json.dumps(baseline, ensure_ascii=False)}"
 
-    try:
-        raw = await call_openai_chat(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            model=os.getenv("READER_PROFILE_LLM_MODEL", os.getenv("OPENAI_MODEL", "qwen3.5-35b-a3b")),
-            temperature=0.1,
-            max_tokens=180,
+    raw = await call_openai_chat(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        model=os.getenv("READER_PROFILE_LLM_MODEL", os.getenv("OPENAI_MODEL", "qwen3.5-35b-a3b")),
+        temperature=0.1,
+        max_tokens=180,
+    )
+    parsed = _extract_json_obj(raw)
+    latent = parsed.get("latent_genres")
+    if not isinstance(latent, list):
+        raise RuntimeError(
+            f"LLM returned invalid JSON for genre inference. user_id={user_id!r} raw={raw!r}"
         )
-        parsed = _extract_json_obj(raw)
-        latent = parsed.get("latent_genres")
-        if isinstance(latent, list):
-            cleaned = [str(x).strip().lower() for x in latent if str(x).strip()]
-            if cleaned:
-                return cleaned[:10]
-    except Exception as exc:
-        logger.warning("event=llm_genre_inference_failed user_id=%s error=%s", user_id, exc)
-    return baseline
+    cleaned = [str(x).strip().lower() for x in latent if str(x).strip()]
+    if not cleaned:
+        raise RuntimeError(
+            f"LLM returned empty latent_genres for user_id={user_id!r} raw={raw!r}"
+        )
+    return cleaned[:10]
 
 
 def _extract_action(payload: Dict[str, Any]) -> str:

@@ -624,6 +624,62 @@
       margin-bottom: 14px;
     }
 
+    .status-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .status-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(127, 144, 165, 0.06);
+      padding: 14px;
+      min-height: 92px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .status-item-label {
+      color: var(--text-muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .status-item-value {
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+    }
+
+    .status-pill--ok {
+      color: var(--success);
+      border-color: rgba(47, 133, 90, 0.25);
+      background: rgba(47, 133, 90, 0.08);
+    }
+
+    .status-pill--warn {
+      color: var(--warning);
+      border-color: rgba(197, 109, 20, 0.25);
+      background: rgba(197, 109, 20, 0.1);
+    }
+
     .results-count {
       color: var(--text-muted);
       font-size: 0.92rem;
@@ -729,6 +785,126 @@
       border-left: 4px solid rgba(15, 76, 129, 0.36);
       color: var(--text);
       font-size: 0.93rem;
+    }
+
+    .result-rationale-body {
+      max-height: 200px;
+      overflow: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+      transition: max-height 180ms ease;
+    }
+
+    .result-rationale-body.is-expanded {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .genre-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .genre-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: rgba(127, 144, 165, 0.08);
+      color: var(--text-muted);
+    }
+
+    .genre-pill--blue {
+      color: var(--primary);
+      border-color: rgba(15, 76, 129, 0.18);
+      background: rgba(15, 76, 129, 0.08);
+    }
+
+    .genre-pill--green {
+      color: var(--success);
+      border-color: rgba(47, 133, 90, 0.18);
+      background: rgba(47, 133, 90, 0.08);
+    }
+
+    .genre-pill--amber {
+      color: var(--warning);
+      border-color: rgba(197, 109, 20, 0.18);
+      background: rgba(197, 109, 20, 0.08);
+    }
+
+    .detail-panel {
+      margin-top: 14px;
+      border-top: 1px dashed var(--border);
+      padding-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .detail-toggle {
+      border: 0;
+      background: transparent;
+      color: var(--primary);
+      font-weight: 700;
+      padding: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .detail-toggle:hover {
+      text-decoration: underline;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: minmax(110px, 160px) minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      font-size: 0.88rem;
+    }
+
+    .detail-row-label {
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .detail-row-value {
+      color: var(--text);
+      word-break: break-word;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .source-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: rgba(127, 144, 165, 0.08);
+    }
+
+    .source-pill--llm {
+      color: var(--success);
+      border-color: rgba(47, 133, 90, 0.22);
+      background: rgba(47, 133, 90, 0.08);
+    }
+
+    .source-pill--fallback {
+      color: var(--warning);
+      border-color: rgba(197, 109, 20, 0.22);
+      background: rgba(197, 109, 20, 0.08);
     }
 
     .feedback-panel {
@@ -1003,7 +1179,8 @@
       }
 
       .profile-bars .bar-row,
-      .summary-row {
+      .summary-row,
+      .status-strip {
         grid-template-columns: 1fr;
         gap: 6px;
       }
@@ -1124,70 +1301,76 @@
         <section class="card" aria-labelledby="settingsTitle">
           <div class="card-header">
             <div>
-              <h3 id="settingsTitle">查询设置</h3>
-              <p>场景控制与测试人设选择。</p>
+              <h3 id="settingsTitle">请求面板</h3>
+              <p>选择用户、输入中文需求并发起推荐请求。</p>
             </div>
           </div>
           <div class="card-body">
             <div class="field">
-              <label for="personaSelect">测试人设</label>
+              <label for="personaSelect">user_id</label>
               <select id="personaSelect"></select>
               <div class="hint" id="personaHint"></div>
             </div>
             <div class="field">
-              <label for="scenario">场景</label>
+              <label for="scenario">scenario</label>
               <select id="scenario">
-                <option value="cold">冷启动</option>
-                <option value="warm">热启动</option>
-                <option value="explore">探索 / 新颖性</option>
+                <option value="warm">warm（个性化推荐）</option>
+                <option value="cold_start">cold_start（探索新口味）</option>
+                <option value="explore">explore（多样化发现）</option>
               </select>
             </div>
             <div class="field">
               <label for="topK">Top K</label>
-              <input type="number" id="topK" min="1" max="10" value="3" />
+              <input type="number" id="topK" min="1" max="5" value="3" />
             </div>
             <div class="field">
-              <label for="strictRemoteValidation">严格远程校验</label>
-              <select id="strictRemoteValidation">
-                <option value="false">关闭</option>
-                <option value="true">开启</option>
-              </select>
+              <label for="query">query</label>
+              <input
+                type="text"
+                id="query"
+                value="推荐带有社会议题的科幻书籍。"
+                placeholder="输入您想要的书籍类型，例如：心理惊悚，阴暗氛围"
+              />
+            </div>
+            <div class="field">
+              <div class="section-title" style="margin-bottom: 10px;">场景快捷切换</div>
+              <div class="chip-row" id="scenarioChips" role="tablist" aria-label="场景选择">
+                <button class="chip is-active" type="button" data-scenario="warm">warm</button>
+                <button class="chip" type="button" data-scenario="cold_start">cold_start</button>
+                <button class="chip" type="button" data-scenario="explore">explore</button>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn-primary" id="runBtn" type="button">获取推荐</button>
+              <button class="btn-secondary" id="loadProfileBtn" type="button">加载画像</button>
             </div>
           </div>
         </section>
       </aside>
 
       <main class="stack">
-        <section class="card" aria-labelledby="queryTitle">
+        <section class="card" aria-labelledby="systemStatusTitle">
           <div class="card-header">
             <div>
-              <h3 id="queryTitle">查询工作区</h3>
-              <p>运行推荐流程、查看结果并提交反馈。</p>
+              <h3 id="systemStatusTitle">系统状态</h3>
+              <p>每次响应后刷新语义检索词、嵌入后端与冷启动状态。</p>
             </div>
+            <span class="badge badge--warn" id="systemHealthBadge">等待运行</span>
           </div>
           <div class="card-body">
-            <div class="field">
-              <label for="query">自然语言查询</label>
-              <input
-                type="text"
-                id="query"
-                value="推荐带有社会议题的科幻书籍。"
-                placeholder="输入风格、主题或阅读目标"
-              />
-            </div>
-
-            <div class="field">
-              <div class="section-title" style="margin-bottom: 10px;">场景快捷切换</div>
-              <div class="chip-row" id="scenarioChips" role="tablist" aria-label="场景选择">
-                <button class="chip is-active" type="button" data-scenario="cold">冷启动</button>
-                <button class="chip" type="button" data-scenario="warm">热启动</button>
-                <button class="chip" type="button" data-scenario="explore">探索</button>
+            <div class="status-strip" id="systemStatusStrip">
+              <div class="status-item">
+                <div class="status-item-label">语义检索词</div>
+                <div class="status-item-value" id="statusSearchQuery">—</div>
               </div>
-            </div>
-
-            <div class="btn-row">
-              <button class="btn-primary" id="runBtn" type="button">获取推荐</button>
-              <button class="btn-secondary" id="loadProfileBtn" type="button">加载画像</button>
+              <div class="status-item">
+                <div class="status-item-label">Embedding</div>
+                <div class="status-item-value" id="statusEmbedding">—</div>
+              </div>
+              <div class="status-item">
+                <div class="status-item-label">cold_start</div>
+                <div class="status-item-value" id="statusColdStart">—</div>
+              </div>
             </div>
           </div>
         </section>
@@ -1213,7 +1396,7 @@
           <div class="card-header">
             <div>
               <h3 id="resultsTitle">推荐结果</h3>
-              <p>包含评分标签、推荐理由和反馈控件的排序结果。</p>
+              <p>卡片内展示推荐语、评分详情、来源与补全标记。</p>
             </div>
           </div>
           <div class="card-body">
@@ -1327,7 +1510,7 @@
         color: "#2f855a",
         description: "学术型读者，专注历史非虚构和政治人物传记，重视深度与一手资料。",
         defaultQuery: "20 世纪政治领导人物的历史传记",
-        scenario: "cold"
+        scenario: "cold_start"
       },
       {
         id: "demo_user_004",
@@ -1340,12 +1523,12 @@
         scenario: "explore"
       }
     ];
-    const VALID_SCENARIOS = ['cold', 'warm', 'explore'];
+    const VALID_SCENARIOS = ['cold_start', 'warm', 'explore'];
 
     const state = {
       theme: 'light',
       userId: 'demo_user_001',
-      scenario: 'cold',
+      scenario: 'warm',
       topK: 3,
       sessionId: null,
       latestResponse: null,
@@ -1724,46 +1907,142 @@
       }
     }
 
+    function getEngineMeta(resp) {
+      return resp?.partner_results?.engine?.engine_meta || resp?.engine_meta || {};
+    }
+
+    function getRecallMeta(engineMeta) {
+      return engineMeta?.modules?.recall || {};
+    }
+
+    function renderSystemStatus(resp) {
+      const intent = resp?.intent || {};
+      const engineMeta = getEngineMeta(resp);
+      const recallMeta = getRecallMeta(engineMeta);
+      const searchQuery = String(intent.search_query || '').trim();
+      const coldStart = Boolean(resp?.partner_results?.rpa?.cold_start ?? resp?.cold_start);
+      const embedBackend = String(recallMeta.embed_backend || engineMeta.embed_backend || '—');
+      const vectorDim = Number(recallMeta.vector_dim ?? engineMeta.vector_dim ?? 0);
+      const embedOk = embedBackend === 'sentence-transformers' && vectorDim === 384;
+
+      el('statusSearchQuery').textContent = searchQuery || '—';
+      const embedNode = el('statusEmbedding');
+      if (embedNode) {
+        embedNode.innerHTML = `
+          <span class="status-pill ${embedOk ? 'status-pill--ok' : 'status-pill--warn'}">
+            ${escapeHtml(embedBackend)} / ${Number.isFinite(vectorDim) ? vectorDim : 0}
+          </span>
+        `;
+      }
+      el('statusColdStart').innerHTML = `
+        <span class="status-pill ${coldStart ? 'status-pill--warn' : 'status-pill--ok'}">
+          ${coldStart ? 'true' : 'false'}
+        </span>
+      `;
+      el('systemHealthBadge').textContent = embedOk ? 'Embedding 正常' : 'Embedding 异常';
+      el('systemHealthBadge').className = `badge ${embedOk ? 'badge--ok' : 'badge--error'}`;
+    }
+
+    function scoreBadgeClass(value, type) {
+      if (type === 'source') {
+        return value === 'llm' ? 'source-pill source-pill--llm' : 'source-pill source-pill--fallback';
+      }
+      if (type === 'recall') {
+        return value === 'both' ? 'genre-pill genre-pill--green' : value === 'ann' ? 'genre-pill genre-pill--blue' : 'genre-pill genre-pill--amber';
+      }
+      return 'genre-pill';
+    }
+
     function buildResultCard(book, index, explanation) {
-      const title = escapeHtml(book.title || book.book_title || '未知标题');
-      const author = escapeHtml(book.author || '未知作者');
-      const matchScore = Number(book.composite_score ?? book.match_score ?? book.score ?? 0);
-      const noveltyScore = Number(book.novelty_score ?? book.novelty ?? 0);
+      const bookId = escapeHtml(book.book_id || index);
+      const title = escapeHtml(book.title_display || book.title || book.book_title || '未知标题');
+      const author = escapeHtml(book.author_display || book.author || '未知作者');
+      const genres = Array.isArray(book.genre_tags_zh) && book.genre_tags_zh.length
+        ? book.genre_tags_zh
+        : (Array.isArray(book.genres) ? book.genres : []);
+      const visibleGenres = genres.slice(0, 3);
       const rationale = escapeHtml(
         explanation?.justification ||
-        (Array.isArray(explanation?.bullet_summary) ? explanation.bullet_summary.join(' | ') : '') ||
+        book.justification ||
+        book.summary_zh ||
         book.rationale ||
         '语义匹配与多样性约束共同选中了这本书。'
       );
-      const recallLabel = book.recall_cf ? '<span class="score-tag score-tag--cf">CF 召回</span>' : '';
+      const scoreParts = book.score_parts || {};
+      const source = String(explanation?.source || book.source || 'fallback');
+      const recallSource = String(book.recall_source || 'ann');
+      const metadataGapFilled = Boolean(book.metadata_gap_filled);
+      const titleSuffix = metadataGapFilled ? ' <span class="badge badge--warn">(AI补全)</span>' : '';
+      const sourceClass = source === 'llm' ? 'source-pill source-pill--llm' : 'source-pill source-pill--fallback';
+      const recallClass = recallSource === 'both' ? 'genre-pill genre-pill--green' : recallSource === 'ann' ? 'genre-pill genre-pill--blue' : 'genre-pill genre-pill--amber';
+      const sourceText = source === 'llm' ? 'llm' : 'fallback';
+      const rationaleId = `jr_${bookId}`;
+      const detailId = `sd_${bookId}`;
 
       return `
-        <article class="result-card" id="rc_${escapeHtml(book.book_id || index)}">
+        <article class="result-card" id="rc_${bookId}">
           <div class="result-head">
             <div class="rank-badge">${index + 1}</div>
             <div>
-              <div class="result-title">${title}</div>
+              <div class="result-title">#${index + 1} ${title}${titleSuffix}</div>
               <div class="result-author">${author}</div>
-              <div class="score-row">
-                <span class="score-tag score-tag--match">匹配 ${fmtNum(matchScore)}</span>
-                <span class="score-tag score-tag--novelty">新颖 ${fmtNum(noveltyScore)}</span>
-                ${recallLabel}
+              <div class="genre-pills">
+                ${visibleGenres.map((genre, idx) => {
+                  const colors = ['genre-pill--blue', 'genre-pill--green', 'genre-pill--amber'];
+                  return `<span class="genre-pill ${colors[idx % colors.length]}">${escapeHtml(genre)}</span>`;
+                }).join('')}
               </div>
             </div>
             <div class="badge badge--ok">排名 ${index + 1}</div>
           </div>
-          <div class="result-rationale">"${rationale}"</div>
+
+          <div class="detail-panel">
+            <button class="detail-toggle" type="button" data-kind="rationale" data-target="${rationaleId}" aria-expanded="false">展开推荐语</button>
+            <div class="result-rationale">
+              <div class="result-rationale-body" id="${rationaleId}">${rationale}</div>
+            </div>
+
+            <button class="detail-toggle" type="button" data-kind="score" data-target="${detailId}" aria-expanded="false">查看评分详情</button>
+            <div class="detail-grid" id="${detailId}" hidden>
+              ${[
+                ['content_sim', scoreParts.content ?? scoreParts.content_sim ?? book.content_sim ?? 0],
+                ['cf', scoreParts.cf ?? book.cf ?? book.cf_score ?? 0],
+                ['novelty', scoreParts.novelty ?? book.novelty_score ?? book.novelty ?? 0],
+                ['diversity', scoreParts.diversity ?? book.diversity_score ?? book.diversity ?? 0],
+                ['recency', scoreParts.recency ?? book.recency ?? 0],
+                ['score_total', scoreParts.score_total ?? book.score_total ?? book.score ?? 0],
+              ].map(([label, value]) => `
+                <div class="detail-row">
+                  <div class="detail-row-label">${escapeHtml(label)}</div>
+                  <div class="detail-row-value">${fmtNum(value, 4)}</div>
+                </div>
+              `).join('')}
+              <div class="detail-row">
+                <div class="detail-row-label">recall_source</div>
+                <div class="detail-row-value"><span class="${recallClass}">${escapeHtml(recallSource)}</span></div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-row-label">source</div>
+                <div class="detail-row-value"><span class="${sourceClass}">${escapeHtml(sourceText)}</span></div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-row-label">metadata_gap_filled</div>
+                <div class="detail-row-value">${metadataGapFilled ? '(AI补全)' : 'false'}</div>
+              </div>
+            </div>
+          </div>
+
           <div class="feedback-panel">
             <div class="feedback-label">这条推荐有多有帮助？</div>
             <div class="feedback-actions">
-              <span class="reward-flash" id="rf_${escapeHtml(book.book_id || index)}"></span>
+              <span class="reward-flash" id="rf_${bookId}"></span>
               <div>
                 ${FEEDBACK_OPTS.map((opt) => `
                   <button
                     class="feedback-btn"
                     type="button"
-                    id="fb_${escapeHtml(book.book_id || index)}_${opt.reward}"
-                    data-book-id="${escapeHtml(book.book_id || index)}"
+                    id="fb_${bookId}_${opt.reward}"
+                    data-book-id="${bookId}"
                     data-reward="${opt.reward}"
                     data-rank="${index}"
                     aria-label="${escapeHtml(opt.label)} reward ${opt.reward > 0 ? '+' : ''}${opt.reward}">
@@ -1799,6 +2078,7 @@
         ? `返回了 ${recommendations.length} 条推荐。`
         : '未返回推荐。';
       el('feedbackSummaryCard').style.display = recommendations.length ? 'block' : 'none';
+      renderSystemStatus(resp);
 
       if (recommendations.length) {
         el('resultsArea').innerHTML = recommendations
@@ -1810,7 +2090,7 @@
       } else {
         el('resultsArea').innerHTML = `
           <div class="empty-state">
-            该查询未返回推荐结果。
+            未找到相关书籍，请换一个关键词试试
           </div>
         `;
       }
@@ -1958,6 +2238,24 @@
         }
         sendFeedback(bookId, reward, rank);
       });
+
+      el('resultsArea').addEventListener('click', (event) => {
+        const toggle = event.target.closest('.detail-toggle');
+        if (!toggle) return;
+        const targetId = toggle.dataset.target;
+        const target = targetId ? el(targetId) : null;
+        if (!target) return;
+        const kind = toggle.dataset.kind || 'rationale';
+        const isExpanded = kind === 'rationale'
+          ? target.classList.toggle('is-expanded')
+          : (target.hidden = !target.hidden, !target.hidden);
+        toggle.setAttribute('aria-expanded', String(isExpanded));
+        if (kind === 'score') {
+          toggle.textContent = isExpanded ? '收起' : '查看评分详情';
+        } else {
+          toggle.textContent = isExpanded ? '收起推荐语' : '展开推荐语';
+        }
+      });
     }
 
     function updateScenarioChips(scenario) {
@@ -2007,6 +2305,9 @@
       el('resultsArea').innerHTML = `<div class="empty-state">已切换到 <strong>${escapeHtml(persona.name)}</strong>，运行一次查询即可查看个性化推荐。</div>`;
       el('feedbackSummaryCard').style.display = 'none';
       el('pipelineCard').style.display = 'none';
+      el('resultsCount').textContent = '尚未运行推荐。';
+      el('resultsStateBadge').textContent = '空闲';
+      el('resultsStateBadge').className = 'badge';
       renderPlaceholderProfile();
 
       showToast(`已切换到 ${persona.name}（${persona.label}）`, 'success');
@@ -2028,7 +2329,7 @@
     function setLoading(isLoading) {
       el('runBtn').disabled = isLoading;
       el('loadProfileBtn').disabled = isLoading;
-      el('runBtn').textContent = isLoading ? '运行中...' : '获取推荐';
+      el('runBtn').textContent = isLoading ? '推荐中…' : '获取推荐';
       if (isLoading) {
         el('resultsArea').innerHTML = `
           <div class="stack">
@@ -2073,7 +2374,19 @@
           body: JSON.stringify(payload),
           timeout: 90000,
         });
-        if (!resp.ok) throw new Error(`服务器错误：${resp.status}`);
+        if (!resp.ok) {
+          let detail = '';
+          try {
+            const errorBody = await resp.json();
+            detail = String(errorBody?.detail || errorBody?.message || JSON.stringify(errorBody));
+          } catch (parseErr) {
+            detail = '';
+          }
+          const err = new Error(detail || `HTTP ${resp.status}`);
+          err.status = resp.status;
+          err.detail = detail || `HTTP ${resp.status}`;
+          throw err;
+        }
 
         const data = await resp.json();
         state.sessionId = data.session_id || state.sessionId || randomId();
@@ -2090,9 +2403,13 @@
         el('pipelineStatusBadge').textContent = '错误';
         el('pipelineStatusBadge').className = 'badge badge--error';
         setPipelineStep('RC', 'error', '推荐请求失败。');
+        const statusCode = err?.status || err?.response?.status || 'unknown';
+        const detail = err?.detail || err?.message || '请求失败';
         el('resultsArea').innerHTML = `
-          <div class="empty-state" style="border-color: rgba(194, 65, 65, 0.28); color: var(--error);">
-            ${escapeHtml(err.message)}
+          <div class="empty-state" style="border-color: rgba(194, 65, 65, 0.28); color: var(--error); text-align:left;">
+            <div style="font-weight:800; margin-bottom:8px;">请求出错</div>
+            <div>HTTP 状态码：${escapeHtml(String(statusCode))}</div>
+            <div>detail：${escapeHtml(String(detail))}</div>
           </div>
         `;
         showToast('推荐请求失败。', 'error');

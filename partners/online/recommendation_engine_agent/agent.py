@@ -279,6 +279,8 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
         "ann_top_k": 200,
         "cf_top_k": 100,
         "cf_sim_users": 50,
+        "embed_backend": os.getenv("EMBED_BACKEND") or "",
+        "vector_dim": 384 if str(os.getenv("EMBED_BACKEND") or "").strip().lower() == "local" else 0,
     }
     recalled, recall_meta = recall_candidates(payload, recall_cfg)
 
@@ -327,6 +329,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
             "recall_source": row.get("recall_source"),
             "score_parts": row.get("score_parts") or {},
             "justification": explanation_row.get("justification", ""),
+            "source": explanation_row.get("source", ""),
         }
         for key in ("title_display", "author_display", "genre_tags_zh", "summary_zh", "metadata_gap_filled"):
             if key in explanation_row:

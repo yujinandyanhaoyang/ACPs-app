@@ -317,6 +317,8 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
     ann_weight = _safe_float(payload.get("ann_weight"), 0.6)
     cf_weight = _safe_float(payload.get("cf_weight"), 0.4)
     cold_start = bool(payload.get("cold_start", False))
+    intent = payload.get("intent") if isinstance(payload.get("intent"), dict) else {}
+    search_query = str(payload.get("search_query") or intent.get("search_query") or "").strip()
 
     total = max(ann_weight + cf_weight, 1e-9)
     ann_weight = ann_weight / total
@@ -334,6 +336,17 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
     cf_book_index_path = Path(str(cfg.get("cf_book_index_path") or ""))
     cf_user_factors_path = Path(str(cfg.get("cf_user_factors_path") or ""))
     cf_user_index_path = Path(str(cfg.get("cf_user_index_path") or ""))
+
+    meta = {
+        "backend": str(cfg.get("embed_backend") or ""),
+        "vector_dim": int(cfg.get("vector_dim") or 0),
+    }
+    logger.info(
+        "event=ann_query search_query=%r embed_backend=%s vector_dim=%d",
+        search_query,
+        meta.get("backend"),
+        meta.get("vector_dim", 0),
+    )
 
     ann_rows = _ann_recall_fallback(candidates, profile_vector, top_k=ann_top_k)
     cf_rows = [] if cold_start else _cf_recall_fallback(candidates, profile_vector, top_k=cf_top_k)
@@ -372,5 +385,7 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
             "similar_users_k": int(cfg.get("cf_sim_users") or 50),
         },
         "cold_start": bool(cold_start),
+        "embed_backend": meta["backend"],
+        "vector_dim": meta["vector_dim"],
     }
     return merged, meta

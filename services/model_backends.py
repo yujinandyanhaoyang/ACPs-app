@@ -1,5 +1,4 @@
 import asyncio
-import hashlib
 import math
 import os
 import json
@@ -19,22 +18,6 @@ _SENTENCE_MODEL_CACHE: Dict[str, Any] = {}
 _DEFAULT_OFFLINE_EMBED_MODEL = "all-MiniLM-L6-v2"
 _LOCAL_EMBED_MODEL_ENV = "BOOK_CONTENT_EMBED_MODEL_PATH"
 _LOGGER = logging.getLogger("services.model_backends")
-
-
-def hash_embedding(text: str, dim: int = 12) -> List[float]:
-	normalized = (text or "").strip().lower()
-	if not normalized:
-		return [0.0] * max(dim, 4)
-
-	digest = hashlib.sha256(normalized.encode("utf-8")).digest()
-	values: List[float] = []
-	while len(values) < dim:
-		for byte_value in digest:
-			values.append(round(byte_value / 255.0, 6))
-			if len(values) >= dim:
-				break
-		digest = hashlib.sha256(digest).digest()
-	return values
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -144,12 +127,9 @@ def _resolve_sentence_transformer(model_name: str):
 		_SENTENCE_MODEL_CACHE[model_name] = model
 		return model
 	except Exception as exc:
-		_LOGGER.warning(
-			"event=sentence_transformer_load_failed model=%s fallback=hash-fallback error=%s",
-			model_name,
-			exc,
+		raise RuntimeError(
+			f"Failed to load sentence-transformer model {model_name!r}: {exc}"
 		)
-		return None
 
 
 def warmup_embedding_model(model_name: str | None = None) -> str:
@@ -159,27 +139,20 @@ def warmup_embedding_model(model_name: str | None = None) -> str:
 		model_name or _DEFAULT_OFFLINE_EMBED_MODEL
 	)
 	model = _resolve_sentence_transformer(effective)
-	if model is not None:
-		try:
-			model.encode(
-				["warmup"],
-				batch_size=1,
-				normalize_embeddings=True,
-				show_progress_bar=False,
-				convert_to_numpy=True,
-			)
-		except Exception:
-			pass
-		_LOGGER.info("event=embedding_model_warm model=%s", effective)
-		return effective
-	_LOGGER.warning("event=embedding_model_warmup_failed model=%s", effective)
-	return ""
-
-
-def _hash_fallback_embeddings(texts: List[str], fallback_dim: int) -> Tuple[List[List[float]], Dict[str, Any]]:
-	vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in texts]
-	dim = len(vectors[0]) if vectors else 0
-	return vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
+	try:
+		model.encode(
+			["warmup"],
+			batch_size=1,
+			normalize_embeddings=True,
+			show_progress_bar=False,
+			convert_to_numpy=True,
+		)
+	except Exception as exc:
+		raise RuntimeError(
+			f"Failed to warm sentence-transformer model {effective!r}: {exc}"
+		) from exc
+	_LOGGER.info("event=embedding_model_warm model=%s", effective)
+	return effective
 
 
 def generate_text_embeddings(
@@ -193,20 +166,15 @@ def generate_text_embeddings(
 
 	effective_model = _resolve_embedding_model_name(model_name)
 	model = _resolve_sentence_transformer(effective_model)
-	if model is not None:
-		vectors = model.encode(
-			text_list,
-			batch_size=64,
-			normalize_embeddings=True,
-			show_progress_bar=False,
-			convert_to_numpy=True,
-		)
-		dim = int(vectors.shape[1]) if vectors.ndim == 2 else 0
-		return vectors.tolist(), {"backend": "sentence-transformers", "model": effective_model, "vector_dim": dim}
-
-	fallback_vectors = [hash_embedding(text, dim=max(8, fallback_dim)) for text in text_list]
-	dim = len(fallback_vectors[0]) if fallback_vectors else 0
-	return fallback_vectors, {"backend": "hash-fallback", "model": "sha256", "vector_dim": dim}
+	vectors = model.encode(
+		text_list,
+		batch_size=64,
+		normalize_embeddings=True,
+		show_progress_bar=False,
+		convert_to_numpy=True,
+	)
+	dim = int(vectors.shape[1]) if vectors.ndim == 2 else 0
+	return vectors.tolist(), {"backend": "sentence-transformers", "model": effective_model, "vector_dim": dim}
 
 
 async def _resolve_dashscope_embeddings(
@@ -231,8 +199,10 @@ async def _resolve_dashscope_embeddings(
 				embeddings.append([round(_to_float(item), 6) for item in vector])
 		dim = len(embeddings[0]) if embeddings else 0
 		return embeddings, {"backend": "dashscope", "model": model_name, "vector_dim": dim}
-	except Exception:
-		return [], {"backend": "dashscope", "model": model_name, "vector_dim": 0}
+	except Exception as exc:
+		raise RuntimeError(
+			f"Failed to generate dashscope embeddings with model {model_name!r}: {exc}"
+		) from exc
 
 
 async def generate_text_embeddings_async(
@@ -252,20 +222,12 @@ async def generate_text_embeddings_async(
 	api_key = os.getenv("OPENAI_API_KEY") or ""
 	base_url = os.getenv("OPENAI_BASE_URL") or ""
 	if api_key and base_url:
-		vectors, meta = await _resolve_dashscope_embeddings(text_list, model_name, base_url, api_key)
-		if vectors:
-			return vectors, meta
-		_LOGGER.info(
-			"event=dashscope_embed_fallback model=%s reason=empty_or_failed_response",
-			model_name,
-		)
+		return await _resolve_dashscope_embeddings(text_list, model_name, base_url, api_key)
 
-	if not (api_key and base_url):
-		_LOGGER.info(
-			"event=offline_embed_fallback model=%s reason=missing_api_key_or_base_url",
-			model_name,
-		)
-	return await asyncio.to_thread(generate_text_embeddings, text_list, model_name, fallback_dim)
+	raise RuntimeError(
+		"Embedding backend is not configured for remote generation and EMBED_BACKEND is not local. "
+		f"model={model_name!r}. Please configure OPENAI_API_KEY/OPENAI_BASE_URL or EMBED_BACKEND=local."
+	)
 
 
 def _token_features(book: Dict[str, Any]) -> List[str]:

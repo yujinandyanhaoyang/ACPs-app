@@ -339,15 +339,15 @@ def retrieve_books_by_query(
             from services.model_backends import generate_text_embeddings, _DEFAULT_OFFLINE_EMBED_MODEL
 
             model_name = os.getenv("BOOK_CONTENT_EMBED_MODEL_PATH") or _DEFAULT_OFFLINE_EMBED_MODEL
-            if (not search_query or not str(search_query).strip()) and any("\u4e00" <= ch <= "\u9fff" for ch in str(query or "")):
-                logger.warning("event=query_translation_missing fallback=original_query")
             vectors, meta = generate_text_embeddings([effective_query or query], model_name)
             if vectors and vectors[0]:
                 results = retrieve_books_by_vector(vectors[0], top_k=top_k)
                 if results:
                     return results
-        except Exception:
-            pass
+        except Exception as exc:
+            raise RuntimeError(
+                f"Failed to generate retrieval embeddings for query={effective_query or query!r}: {exc}"
+            ) from exc
 
     pool = list(books) if books is not None else load_books()
     if not pool:

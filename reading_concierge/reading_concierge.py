@@ -208,53 +208,6 @@ def _detect_language_code(text: str) -> str:
     return "en"
 
 
-def _translate_query_local(query: str) -> Dict[str, Any]:
-    text = str(query or "").strip()
-    lower = text.lower()
-    if not text:
-        return {
-            "search_query": "",
-            "preferred_genres": [],
-            "scenario_hint": "auto",
-            "response_style": "concise",
-        }
-
-    if any(keyword in text for keyword in ("悬疑", "推理", "犯罪", "侦探", "谋杀")):
-        return {
-            "search_query": "mystery detective crime thriller novels",
-            "preferred_genres": ["mystery", "crime", "thriller", "detective"],
-            "scenario_hint": "cold_start",
-            "response_style": "concise",
-        }
-    if any(keyword in text for keyword in ("太空歌剧", "科幻", "未来", "宇宙", "星际")):
-        return {
-            "search_query": "space opera science fiction novels",
-            "preferred_genres": ["science fiction", "space opera", "sci-fi"],
-            "scenario_hint": "explore",
-            "response_style": "concise",
-        }
-    if any(keyword in text for keyword in ("传记", "历史", "人物")) or "20世纪" in text or "欧洲" in text:
-        return {
-            "search_query": "20th century european biography and history books",
-            "preferred_genres": ["biography", "history", "historical biography"],
-            "scenario_hint": "warm",
-            "response_style": "concise",
-        }
-    if lower:
-        return {
-            "search_query": text,
-            "preferred_genres": [],
-            "scenario_hint": "auto",
-            "response_style": "concise",
-        }
-    return {
-        "search_query": query,
-        "preferred_genres": [],
-        "scenario_hint": "auto",
-        "response_style": "concise",
-    }
-
-
 def _resolve_partner(partner_key: str) -> Dict[str, Any]:
     remote_env = {
         "profile": "READER_PROFILE_RPC_URL",
@@ -502,60 +455,43 @@ def _safe_json_object(raw: str) -> Dict[str, Any]:
 
 
 async def _parse_intent(query: str) -> Dict[str, Any]:
-    template = INTENT_PROMPT["user_template"]
-    user_prompt = template.format(query=query)
-    if _detect_language_code(query) == "zh":
-        parsed = {
-            "intent": "recommend_books",
-            "constraints": {},
-            **_translate_query_local(query),
-            "original_language": "zh",
-        }
-        if not str(parsed.get("search_query") or "").strip():
-            parsed["search_query"] = query
-        return parsed
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
-        return {
-            "intent": "recommend_books",
-            "constraints": {},
-            "preferred_genres": [],
-            "scenario_hint": "auto",
-            "response_style": "concise",
-            "search_query": query,
-            "original_language": _detect_language_code(query),
-        }
-
-    try:
-        raw = await asyncio.wait_for(
-            call_openai_chat(
-                [
-                    {"role": "system", "content": INTENT_PROMPT["system"]},
-                    {"role": "user", "content": user_prompt},
-                ],
-                model=RUNTIME.llm_model,
-                temperature=RUNTIME.llm_temperature,
-                max_tokens=RUNTIME.llm_max_tokens,
-            ),
-            timeout=10.0,
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. "
+            "Intent parsing requires LLM. Please check your environment configuration."
         )
-        parsed = _safe_json_object(raw)
-        if parsed:
-            if not str(parsed.get("search_query") or "").strip():
-                logger.warning("event=intent_search_query_missing fallback=original_query")
-                parsed["search_query"] = query
-            if not str(parsed.get("original_language") or "").strip():
-                parsed["original_language"] = _detect_language_code(query)
-            return parsed
-    except Exception as exc:
-        logger.warning("event=intent_parse_failed error=%s", exc)
+    raw = await asyncio.wait_for(
+        call_openai_chat(
+            [
+                {"role": "system", "content": INTENT_PROMPT["system"]},
+                {"role": "user", "content": INTENT_PROMPT["user_template"].format(query=query)},
+            ],
+            model=RUNTIME.llm_model,
+            temperature=RUNTIME.llm_temperature,
+            max_tokens=RUNTIME.llm_max_tokens,
+        ),
+        timeout=10.0,
+    )
+    parsed = _safe_json_object(raw)
+    if not parsed:
+        raise RuntimeError(
+            f"LLM returned invalid or empty JSON for intent parsing. raw_response={raw!r}"
+        )
 
-    logger.warning("event=intent_parse_failed fallback=original_query")
-    return {
-        "intent": "recommend_books",
-        "constraints": {},
-        **_translate_query_local(query),
-        "original_language": _detect_language_code(query),
-    }
+    if not str(parsed.get("search_query") or "").strip():
+        raise RuntimeError(
+            f"LLM intent parsing returned empty search_query. parsed={parsed!r}"
+        )
+
+    sq = str(parsed.get("search_query") or "")
+    if any("\u4e00" <= ch <= "\u9fff" for ch in sq):
+        raise RuntimeError(
+            f"LLM failed to translate query to English. search_query still contains Chinese: {sq!r}"
+        )
+
+    if not str(parsed.get("original_language") or "").strip():
+        parsed["original_language"] = _detect_language_code(query)
+    return parsed
 
 
 def _normalize_book_row(row: Dict[str, Any], index: int) -> Dict[str, Any]:
@@ -833,6 +769,7 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
         "session_id": session_id,
         "user_id": req.user_id,
         "query": req.query,
+        "search_query": search_query,
         "reading_history": reading_history,
         "history": reading_history,
         "user_profile": {"reading_history": reading_history},
@@ -847,6 +784,8 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
         "cold_start": bool(profile_data.get("cold_start", False)),
         "top_k": top_k,
         "reading_history": reading_history,
+        "embed_backend": (content_data.get("embedding_backend") or {}).get("backend") if isinstance(content_data.get("embedding_backend"), dict) else "",
+        "vector_dim": int((content_data.get("embedding_backend") or {}).get("vector_dim") or 0) if isinstance(content_data.get("embedding_backend"), dict) else 0,
     }
     if ablation_flags.get("disable_cf_path"):
         engine_payload["cf_weight"] = 0.0

@@ -66,8 +66,12 @@ def _safe_json_loads(raw: str) -> Dict[str, Any]:
 
 
 def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_k: int) -> List[str]:
-    if not query.strip() or not candidates or not os.getenv("OPENAI_API_KEY"):
+    if not query.strip() or not candidates:
         return []
+    if not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. LLM-based candidate selection requires LLM."
+        )
     model = os.getenv("OPENAI_MODEL", "qwen-plus")
     rows = []
     for book in candidates[:40]:
@@ -89,7 +93,6 @@ def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_
     )
     try:
         asyncio.get_running_loop()
-        return []
     except RuntimeError:
         raw = asyncio.run(
             call_openai_chat(
@@ -101,6 +104,10 @@ def _llm_select_book_ids_sync(query: str, candidates: List[Dict[str, Any]], top_
                 temperature=0.1,
                 max_tokens=256,
             )
+        )
+    else:
+        raise RuntimeError(
+            "_llm_select_book_ids_sync() cannot run inside an active event loop."
         )
     if not isinstance(raw, str):
         return []

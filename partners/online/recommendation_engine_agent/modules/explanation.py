@@ -210,23 +210,14 @@ def _fallback_rationale(
     fallback_template: str,
     prompt_context: Dict[str, Any] | None = None,
 ) -> str:
-    title = str(item.get("title") or item.get("book_id") or "this book")
-    author = str(item.get("author") or "the author")
-    genres = item.get("genres") if isinstance(item.get("genres"), list) else []
-    genre_tags = ", ".join(str(g) for g in genres if str(g).strip()) or "general interest"
-    prompt_context = prompt_context or {}
-    description = "" if prompt_context.get("description_is_short") else str(item.get("description") or "")
-    try:
-        return fallback_template.format(
-            title=title,
-            author=author,
-            genre_tags=genre_tags,
-            preferred_genres=prompt_context.get("preferred_genres") or genre_tags,
-            reading_history=prompt_context.get("reading_history") or "not provided",
-            description=description,
-        )
-    except KeyError:
-        return f'We recommend "{title}" by {author}.'
+    summary_zh = str(item.get("summary_zh") or "").strip()
+    if summary_zh:
+        return summary_zh
+    title = str(item.get("title_display") or item.get("title") or item.get("book_id") or "")
+    author = str(item.get("author_display") or item.get("author") or "")
+    if author:
+        return f"《{title}》 · {author}"
+    return f"《{title}》"
 
 
 def _needs_metadata_gap_fill(row: Dict[str, Any]) -> bool:
@@ -236,21 +227,36 @@ def _needs_metadata_gap_fill(row: Dict[str, Any]) -> bool:
     return (not author) or (not genres) or (len(description) < 20)
 
 
-def _fallback_gap_fill(row: Dict[str, Any]) -> Dict[str, Any]:
-    title = str(row.get("title") or row.get("book_id") or "")
-    author = str(row.get("author") or "佚名").strip() or "佚名"
-    genres = row.get("genres") if isinstance(row.get("genres"), list) else []
-    genre_tags_zh = [str(g).strip() for g in genres if str(g).strip()]
-    if not genre_tags_zh:
-        genre_tags_zh = ["文学", "小说"]
-    description = str(row.get("description") or "").strip()
-    summary = description[:50] if description else f"围绕《{title}》的作品，风格与题材值得关注(AI推断)"
-    return {
-        "author_display": author,
-        "genre_tags_zh": genre_tags_zh[:2],
-        "summary_zh": summary if summary.endswith("(AI推断)") else f"{summary}(AI推断)" if not description else summary,
-        "title_zh": title,
-    }
+async def _fetch_description_via_llm(
+    title: str,
+    author: str,
+    llm_model: str,
+    llm_temperature: float,
+    llm_max_tokens: int,
+) -> str:
+    prompt = (
+        f"请用中文简要介绍以下书籍的核心内容、风格和主题（100字以内）：\n"
+        f"书名：{title}\n作者：{author}\n"
+        f"仅输出简介正文，不加任何前缀或解释。"
+    )
+    raw = await asyncio.wait_for(
+        call_openai_chat(
+            [
+                {"role": "system", "content": "你是一位精通各类书籍的图书馆员，请简要介绍指定书籍。"},
+                {"role": "user", "content": prompt},
+            ],
+            model=llm_model,
+            temperature=llm_temperature,
+            max_tokens=200,
+        ),
+        timeout=8.0,
+    )
+    text = str(raw or "").strip()
+    if not text:
+        raise RuntimeError(
+            f"LLM returned empty description for title={title!r} author={author!r}"
+        )
+    return text
 
 
 async def _gap_fill_metadata(
@@ -282,26 +288,23 @@ async def _gap_fill_metadata(
         author=str(row.get("author") or ""),
         description=str(row.get("description") or ""),
     )
-    result: Dict[str, Any] = {}
-    if gap_fill_template.strip():
-        try:
-            raw = await call_openai_chat(
-                [
-                    {"role": "system", "content": "你是一个严格输出 JSON 的图书元数据补全助手。"},
-                    {"role": "user", "content": prompt},
-                ],
-                model=llm_model,
-                temperature=llm_temperature,
-                max_tokens=llm_max_tokens,
-            )
-            parsed = _extract_json_obj(raw)
-            if parsed:
-                result = parsed
-        except Exception:
-            result = {}
+    if not gap_fill_template.strip():
+        raise RuntimeError("metadata_gap_fill template is empty. Please check prompts.toml.")
 
+    raw = await call_openai_chat(
+        [
+            {"role": "system", "content": "你是一个严格输出 JSON 的图书元数据补全助手。"},
+            {"role": "user", "content": prompt},
+        ],
+        model=llm_model,
+        temperature=llm_temperature,
+        max_tokens=llm_max_tokens,
+    )
+    result = _extract_json_obj(raw)
     if not result:
-        result = _fallback_gap_fill(row)
+        raise RuntimeError(
+            f"LLM returned invalid JSON for metadata gap-fill. book_id={book_id!r} raw={raw!r}"
+        )
 
     author_display = str(result.get("author_display") or row.get("author") or "佚名").strip() or "佚名"
     title_zh = str(result.get("title_zh") or row.get("title") or book_id).strip() or str(row.get("title") or book_id)
@@ -346,7 +349,15 @@ async def _generate_one(
     cf_evidence = "available" if _safe_float(row.get("cf_score"), 0.0) > 0 else "not available"
     matched = row.get("matched_prefs") if isinstance(row.get("matched_prefs"), list) else []
     matched_preferences = ", ".join(str(m) for m in matched if str(m).strip()) or "N/A"
-    description_text = str(description or "暂无简介")
+    description_text = str(description or "").strip()
+    if not description_text or description_text == "暂无简介" or len(description_text) < 20:
+        description_text = await _fetch_description_via_llm(
+            title,
+            author,
+            llm_model,
+            llm_temperature,
+            llm_max_tokens,
+        )
     query_text = str(user_query or "")
     prompt_context = _extract_prompt_context(payload, row, description_text)
 
@@ -366,22 +377,22 @@ async def _generate_one(
             reading_history=prompt_context["reading_history"],
             description_is_short="true" if prompt_context["description_is_short"] else "false",
         )
-        try:
-            raw = await call_openai_chat(
-                [
+        raw = await call_openai_chat(
+            [
                 {"role": "system", "content": "你是专业图书推荐助手，请严格用中文输出推荐理由。"},
                 {"role": "user", "content": prompt},
             ],
-                model=llm_model,
-                temperature=llm_temperature,
-                max_tokens=llm_max_tokens,
+            model=llm_model,
+            temperature=llm_temperature,
+            max_tokens=llm_max_tokens,
+        )
+        text = str(raw or "").strip()
+        if not text:
+            raise RuntimeError(
+                f"LLM returned empty explanation for book_id={book_id!r} title={title!r}"
             )
-            text = str(raw or "").strip()
-            if text:
-                rationale = text
-                source = "llm"
-        except Exception:
-            source = "fallback"
+        rationale = text
+        source = "llm"
 
     return {
         "book_id": book_id,
@@ -399,14 +410,19 @@ async def generate_rationale(
     payload: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     main_template = str(prompts.get("main") or "")
-    fallback_template = str(
-        prompts.get("fallback")
-        or 'Because your preferred genres are {preferred_genres} and your reading history includes {reading_history}, "{title}" by {author} is a strong match for {genre_tags}. {description}'
-    )
+    fallback_template = str(prompts.get("fallback") or "{summary_zh}")
     gap_fill_template = str(prompts.get("metadata_gap_fill") or "")
 
     _llm_key = os.getenv("OPENAI_API_KEY") or ""
-    use_llm = bool(_llm_key.strip()) and bool(main_template.strip())
+    if not _llm_key.strip():
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. Explanation generation requires LLM."
+        )
+    if not main_template.strip():
+        raise RuntimeError(
+            "explanation_main template is empty. Please check prompts.toml."
+        )
+    use_llm = True
     user_query = str((payload or {}).get("query") or "")
     session_key = str((payload or {}).get("session_id") or "__default__")
 
