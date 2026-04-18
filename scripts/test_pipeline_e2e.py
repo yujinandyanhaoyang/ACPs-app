@@ -53,7 +53,14 @@ def _load_llm_config() -> Dict[str, Any]:
         raise RuntimeError(f"llm model missing in {ENGINE_CONFIG_PATH}")
     temperature = float(llm.get("temperature") or 0.2)
     max_tokens = int(llm.get("max_tokens") or 1024)
-    return {"model": model, "temperature": temperature, "max_tokens": max_tokens}
+    gap_fill = llm.get("gap_fill") if isinstance(llm, dict) else {}
+    gap_fill_max_tokens = int(gap_fill.get("max_tokens") or 256) if isinstance(gap_fill, dict) else 256
+    return {
+        "model": model,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "gap_fill_max_tokens": gap_fill_max_tokens,
+    }
 
 
 def _load_master_by_id(path: Path) -> Dict[str, Dict[str, Any]]:
@@ -252,6 +259,7 @@ def main() -> int:
         llm_model=str(llm_cfg["model"]),
         llm_temperature=float(llm_cfg["temperature"]),
         llm_max_tokens=int(llm_cfg["max_tokens"]),
+        gap_fill_max_tokens=int(llm_cfg["gap_fill_max_tokens"]),
     ))
 
     _okfail(len(final_ranked) == 5, f"final_ranked has 5 items (got {len(final_ranked)})")

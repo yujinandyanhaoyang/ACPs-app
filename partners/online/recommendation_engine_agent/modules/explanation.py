@@ -4,12 +4,14 @@ import asyncio
 import json
 import os
 import sqlite3
+import logging
 from typing import Any, Dict, List, Tuple
 from pathlib import Path
 
 from base import call_openai_chat
 
 
+logger = logging.getLogger(__name__)
 _METADATA_GAP_FILL_CACHE: Dict[Tuple[str, str], Dict[str, Any]] = {}
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
@@ -287,7 +289,7 @@ async def _gap_fill_metadata(
     prompt = gap_fill_template.format(
         title=str(row.get("title") or book_id),
         author=str(row.get("author") or ""),
-        description=str(row.get("description") or ""),
+        description=str(row.get("description") or "")[:500],
     )
     if not gap_fill_template.strip():
         raise RuntimeError("metadata_gap_fill template is empty. Please check prompts.toml.")
@@ -304,9 +306,18 @@ async def _gap_fill_metadata(
     )
     result = _extract_json_obj(raw)
     if not result:
-        raise RuntimeError(
-            f"LLM returned invalid JSON for metadata gap-fill. book_id={book_id!r} raw={raw!r}"
+        logger.warning(
+            "event=metadata_gap_fill_fallback book_id=%s raw=%s",
+            book_id,
+            raw,
         )
+        return {
+            "metadata_gap_filled": False,
+            "author_display": str(row.get("author") or "佚名").strip() or "佚名",
+            "genre_tags_zh": row.get("genres") if isinstance(row.get("genres"), list) else [],
+            "summary_zh": str(row.get("description") or ""),
+            "title_zh": str(row.get("title") or book_id),
+        }
 
     author_display = str(result.get("author_display") or row.get("author") or "佚名").strip() or "佚名"
     title_zh = str(result.get("title_zh") or row.get("title") or book_id).strip() or str(row.get("title") or book_id)
@@ -360,6 +371,7 @@ async def _generate_one(
             llm_temperature,
             llm_max_tokens,
         )
+    description_text = description_text[:800]
     query_text = str(user_query or "")
     prompt_context = _extract_prompt_context(payload, row, description_text)
 
@@ -410,6 +422,7 @@ async def generate_rationale(
     llm_model: str,
     llm_temperature: float,
     llm_max_tokens: int,
+    gap_fill_max_tokens: int,
     payload: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     main_template = str(prompts.get("main") or "")
@@ -436,7 +449,7 @@ async def generate_rationale(
             gap_fill_template=gap_fill_template,
             llm_model=llm_model,
             llm_temperature=llm_temperature,
-            llm_max_tokens=llm_max_tokens,
+            llm_max_tokens=gap_fill_max_tokens,
             session_key=session_key,
         )
         for row in final_list

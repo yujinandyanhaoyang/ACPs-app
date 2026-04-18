@@ -1766,11 +1766,15 @@
       const genres = Array.isArray(rpa.behavior_genres) ? rpa.behavior_genres : [];
       const scoreWeights = rda.score_weights || {};
       const finalWeights = rda.final_weights || {};
+      const coldStart = Boolean(rpa.cold_start ?? resp?.cold_start);
+      const eventCount = Number(rpa.event_count ?? resp?.event_count ?? 0);
 
       return {
         user_id: resp.user_id || state.userId,
         confidence: Number(rpa.confidence),
         behavior_genres: genres,
+        cold_start: coldStart,
+        event_count: eventCount,
         strategy_suggestion: rpa.strategy_suggestion || rda.strategy || 'balanced',
         profile_vector: profileVector,
         final_weights: finalWeights,
@@ -1787,26 +1791,31 @@
       const finalWeights = profile?.final_weights || {};
       const scoreWeights = profile?.score_weights || {};
       const genres = Array.isArray(profile?.behavior_genres) ? profile.behavior_genres : [];
+      const coldStart = Boolean(profile?.cold_start ?? (Number.isFinite(confidence) ? confidence <= 0.25 : true));
+      const eventCount = Number(profile?.event_count ?? 0);
+      const visibleGenres = genres.slice(0, 5);
 
       const profileBadge = el('profileBadge');
-      if (Number.isFinite(confidence) && confidence > 0.72) {
-        profileBadge.textContent = '热启动用户';
-        profileBadge.className = 'badge badge--warm';
-      } else {
+      if (coldStart) {
         profileBadge.textContent = '冷启动';
         profileBadge.className = 'badge badge--cold';
+      } else {
+        profileBadge.textContent = '已激活';
+        profileBadge.className = 'badge badge--warm';
       }
 
       el('profileUserLabel').textContent = profile?.user_id || state.userId;
-      el('profileSubtitle').textContent = profile?.strategy_suggestion
-        ? `策略建议：${profile.strategy_suggestion}`
-        : '画像摘要等待一次完成的推荐运行。';
+      el('profileSubtitle').textContent = [
+        profile?.strategy_suggestion ? `策略建议：${profile.strategy_suggestion}` : '画像摘要等待一次完成的推荐运行。',
+        `行为事件：${Number.isFinite(eventCount) ? eventCount : 0}`,
+      ].join(' · ');
 
       el('profileChips').innerHTML = [
-        `置信度：${Number.isFinite(confidence) ? confidence.toFixed(2) : '—'}`,
-        `类型：${genres.length ? genres.join('，') : '—'}`,
-        `策略：${profile?.strategy || profile?.strategy_suggestion || '—'}`,
-      ].map((text) => `<span class="chip">${escapeHtml(text)}</span>`).join('');
+        `<span class="chip">置信度：${Number.isFinite(confidence) ? confidence.toFixed(2) : '—'}</span>`,
+        `<span class="chip">${coldStart ? '冷启动' : '已激活'}</span>`,
+        `<span class="chip">事件数：${Number.isFinite(eventCount) ? eventCount : 0}</span>`,
+        ...visibleGenres.map((genre) => `<span class="chip">${escapeHtml(genre)}</span>`),
+      ].join('');
 
       const confidencePct = Number.isFinite(confidence) ? Math.min(100, confidence * 100) : 0;
       el('profileConfidenceFill').style.width = `${confidencePct}%`;
@@ -1874,8 +1883,8 @@
       el('profileSubtitle').textContent = '运行一次查询即可生成画像快照。';
       el('profileChips').innerHTML = `
         <span class="chip">置信度：—</span>
-        <span class="chip">类型：—</span>
-        <span class="chip">策略：—</span>
+        <span class="chip">冷启动</span>
+        <span class="chip">事件数：—</span>
       `;
       el('profileConfidenceFill').style.width = '0%';
       el('profileVectorFill').style.width = '0%';
@@ -2482,8 +2491,9 @@
       el('runBtn').addEventListener('click', runRecommendation);
       el('loadProfileBtn').addEventListener('click', refreshProfile);
       el('refreshProfileBtn').addEventListener('click', refreshProfile);
-      el('personaSelect').addEventListener('change', (event) => {
+      el('personaSelect').addEventListener('change', async (event) => {
         switchPersona(event.target.value);
+        await refreshProfile();
       });
       el('scenario').addEventListener('change', (event) => updateScenarioChips(event.target.value));
       el('topK').addEventListener('change', (event) => {

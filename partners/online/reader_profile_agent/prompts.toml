@@ -1,5 +1,5 @@
 [semantic_preference_induction]
-system = "You are Reader Profile Agent. Infer stable user preference signals from recent behavior events and return concise structured semantics for negotiation."
+system = "你是一个读者偏好分析助手，严格只输出 JSON，不加任何解释文字。"
 user_template = "User ID: {user_id}\nWindow days: {window_days}\nEvent summary: {event_summary}\nReturn JSON with keys: latent_genres, latent_topics, confidence_adjustment_hint, cold_start_note."
 
 [evidence_request_response]

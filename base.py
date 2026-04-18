@@ -164,6 +164,7 @@ async def call_openai_chat(
     temperature: float | None = None,
     max_tokens: int | None = None,
     timeout_s: float | None = None,
+    extra_body: dict | None = None,
 ) -> str:
     """Call OpenAI-compatible chat completion API using the async client.
 
@@ -181,6 +182,14 @@ async def call_openai_chat(
         kwargs["temperature"] = temperature
     if max_tokens is not None:
         kwargs["max_tokens"] = max_tokens
+    merged_extra_body: dict | None = {"thinking": {"type": "disabled"}}
+    if extra_body:
+        for key, value in extra_body.items():
+            if key == "thinking" and isinstance(value, dict):
+                merged_extra_body[key] = {**merged_extra_body.get(key, {}), **value}
+            else:
+                merged_extra_body[key] = value
+    kwargs["extra_body"] = merged_extra_body
     effective_timeout = float(timeout_s if timeout_s is not None else os.getenv("OPENAI_CHAT_TIMEOUT", "30"))
     timeout_errors: tuple[type[BaseException], ...] = (TimeoutError, httpx.TimeoutException)
     api_timeout_error = getattr(openai, "APITimeoutError", None) if openai is not None else None
@@ -197,6 +206,7 @@ async def call_openai_chat(
                 client.chat.completions.create(
                     messages=messages,
                     model=model,
+                    extra_body=merged_extra_body,
                 ),
                 timeout=effective_timeout,
             )
@@ -227,13 +237,7 @@ async def call_openai_chat(
             f"LLM returned None content for model={model!r}. "
             f"finish_reason={getattr(chat_completion.choices[0], 'finish_reason', None)!r}"
         )
-    text = str(content).strip()
-    if not text:
-        raise RuntimeError(
-            f"LLM returned empty content for model={model!r}. "
-            f"finish_reason={getattr(chat_completion.choices[0], 'finish_reason', None)!r}"
-        )
-    return text
+    return str(content)
 
 
 def _normalize_acs_skills(skills: Any) -> List[Dict[str, str]]:

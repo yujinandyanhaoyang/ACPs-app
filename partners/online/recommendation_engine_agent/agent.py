@@ -58,6 +58,7 @@ class AgentConfig:
     llm_model: str = field(init=False)
     llm_temperature: float = field(init=False)
     llm_max_tokens: int = field(init=False)
+    gap_fill_max_tokens: int = field(init=False)
     confidence_penalty_threshold: float = field(init=False)
     penalty_multiplier: float = field(init=False)
     default_mmr_lambda: float = field(init=False)
@@ -154,11 +155,17 @@ def _load_config() -> AgentConfig:
     cfg.llm_model = configured_llm_model
     cfg.llm_temperature = _safe_float(_require_value(llm, "llm", "temperature"))
     cfg.llm_max_tokens = int(_require_value(llm, "llm", "max_tokens"))
+    gap_fill = llm.get("gap_fill") if isinstance(llm, dict) else {}
+    if isinstance(gap_fill, dict) and gap_fill.get("max_tokens") is not None:
+        cfg.gap_fill_max_tokens = int(gap_fill.get("max_tokens"))
+    else:
+        cfg.gap_fill_max_tokens = 256
     logger.info(
-        "event=config_loaded section=llm model=%s temperature=%s max_tokens=%s",
+        "event=config_loaded section=llm model=%s temperature=%s max_tokens=%s gap_fill_max_tokens=%s",
         configured_llm_model,
         cfg.llm_temperature,
         cfg.llm_max_tokens,
+        cfg.gap_fill_max_tokens,
     )
     ranking = _require_section(data, "ranking", "CONFIDENCE_PENALTY_THRESHOLD")
     cfg.confidence_penalty_threshold = _safe_float(
@@ -311,6 +318,7 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
         llm_model=CFG.llm_model,
         llm_temperature=CFG.llm_temperature,
         llm_max_tokens=CFG.llm_max_tokens,
+        gap_fill_max_tokens=CFG.gap_fill_max_tokens,
     )
     explanation_by_id = {str(x.get("book_id")): x for x in explanations}
 

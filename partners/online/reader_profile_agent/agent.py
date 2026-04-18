@@ -348,6 +348,20 @@ def _extract_json_obj(text: str) -> Dict[str, Any]:
     return {}
 
 
+def _extract_json_from_markdown(text: str) -> Dict[str, Any]:
+    raw = str(text or "").strip()
+    if not raw:
+        return {}
+    match = re.search(r"```json\s*(.*?)\s*```", raw, flags=re.DOTALL | re.IGNORECASE)
+    if not match:
+        return {}
+    try:
+        parsed = json.loads(match.group(1))
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+
 async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Dict[str, Any]], baseline: List[str]) -> List[str]:
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
         raise RuntimeError(
@@ -393,8 +407,13 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
                 baseline,
             )
             return list(dict.fromkeys([str(x).strip().lower() for x in baseline if str(x).strip()]))[:10]
-        raise
-    parsed = _extract_json_obj(raw)
+        logger.warning(
+            "event=genre_inference_llm_failed_no_baseline user_id=%s error=%s",
+            user_id,
+            exc,
+        )
+        return []
+    parsed = _extract_json_obj(raw) or _extract_json_from_markdown(raw)
     latent = parsed.get("latent_genres")
     if not isinstance(latent, list):
         if baseline:
@@ -405,9 +424,12 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
                 raw,
             )
             return list(dict.fromkeys([str(x).strip().lower() for x in baseline if str(x).strip()]))[:10]
-        raise RuntimeError(
-            f"LLM returned invalid JSON for genre inference. user_id={user_id!r} raw={raw!r}"
+        logger.warning(
+            "event=genre_inference_invalid_json_no_baseline user_id=%s raw=%s",
+            user_id,
+            raw,
         )
+        return []
     cleaned = [str(x).strip().lower() for x in latent if str(x).strip()]
     if not cleaned:
         if baseline:
