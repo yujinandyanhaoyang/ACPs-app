@@ -68,9 +68,9 @@ _DISCOVERY_CACHE_TTL_SEC = 30
 class RuntimeConfig(BaseModel):
     port: int = 8210
     redis_url: str = "redis://localhost:6379/0"
-    llm_model: str = "gui-plus-2026-02-26"
-    llm_temperature: float = 0.3
-    llm_max_tokens: int = 1024
+    llm_model: str = "MiniMax-M2.5"
+    llm_temperature: float = 0.2
+    llm_max_tokens: int = 384
     llm_intent_max_tokens: int = 128
     partner_aics: Dict[str, str] = Field(default_factory=dict)
 
@@ -940,7 +940,7 @@ async def api_profile(user_id: str = ""):
         logger.warning("event=profile_api_failed user_id=%s error=%s", uid, exc)
         raise HTTPException(
             status_code=503,
-            detail=f"画像サービス暂时不可用，请稍后重试。error={exc}",
+            detail=f"画像服务暂时不可用，请稍后重试。error={exc}",
         ) from exc
     if _state(profile_resp) in {"failed", "rejected", "canceled"}:
         raise HTTPException(status_code=503, detail="profile agent unavailable")
