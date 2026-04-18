@@ -845,12 +845,12 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
     try:
         return await asyncio.wait_for(
             _orchestrate_inner(req, allow_deprecated_payload),
-            timeout=150.0,
+            timeout=120.0,
         )
     except asyncio.TimeoutError as exc:
         raise HTTPException(
             status_code=504,
-            detail="推荐请求超时（后端处理超过 150 秒）。请稍后重试或减少 Top K 数量。",
+            detail="推荐请求超时（后端处理超过 120 秒）。请稍后重试或减少 Top K 数量。",
         ) from exc
 
 

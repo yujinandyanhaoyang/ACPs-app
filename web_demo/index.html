@@ -1352,32 +1352,6 @@
       </aside>
 
       <main class="stack">
-        <section class="card" aria-labelledby="systemStatusTitle">
-          <div class="card-header">
-            <div>
-              <h3 id="systemStatusTitle">系统状态</h3>
-              <p>每次响应后刷新语义检索词、嵌入后端与冷启动状态。</p>
-            </div>
-            <span class="badge badge--warn" id="systemHealthBadge">等待运行</span>
-          </div>
-          <div class="card-body">
-            <div class="status-strip" id="systemStatusStrip">
-              <div class="status-item">
-                <div class="status-item-label">语义检索词</div>
-                <div class="status-item-value" id="statusSearchQuery">—</div>
-              </div>
-              <div class="status-item">
-                <div class="status-item-label">Embedding</div>
-                <div class="status-item-value" id="statusEmbedding">—</div>
-              </div>
-              <div class="status-item">
-                <div class="status-item-label">cold_start</div>
-                <div class="status-item-value" id="statusColdStart">—</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section class="card" id="pipelineCard" aria-labelledby="pipelineTitle" style="display:none;">
           <div class="card-header">
             <div>
@@ -1439,6 +1413,32 @@
                 <div class="summary-label">CF 重新训练阈值</div>
                 <div class="summary-track"><div class="summary-fill" id="summaryCFill"></div></div>
                 <div class="summary-value" id="summaryCValue">0 / 0</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="systemStatusTitle">
+          <div class="card-header">
+            <div>
+              <h3 id="systemStatusTitle">系统状态</h3>
+              <p>每次响应后刷新语义检索词、嵌入后端与冷启动状态。</p>
+            </div>
+            <span class="badge badge--warn" id="systemHealthBadge">等待运行</span>
+          </div>
+          <div class="card-body">
+            <div class="status-strip" id="systemStatusStrip">
+              <div class="status-item">
+                <div class="status-item-label">语义检索词</div>
+                <div class="status-item-value" id="statusSearchQuery">—</div>
+              </div>
+              <div class="status-item">
+                <div class="status-item-label">Embedding</div>
+                <div class="status-item-value" id="statusEmbedding">—</div>
+              </div>
+              <div class="status-item">
+                <div class="status-item-label">cold_start</div>
+                <div class="status-item-value" id="statusColdStart">—</div>
               </div>
             </div>
           </div>

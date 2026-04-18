@@ -255,10 +255,6 @@ async def _fetch_description_via_llm(
         timeout=30.0,
     )
     text = str(raw or "").strip()
-    if not text:
-        raise RuntimeError(
-            f"LLM returned empty description for title={title!r} author={author!r}"
-        )
     return text
 
 
@@ -292,18 +288,26 @@ async def _gap_fill_metadata(
         description=str(row.get("description") or "")[:500],
     )
     if not gap_fill_template.strip():
-        raise RuntimeError("metadata_gap_fill template is empty. Please check prompts.toml.")
+        logger.warning("event=gap_fill_template_empty book_id=%s", book_id)
+        return {}
 
-    raw = await call_openai_chat(
-        [
-            {"role": "system", "content": "你是一个严格输出 JSON 的图书元数据补全助手。"},
-            {"role": "user", "content": prompt},
-        ],
-        model=llm_model,
-        temperature=llm_temperature,
-        max_tokens=llm_max_tokens,
-        timeout_s=30.0,
-    )
+    try:
+        raw = await asyncio.wait_for(
+            call_openai_chat(
+                [
+                    {"role": "system", "content": "你是一个严格输出 JSON 的图书元数据补全助手。"},
+                    {"role": "user", "content": prompt},
+                ],
+                model=llm_model,
+                temperature=llm_temperature,
+                max_tokens=llm_max_tokens,
+                timeout_s=25.0,
+            ),
+            timeout=25.0,
+        )
+    except (asyncio.TimeoutError, Exception) as exc:
+        logger.warning("event=metadata_gap_fill_fallback book_id=%s error=%s", book_id, exc)
+        return {}
     result = _extract_json_obj(raw)
     if not result:
         logger.warning(
@@ -389,23 +393,30 @@ async def _generate_one(
             reading_history=prompt_context["reading_history"],
             description_is_short="true" if prompt_context["description_is_short"] else "false",
         )
-        raw = await call_openai_chat(
-            [
-                {"role": "system", "content": "你是专业图书推荐助手，请严格用中文输出推荐理由。"},
-                {"role": "user", "content": prompt},
-            ],
-            model=llm_model,
-            temperature=llm_temperature,
-            max_tokens=llm_max_tokens,
-            timeout_s=45.0,
-        )
-        text = str(raw or "").strip()
-        if not text:
-            raise RuntimeError(
-                f"LLM returned empty explanation for book_id={book_id!r} title={title!r}"
+        try:
+            raw = await asyncio.wait_for(
+                call_openai_chat(
+                    [
+                        {"role": "system", "content": "你是专业图书推荐助手，请严格用中文输出推荐理由。"},
+                        {"role": "user", "content": prompt},
+                    ],
+                    model=llm_model,
+                    temperature=llm_temperature,
+                    max_tokens=llm_max_tokens,
+                    timeout_s=40.0,
+                ),
+                timeout=40.0,
             )
-        rationale = text
-        source = "llm"
+            text = str(raw or "").strip()
+            if text:
+                rationale = text
+                source = "llm"
+        except (asyncio.TimeoutError, Exception) as exc:
+            logger.warning(
+                "event=explanation_llm_fallback book_id=%s error=%s",
+                book_id,
+                exc,
+            )
 
     return {
         "book_id": book_id,
@@ -414,7 +425,7 @@ async def _generate_one(
     }
 
 
-async def generate_rationale(
+async def _generate_rationale_inner(
     final_list: List[Dict[str, Any]],
     prompts: Dict[str, str],
     llm_model: str,
@@ -452,7 +463,8 @@ async def generate_rationale(
         )
         for row in final_list
     ]
-    gap_fill_results = await asyncio.gather(*gap_fill_tasks) if gap_fill_tasks else []
+    gap_fill_results_raw = await asyncio.gather(*gap_fill_tasks, return_exceptions=True) if gap_fill_tasks else []
+    gap_fill_results = [r if isinstance(r, dict) else {} for r in gap_fill_results_raw]
 
     for row, gap_fill in zip(final_list, gap_fill_results):
         enriched = dict(row)
@@ -470,7 +482,7 @@ async def generate_rationale(
             fallback_template=fallback_template,
             payload=payload,
             user_query=user_query,
-            description=str(row.get("description") or ""),
+            description=(str(row.get("summary_zh") or "").strip() or str(row.get("description") or "")),
             use_llm=use_llm,
             llm_model=llm_model,
             llm_temperature=llm_temperature,
@@ -494,3 +506,30 @@ async def generate_rationale(
             }
         )
     return merged
+
+
+async def generate_rationale(
+    final_list: List[Dict[str, Any]],
+    prompts: Dict[str, str],
+    llm_model: str,
+    llm_temperature: float,
+    llm_max_tokens: int,
+    gap_fill_max_tokens: int,
+    payload: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    try:
+        return await asyncio.wait_for(
+            _generate_rationale_inner(
+                final_list=final_list,
+                prompts=prompts,
+                llm_model=llm_model,
+                llm_temperature=llm_temperature,
+                llm_max_tokens=llm_max_tokens,
+                gap_fill_max_tokens=gap_fill_max_tokens,
+                payload=payload,
+            ),
+            timeout=80.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("event=generate_rationale_timeout fallback to empty explanations")
+        return []
