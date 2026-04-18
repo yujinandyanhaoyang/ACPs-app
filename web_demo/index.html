@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="light dark" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>阅读管家演示</title>
   <style>
     :root {
@@ -2345,6 +2348,9 @@
             <div class="skeleton" style="height: 170px;"></div>
             <div class="skeleton" style="height: 170px;"></div>
             <div class="skeleton" style="height: 170px;"></div>
+            <div style="text-align:center; color:var(--text-muted); font-size:0.88rem; margin-top:8px;">
+              推荐生成约需 30-90 秒，请耐心等待……
+            </div>
           </div>`;
       }
     }
@@ -2381,7 +2387,7 @@
         const resp = await fetchJson(`${API_BASE}/user_api`, {
           method: 'POST',
           body: JSON.stringify(payload),
-          timeout: 90000,
+          timeout: 180000,
         });
         if (!resp.ok) {
           let detail = '';
@@ -2414,11 +2420,14 @@
         setPipelineStep('RC', 'error', '推荐请求失败。');
         const statusCode = err?.status || err?.response?.status || 'unknown';
         const detail = err?.detail || err?.message || '请求失败';
+        const friendlyDetail = /aborted|timeout/i.test(String(detail))
+          ? '推荐超时（后端处理超过 180 秒），请稍后重试或减少 Top K 数量。'
+          : String(detail);
         el('resultsArea').innerHTML = `
           <div class="empty-state" style="border-color: rgba(194, 65, 65, 0.28); color: var(--error); text-align:left;">
             <div style="font-weight:800; margin-bottom:8px;">请求出错</div>
             <div>HTTP 状态码：${escapeHtml(String(statusCode))}</div>
-            <div>detail：${escapeHtml(String(detail))}</div>
+            <div>detail：${escapeHtml(friendlyDetail)}</div>
           </div>
         `;
         showToast('推荐请求失败。', 'error');

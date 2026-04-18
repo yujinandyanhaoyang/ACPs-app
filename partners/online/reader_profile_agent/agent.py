@@ -397,6 +397,7 @@ async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Di
             model=model_name,
             temperature=CFG.llm_temperature,
             max_tokens=CFG.llm_max_tokens,
+            timeout_s=60.0,
         )
     except Exception as exc:
         if baseline:

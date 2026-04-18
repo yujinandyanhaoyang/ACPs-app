@@ -656,7 +656,7 @@ def _normalize_recommendations_for_frontend(
     return normalized
 
 
-async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False) -> Dict[str, Any]:
+async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = False) -> Dict[str, Any]:
     session_id = req.session_id or f"session-{uuid.uuid4()}"
     SESSION_STORE.append_message(session_id, "user", req.query)
     req_payload = req.model_dump()
@@ -839,6 +839,19 @@ async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False)
     SESSION_STORE.update_fields(session_id, {"last_response": response, "intent": intent})
     SESSION_STORE.append_message(session_id, "assistant", "orchestration_completed")
     return response
+
+
+async def _orchestrate(req: UserRequest, allow_deprecated_payload: bool = False) -> Dict[str, Any]:
+    try:
+        return await asyncio.wait_for(
+            _orchestrate_inner(req, allow_deprecated_payload),
+            timeout=150.0,
+        )
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="推荐请求超时（后端处理超过 150 秒）。请稍后重试或减少 Top K 数量。",
+        ) from exc
 
 
 @app.get("/", response_class=HTMLResponse)

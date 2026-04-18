@@ -364,13 +364,17 @@ async def _generate_one(
     matched_preferences = ", ".join(str(m) for m in matched if str(m).strip()) or "N/A"
     description_text = str(description or "").strip()
     if not description_text or description_text == "暂无简介" or len(description_text) < 20:
-        description_text = await _fetch_description_via_llm(
-            title,
-            author,
-            llm_model,
-            llm_temperature,
-            llm_max_tokens,
-        )
+        summary_zh = str(row.get("summary_zh") or "").strip()
+        if summary_zh and len(summary_zh) >= 20:
+            description_text = summary_zh
+        else:
+            description_text = await _fetch_description_via_llm(
+                title,
+                author,
+                llm_model,
+                llm_temperature,
+                llm_max_tokens,
+            )
     description_text = description_text[:800]
     query_text = str(user_query or "")
     prompt_context = _extract_prompt_context(payload, row, description_text)
