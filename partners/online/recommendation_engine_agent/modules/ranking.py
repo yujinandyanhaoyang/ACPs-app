@@ -76,6 +76,7 @@ def score_round1(
 
     total_candidates = max(1, len(candidates))
     for idx, row in enumerate(candidates):
+        # content already comes from recall.py and should reflect query-aware ANN scoring.
         content = _safe_float(row.get("content_sim"), 0.0)
         if cold_start:
             rank_prior = max(0.0, 1.0 - (idx / total_candidates))
@@ -109,6 +110,7 @@ def score_round1(
             "novelty": round(novelty, 6),
             "diversity": round(diversity, 6),
             "recency": round(recency, 6),
+            "query_sim": round(_safe_float(row.get("query_sim"), 0.0), 6),
         }
         item["novelty_score"] = round(novelty, 6)
         item["diversity_score"] = round(diversity, 6)

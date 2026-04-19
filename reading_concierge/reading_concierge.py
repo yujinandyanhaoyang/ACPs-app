@@ -212,6 +212,41 @@ def _detect_language_code(text: str) -> str:
     return "en"
 
 
+def _rescue_search_query_locally(query: str) -> str:
+    text = str(query or "").strip()
+    if not text:
+        return text
+    replacements = [
+        ("硬科幻", "hard science fiction"),
+        ("科幻", "science fiction"),
+        ("心理", "psychological"),
+        ("悬疑推理", "mystery thriller"),
+        ("推理", "mystery"),
+        ("悬疑", "suspense"),
+        ("犯罪", "crime"),
+        ("刑侦", "detective"),
+        ("心理惊悚", "psychological thriller"),
+        ("惊悚", "thriller"),
+        ("治愈系", "cozy"),
+        ("温馨", "heartwarming"),
+        ("故事", "story"),
+        ("小说", "novel"),
+        ("要求技术设定真实", "realistic technical setting"),
+        ("技术设定真实", "realistic technical setting"),
+        ("真实", "realistic"),
+        ("文学", "literary"),
+        ("传记", "biography"),
+    ]
+    rescued = text
+    for zh, en in replacements:
+        rescued = rescued.replace(zh, en)
+    rescued = rescued.replace("，", " ").replace("。", " ").replace("、", " ").replace("：", " ").replace("；", " ")
+    rescued = " ".join(rescued.split())
+    if any("\u4e00" <= ch <= "\u9fff" for ch in rescued):
+        return ""
+    return rescued.strip()
+
+
 def _resolve_partner(partner_key: str) -> Dict[str, Any]:
     remote_env = {
         "profile": "READER_PROFILE_RPC_URL",
@@ -675,9 +710,24 @@ def _normalize_recommendations_for_frontend(
         item["score_parts"] = row.get("score_parts") if isinstance(row.get("score_parts"), dict) else {}
         item["justification"] = str(row.get("justification") or explanation.get("justification") or "")
         title_display = str(row.get("title_display") or row.get("title") or "")
-        title_key = title_display.replace(" ", "").replace(":", "").replace("-", "")
-        item["title_display"] = title_display
-        item["title_zh"] = "" if title_display and title_key and all(ord(c) < 128 for c in title_key) else title_display
+        title_zh_raw = str(
+            row.get("title_display_zh")
+            or row.get("title_zh")
+            or row.get("title_cn")
+            or ""
+        ).strip()
+        if title_zh_raw:
+            item["title_display_zh"] = title_zh_raw
+            item["title_display"] = title_zh_raw
+        elif title_display and all(
+            ord(c) < 128
+            for c in title_display.replace(" ", "").replace(":", "").replace("-", "").replace("'", "").replace(",", "")
+        ):
+            item["title_display_zh"] = ""
+            item["title_display"] = title_display
+        else:
+            item["title_display_zh"] = title_display
+            item["title_display"] = title_display
         normalized.append(item)
     return normalized
 
@@ -718,6 +768,17 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
                 intent["search_query"] = translated
         except Exception as exc:
             logger.warning("event=search_query_rescue_failed error=%s", exc)
+
+    if any("\u4e00" <= ch <= "\u9fff" for ch in search_query):
+        rescued = _rescue_search_query_locally(search_query)
+        if rescued:
+            logger.info(
+                "event=search_query_rescue_local original=%r translated=%r",
+                search_query,
+                rescued,
+            )
+            search_query = rescued
+            intent["search_query"] = rescued
 
     constraints = req.constraints if isinstance(req.constraints, dict) else {}
     ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}

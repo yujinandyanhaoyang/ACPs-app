@@ -336,10 +336,11 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
             "score_total": _safe_float(row.get("score_total"), 0.0),
             "recall_source": row.get("recall_source"),
             "score_parts": row.get("score_parts") or {},
+            "query_sim": _safe_float(row.get("query_sim"), 0.0),
             "justification": explanation_row.get("justification", ""),
             "source": explanation_row.get("source", ""),
         }
-        for key in ("title_display", "author_display", "genre_tags_zh", "summary_zh", "metadata_gap_filled"):
+        for key in ("title_display", "title_display_zh", "author_display", "genre_tags_zh", "summary_zh", "metadata_gap_filled"):
             if key in explanation_row:
                 rec[key] = explanation_row.get(key)
         recommendations.append(rec)

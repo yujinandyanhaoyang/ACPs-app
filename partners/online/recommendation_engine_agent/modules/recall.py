@@ -76,12 +76,22 @@ def _ann_recall_fallback(
     candidates: List[Dict[str, Any]],
     profile_vector: List[float],
     top_k: int,
+    query_vector: List[float] | None = None,
+    query_weight: float = 0.7,
+    profile_weight: float = 0.3,
 ) -> List[Dict[str, Any]]:
     scored: List[Tuple[float, Dict[str, Any]]] = []
     for row in candidates:
-        content_sim = _cosine(profile_vector, row.get("_vector") or []) if profile_vector else 0.0
+        cand_vec = row.get("_vector") or []
+        query_sim = _cosine(query_vector or [], cand_vec) if query_vector else 0.0
+        profile_sim = _cosine(profile_vector, cand_vec) if profile_vector else 0.0
+        if query_vector:
+            content_sim = (query_weight * query_sim) + (profile_weight * profile_sim)
+        else:
+            content_sim = profile_sim
         enriched = dict(row)
         enriched["content_sim"] = round(max(0.0, content_sim), 6)
+        enriched["query_sim"] = round(max(0.0, query_sim), 6)
         enriched["recall_source"] = "ann"
         scored.append((enriched["content_sim"], enriched))
     scored.sort(key=lambda x: x[0], reverse=True)
@@ -312,6 +322,36 @@ def _merge_ann_cf(
     return out
 
 
+def _extract_query_vector(search_query: str, vector_dim: int = 0) -> List[float]:
+    query = str(search_query or "").strip()
+    if not query:
+        return []
+    try:
+        from services.model_backends import generate_text_embeddings
+
+        vectors, meta = generate_text_embeddings([query], model_name="all-MiniLM-L6-v2")
+        if vectors and isinstance(vectors, list):
+            query_vector = [_safe_float(v) for v in vectors[0]]
+            if query_vector:
+                logger.info(
+                    "event=query_vector_generated search_query=%r dim=%d backend=%s",
+                    query,
+                    len(query_vector),
+                    meta.get("backend"),
+                )
+                if vector_dim and len(query_vector) != vector_dim:
+                    logger.warning(
+                        "event=query_vector_dim_mismatch search_query=%r query_dim=%d expected_dim=%d",
+                        query,
+                        len(query_vector),
+                        vector_dim,
+                    )
+                return query_vector
+    except Exception as exc:
+        logger.warning("event=query_vector_failed search_query=%r error=%s", query, exc)
+    return []
+
+
 def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     candidates = _normalize_candidates(payload)
     ann_weight = _safe_float(payload.get("ann_weight"), 0.6)
@@ -329,6 +369,7 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
 
     ann_top_k = int(cfg.get("ann_top_k") or 200)
     cf_top_k = int(cfg.get("cf_top_k") or 100)
+    query_vector = _extract_query_vector(search_query, int(cfg.get("vector_dim") or 0))
 
     faiss_index_path = Path(str(cfg.get("faiss_index_path") or ""))
     faiss_index_meta_path = Path(str(cfg.get("faiss_index_meta_path") or ""))
@@ -348,10 +389,46 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
         meta.get("vector_dim", 0),
     )
 
-    ann_rows = _ann_recall_fallback(candidates, profile_vector, top_k=ann_top_k)
+    ann_rows = _ann_recall_fallback(
+        candidates,
+        profile_vector,
+        top_k=ann_top_k,
+        query_vector=query_vector if query_vector else None,
+        query_weight=0.7,
+        profile_weight=0.3,
+    )
     cf_rows = [] if cold_start else _cf_recall_fallback(candidates, profile_vector, top_k=cf_top_k)
 
     merged = _merge_ann_cf(ann_rows, cf_rows, ann_weight=ann_weight, cf_weight=cf_weight)
+    if query_vector:
+        before_count = len(merged)
+        min_query_sim = 0.10
+        merged = [row for row in merged if _safe_float(row.get("query_sim"), 0.0) >= min_query_sim]
+        filtered_count = before_count - len(merged)
+        if filtered_count > 0:
+            logger.info(
+                "event=query_sim_filter removed=%d remaining=%d threshold=%.2f",
+                filtered_count,
+                len(merged),
+                min_query_sim,
+            )
+        if len(merged) < 5:
+            logger.warning(
+                "event=query_sim_filter_too_aggressive remaining=%d, relaxing filter",
+                len(merged),
+            )
+            merged = sorted(
+                _ann_recall_fallback(
+                    candidates,
+                    profile_vector,
+                    top_k=ann_top_k,
+                    query_vector=query_vector,
+                    query_weight=0.7,
+                    profile_weight=0.3,
+                ),
+                key=lambda x: _safe_float(x.get("content_sim"), 0.0),
+                reverse=True,
+            )
     if cold_start:
         for row in merged:
             row["cf_score"] = 0.0
@@ -387,5 +464,7 @@ def recall_candidates(payload: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Lis
         "cold_start": bool(cold_start),
         "embed_backend": meta["backend"],
         "vector_dim": meta["vector_dim"],
+        "query_vector_dim": len(query_vector),
+        "query_weight": 0.7 if query_vector else 0.0,
     }
     return merged, meta

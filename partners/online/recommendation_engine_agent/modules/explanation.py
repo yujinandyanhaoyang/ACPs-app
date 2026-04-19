@@ -517,6 +517,7 @@ async def _generate_rationale_inner(
             {
                 **explanation,
                 "title_display": row.get("title_display") or row.get("title") or row.get("book_id"),
+                "title_display_zh": row.get("title_display_zh") or row.get("title_zh") or row.get("title_display") or row.get("title") or row.get("book_id"),
                 "author_display": row.get("author_display") or row.get("author") or "佚名",
                 "genre_tags_zh": row.get("genre_tags_zh") if isinstance(row.get("genre_tags_zh"), list) else [],
                 "summary_zh": row.get("summary_zh") or "",
