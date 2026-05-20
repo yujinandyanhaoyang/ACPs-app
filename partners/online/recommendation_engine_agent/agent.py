@@ -124,17 +124,16 @@ def _load_config() -> AgentConfig:
         pass
 
     index = _require_section(data, "index", "FAISS_INDEX_PATH")
-    cfg.faiss_index_path = str(_require_value(index, "index", "FAISS_INDEX_PATH"))
-    cfg.faiss_index_meta_path = _optional_str(index, "FAISS_INDEX_META_PATH", str(os.getenv("FAISS_INDEX_META_PATH") or ""))
-    cfg.book_retrieval_dataset_path = _optional_str(
-        index,
-        "BOOK_RETRIEVAL_DATASET_PATH",
-        str(os.getenv("BOOK_RETRIEVAL_DATASET_PATH") or ""),
+    cfg.faiss_index_path = str(os.getenv("FAISS_INDEX_PATH") or _require_value(index, "index", "FAISS_INDEX_PATH"))
+    cfg.faiss_index_meta_path = str(os.getenv("FAISS_INDEX_META_PATH") or _optional_str(index, "FAISS_INDEX_META_PATH", ""))
+    cfg.book_retrieval_dataset_path = str(
+        os.getenv("BOOK_RETRIEVAL_DATASET_PATH")
+        or _optional_str(index, "BOOK_RETRIEVAL_DATASET_PATH", "")
     )
-    cfg.cf_item_factors_path = _optional_str(index, "CF_ITEM_FACTORS_PATH", str(os.getenv("CF_ITEM_FACTORS_PATH") or ""))
-    cfg.cf_user_factors_path = _optional_str(index, "CF_USER_FACTORS_PATH", str(os.getenv("CF_USER_FACTORS_PATH") or ""))
-    cfg.cf_book_index_path = _optional_str(index, "CF_BOOK_INDEX_PATH", str(os.getenv("CF_BOOK_INDEX_PATH") or ""))
-    cfg.cf_user_index_path = _optional_str(index, "CF_USER_INDEX_PATH", str(os.getenv("CF_USER_INDEX_PATH") or ""))
+    cfg.cf_item_factors_path = str(os.getenv("CF_ITEM_FACTORS_PATH") or _optional_str(index, "CF_ITEM_FACTORS_PATH", ""))
+    cfg.cf_user_factors_path = str(os.getenv("CF_USER_FACTORS_PATH") or _optional_str(index, "CF_USER_FACTORS_PATH", ""))
+    cfg.cf_book_index_path = str(os.getenv("CF_BOOK_INDEX_PATH") or _optional_str(index, "CF_BOOK_INDEX_PATH", ""))
+    cfg.cf_user_index_path = str(os.getenv("CF_USER_INDEX_PATH") or _optional_str(index, "CF_USER_INDEX_PATH", ""))
     cfg.als_model_path = str(_require_value(index, "index", "ALS_MODEL_PATH"))
     cfg.hnswlib_path = str(_require_value(index, "index", "HNSWLIB_PATH"))
     logger.info(
@@ -264,6 +263,7 @@ def _coverage(candidates: List[Dict[str, Any]], required_evidence_types: List[st
 
 async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
     dispatch_start = time.perf_counter()
+    ablation_flags = payload.get("ablation_flags") if isinstance(payload.get("ablation_flags"), dict) else {}
 
     score_weights = payload.get("score_weights") if isinstance(payload.get("score_weights"), dict) else {}
     mmr_lambda = _safe_float(payload.get("mmr_lambda"), CFG.default_mmr_lambda)
@@ -311,15 +311,18 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
         top_k=top_k,
     )
 
-    explanations = await generate_rationale(
-        final_list=final_ranked,
-        payload=payload,
-        prompts=PROMPTS,
-        llm_model=CFG.llm_model,
-        llm_temperature=CFG.llm_temperature,
-        llm_max_tokens=CFG.llm_max_tokens,
-        gap_fill_max_tokens=CFG.gap_fill_max_tokens,
-    )
+    disable_explanations = bool(ablation_flags.get("disable_explanations"))
+    explanations: List[Dict[str, Any]] = []
+    if not disable_explanations:
+        explanations = await generate_rationale(
+            final_list=final_ranked,
+            payload=payload,
+            prompts=PROMPTS,
+            llm_model=CFG.llm_model,
+            llm_temperature=CFG.llm_temperature,
+            llm_max_tokens=CFG.llm_max_tokens,
+            gap_fill_max_tokens=CFG.gap_fill_max_tokens,
+        )
     explanation_by_id = {str(x.get("book_id")): x for x in explanations}
 
     recommendations: List[Dict[str, Any]] = []
@@ -360,7 +363,8 @@ async def _dispatch(payload: Dict[str, Any]) -> Dict[str, Any]:
             "ranking_round2": round2_meta,
             "explanation": {
                 "llm_model": CFG.llm_model,
-                "llm_enabled": bool(str(os.getenv("OPENAI_API_KEY") or "").strip()),
+                "llm_enabled": (not disable_explanations) and bool(str(os.getenv("OPENAI_API_KEY") or "").strip()),
+                "disabled": disable_explanations,
                 "items": len(explanations),
             },
         },

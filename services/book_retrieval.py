@@ -203,10 +203,12 @@ def _load_vector_meta(meta_path: str) -> List[Dict[str, Any]]:
 @lru_cache(maxsize=1)
 def _load_books_by_id() -> Dict[str, Dict[str, Any]]:
     """
-    Build a lightweight book_id -> record map from the FAISS meta file
-    (books_index_meta_v2.jsonl). This file is already loaded by _load_vector_meta()
-    and contains book_id, title, source - enough for result enrichment without
-    reading the 1.4 GB master file.
+    Build a lightweight book_id -> record map keyed by FAISS metadata, then
+    overlay fields from the active retrieval corpus when available.
+
+    This keeps the returned id set aligned with the active FAISS index while
+    still letting downstream code see title/author/genres/description from the
+    currently configured dataset rather than only the sparse index meta rows.
     """
     from services.data_paths import get_processed_data_root
 
@@ -235,6 +237,33 @@ def _load_books_by_id() -> Dict[str, Dict[str, Any]]:
             if not book_id or book_id in books:
                 continue
             books[book_id] = dict(row)
+
+    if not books:
+        return books
+
+    try:
+        for row in iter_books():
+            if not isinstance(row, dict):
+                continue
+            book_id = str(row.get("book_id") or "").strip()
+            if not book_id:
+                continue
+            existing = books.get(book_id)
+            if existing is None:
+                continue
+            if not str(existing.get("title") or "").strip():
+                existing["title"] = str(row.get("title") or "")
+            if not str(existing.get("author") or "").strip():
+                existing["author"] = str(row.get("author") or "")
+            if not isinstance(existing.get("genres"), list) or not existing.get("genres"):
+                genres = row.get("genres") if isinstance(row.get("genres"), list) else []
+                existing["genres"] = genres
+            if not str(existing.get("description") or "").strip():
+                existing["description"] = str(row.get("description") or row.get("blurb") or "")
+            if not str(existing.get("source") or "").strip():
+                existing["source"] = str(row.get("source") or "")
+    except Exception:
+        pass
     return books
 
 

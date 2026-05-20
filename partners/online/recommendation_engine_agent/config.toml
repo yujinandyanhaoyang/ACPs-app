@@ -20,15 +20,15 @@ max_concurrent_tasks = 10
 level = "INFO"
 
 [index]
-FAISS_INDEX_PATH         = "/root/WORK/DATA/processed/books_index_v2.faiss"
-FAISS_INDEX_META_PATH    = "/root/WORK/DATA/processed/books_index_meta_v2.jsonl"
-BOOK_RETRIEVAL_DATASET_PATH = "/root/WORK/DATA/processed/books_master_merged_v2.jsonl"
-CF_ITEM_FACTORS_PATH     = "/root/WORK/DATA/processed/cf_item_factors_v2.npy"
-CF_USER_FACTORS_PATH     = "/root/WORK/DATA/processed/cf_user_factors_v2.npy"
-CF_BOOK_INDEX_PATH       = "/root/WORK/DATA/processed/cf_book_id_index_v2.json"
-CF_USER_INDEX_PATH       = "/root/WORK/DATA/processed/cf_user_id_index_v2.json"
-ALS_MODEL_PATH           = "/root/WORK/DATA/processed/cf_item_factors_v2.npy"
-HNSWLIB_PATH             = "/root/WORK/DATA/processed/cf_user_factors_v2.npy"
+FAISS_INDEX_PATH         = "/root/WORK/DATA/experiment/common/5core/books_index_5core.faiss"
+FAISS_INDEX_META_PATH    = "/root/WORK/DATA/experiment/common/5core/books_index_meta_5core.jsonl"
+BOOK_RETRIEVAL_DATASET_PATH = "/root/WORK/DATA/experiment/common/5core/books_master_merged_5core.jsonl"
+CF_ITEM_FACTORS_PATH     = "/root/WORK/DATA/experiment/common/5core/cf_item_factors.npy"
+CF_USER_FACTORS_PATH     = "/root/WORK/DATA/experiment/common/5core/cf_user_factors.npy"
+CF_BOOK_INDEX_PATH       = "/root/WORK/DATA/experiment/common/5core/cf_book_id_index.json"
+CF_USER_INDEX_PATH       = "/root/WORK/DATA/experiment/common/5core/cf_user_id_index.json"
+ALS_MODEL_PATH           = "/root/WORK/DATA/experiment/common/5core/cf_als_model_5core.npz"
+HNSWLIB_PATH             = "/root/WORK/DATA/experiment/common/5core/cf_user_similarity_5core.bin"
 
 [llm]
 model       = "MiniMax-M2.5"

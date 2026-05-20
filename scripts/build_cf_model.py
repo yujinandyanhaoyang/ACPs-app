@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sqlite3
+import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
@@ -11,9 +13,12 @@ from scipy.sparse import csr_matrix
 from sklearn.decomposition import TruncatedSVD
 from sklearn.neighbors import NearestNeighbors
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from services.data_paths import get_processed_data_path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INTERACTIONS_PATH = get_processed_data_path("merged", "interactions_merged.jsonl")
 DEFAULT_OUT_DIR = get_processed_data_path()
 DEFAULT_ALS_MODEL_PATH = PROJECT_ROOT / "data" / "als_model.npz"
@@ -29,6 +34,14 @@ def _iter_jsonl(path: Path) -> Iterable[Dict[str, object]]:
             yield json.loads(line)
 
 
+def _iter_recbole_inter(path: Path) -> Iterable[Dict[str, object]]:
+    with path.open("r", encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="\t")
+        for row in reader:
+            if isinstance(row, dict):
+                yield row
+
+
 def _build_indices(path: Path) -> Tuple[Dict[str, int], Dict[str, int], List[Tuple[int, int, float]]]:
     user_to_idx: Dict[str, int] = {}
     book_to_idx: Dict[str, int] = {}
@@ -36,14 +49,21 @@ def _build_indices(path: Path) -> Tuple[Dict[str, int], Dict[str, int], List[Tup
     cols: List[int] = []
     values: List[float] = []
 
-    for row in _iter_jsonl(path):
-        user_id = str(row.get("user_id") or "").strip()
-        book_id = str(row.get("book_id") or "").strip()
+    suffix = path.suffix.lower()
+    row_iter: Iterable[Dict[str, object]]
+    if suffix == ".inter":
+        row_iter = _iter_recbole_inter(path)
+    else:
+        row_iter = _iter_jsonl(path)
+
+    for row in row_iter:
+        user_id = str(row.get("user_id") or row.get("user_id:token") or "").strip()
+        book_id = str(row.get("book_id") or row.get("item_id") or row.get("item_id:token") or "").strip()
         if not user_id or not book_id:
             continue
 
         try:
-            rating = float(row.get("rating") or 0.0)
+            rating = float(row.get("rating") or row.get("rating:float") or 0.0)
         except (TypeError, ValueError):
             rating = 0.0
 

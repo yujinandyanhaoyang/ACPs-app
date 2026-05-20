@@ -18,6 +18,30 @@ _async_client: Any = None
 _async_client_init_failed = False
 
 
+def _is_rate_limit_error(exc: Exception) -> bool:
+    message = str(exc)
+    lowered = message.lower()
+    return (
+        "429" in message
+        or "rate limit" in lowered
+        or "请求数限制" in message
+    )
+
+
+def _rate_limit_max_retries() -> int:
+    try:
+        return max(0, int(os.getenv("OPENAI_RATE_LIMIT_MAX_RETRIES", "8")))
+    except Exception:
+        return 8
+
+
+def _rate_limit_backoff_seconds() -> float:
+    try:
+        return max(1.0, float(os.getenv("OPENAI_RATE_LIMIT_BACKOFF", "3600")))
+    except Exception:
+        return 3600.0
+
+
 def _get_async_openai_client() -> Any:
     """Lazily create and cache a single AsyncOpenAI client instance."""
     global _async_client, _async_client_init_failed
@@ -191,41 +215,75 @@ async def call_openai_chat(
                 merged_extra_body[key] = value
     kwargs["extra_body"] = merged_extra_body
     effective_timeout = float(timeout_s if timeout_s is not None else os.getenv("OPENAI_CHAT_TIMEOUT", "30"))
+    timeout_cap_raw = str(os.getenv("OPENAI_CHAT_TIMEOUT_CAP") or "").strip()
+    if timeout_cap_raw:
+        try:
+            effective_timeout = min(effective_timeout, float(timeout_cap_raw))
+        except Exception:
+            pass
     timeout_errors: tuple[type[BaseException], ...] = (TimeoutError, httpx.TimeoutException)
     api_timeout_error = getattr(openai, "APITimeoutError", None) if openai is not None else None
     if isinstance(api_timeout_error, type):
         timeout_errors = timeout_errors + (api_timeout_error,)
-    try:
-        chat_completion = await asyncio.wait_for(
-            client.chat.completions.create(**kwargs),
-            timeout=effective_timeout,
-        )
-    except TypeError:
+    rate_limit_retries = _rate_limit_max_retries()
+    rate_limit_backoff = _rate_limit_backoff_seconds()
+    attempt = 0
+    while True:
         try:
             chat_completion = await asyncio.wait_for(
-                client.chat.completions.create(
-                    messages=messages,
-                    model=model,
-                    extra_body=merged_extra_body,
-                ),
+                client.chat.completions.create(**kwargs),
                 timeout=effective_timeout,
             )
+            break
+        except TypeError:
+            try:
+                chat_completion = await asyncio.wait_for(
+                    client.chat.completions.create(
+                        messages=messages,
+                        model=model,
+                        extra_body=merged_extra_body,
+                    ),
+                    timeout=effective_timeout,
+                )
+                break
+            except timeout_errors as exc:
+                raise RuntimeError(
+                    f"LLM call timed out for model={model!r}: {exc}"
+                ) from exc
+            except Exception as exc:
+                if attempt < rate_limit_retries and _is_rate_limit_error(exc):
+                    logging.getLogger("agent.base").warning(
+                        "event=llm_rate_limit_wait model=%s attempt=%s backoff_s=%.1f error=%s",
+                        model,
+                        attempt + 1,
+                        rate_limit_backoff,
+                        str(exc),
+                    )
+                    attempt += 1
+                    await asyncio.sleep(rate_limit_backoff)
+                    continue
+                raise RuntimeError(
+                    f"LLM call failed for model={model!r}: {exc}"
+                ) from exc
         except timeout_errors as exc:
             raise RuntimeError(
                 f"LLM call timed out for model={model!r}: {exc}"
             ) from exc
         except Exception as exc:
+            if attempt < rate_limit_retries and _is_rate_limit_error(exc):
+                logging.getLogger("agent.base").warning(
+                    "event=llm_rate_limit_wait model=%s attempt=%s backoff_s=%.1f error=%s",
+                    model,
+                    attempt + 1,
+                    rate_limit_backoff,
+                    str(exc),
+                )
+                attempt += 1
+                await asyncio.sleep(rate_limit_backoff)
+                continue
             raise RuntimeError(
                 f"LLM call failed for model={model!r}: {exc}"
             ) from exc
-    except timeout_errors as exc:
-        raise RuntimeError(
-            f"LLM call timed out for model={model!r}: {exc}"
-        ) from exc
-    except Exception as exc:
-        raise RuntimeError(
-            f"LLM call failed for model={model!r}: {exc}"
-        ) from exc
     if not getattr(chat_completion, "choices", None):
         raise RuntimeError(
             f"LLM returned no choices for model={model!r}. response={chat_completion!r}"

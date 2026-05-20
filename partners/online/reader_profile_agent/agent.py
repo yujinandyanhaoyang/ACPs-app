@@ -147,6 +147,7 @@ def _load_prompts() -> Dict[str, Dict[str, str]]:
 
 
 PROMPTS = _load_prompts()
+_CURRENT_PAYLOAD_FLAGS: Dict[str, Any] = {}
 
 
 app = FastAPI(
@@ -384,6 +385,8 @@ def _extract_json_from_markdown(text: str) -> Dict[str, Any]:
 
 
 async def _infer_behavior_genres(user_id: str, window_days: int, events: List[Dict[str, Any]], baseline: List[str]) -> List[str]:
+    if baseline and _CURRENT_PAYLOAD_FLAGS.get("skip_genre_inference"):
+        return list(dict.fromkeys([str(x).strip().lower() for x in baseline if str(x).strip()]))[:10]
     if not str(os.getenv("OPENAI_API_KEY") or "").strip():
         raise RuntimeError(
             "OPENAI_API_KEY is not configured. Reader profile genre inference requires LLM."
@@ -489,6 +492,10 @@ def _extract_action(payload: Dict[str, Any]) -> str:
 
 
 async def _run_profile_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
+    global _CURRENT_PAYLOAD_FLAGS
+    _CURRENT_PAYLOAD_FLAGS = {
+        "skip_genre_inference": bool(payload.get("skip_genre_inference")),
+    }
     user_id = str(payload.get("user_id") or "").strip() or "anonymous"
     window_days = int(payload.get("window_days") or 90)
     events = _load_behavior_sequence(user_id, window_days=window_days)

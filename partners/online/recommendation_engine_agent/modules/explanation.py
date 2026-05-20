@@ -384,13 +384,21 @@ async def _generate_one(
         if summary_zh and len(summary_zh) >= 20:
             description_text = summary_zh
         else:
-            description_text = await _fetch_description_via_llm(
-                title,
-                author,
-                llm_model,
-                llm_temperature,
-                llm_max_tokens,
-            )
+            try:
+                description_text = await _fetch_description_via_llm(
+                    title,
+                    author,
+                    llm_model,
+                    llm_temperature,
+                    llm_max_tokens,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "event=description_llm_fallback book_id=%s error=%s",
+                    book_id,
+                    exc,
+                )
+                description_text = summary_zh or str(row.get("description") or "").strip() or f"{title} {author}".strip()
     description_text = description_text[:800]
     query_text = str(user_query or "")
     prompt_context = _extract_prompt_context(payload, row, description_text)
@@ -510,9 +518,20 @@ async def _generate_rationale_inner(
     ]
     if not tasks:
         return []
-    explanations = await asyncio.gather(*tasks)
+    explanations_raw = await asyncio.gather(*tasks, return_exceptions=True)
     merged: List[Dict[str, Any]] = []
-    for row, explanation in zip(enriched_rows, explanations):
+    for row, explanation in zip(enriched_rows, explanations_raw):
+        if isinstance(explanation, Exception):
+            logger.warning(
+                "event=explanation_task_failed book_id=%s error=%s",
+                row.get("book_id"),
+                explanation,
+            )
+            explanation = {
+                "book_id": str(row.get("book_id") or ""),
+                "justification": _make_fallback_justification(row, user_query),
+                "source": "fallback",
+            }
         merged.append(
             {
                 **explanation,

@@ -180,6 +180,9 @@ class UserRequest(BaseModel):
     reviews: List[Dict[str, Any]] = Field(default_factory=list, deprecated=True)
     books: List[Dict[str, Any]] = Field(default_factory=list, deprecated=True)
     candidate_ids: List[str] = Field(default_factory=list, deprecated=True)
+    behavior_genres: List[str] = Field(default_factory=list, deprecated=True)
+    skip_genre_inference: bool = Field(default=False, deprecated=True)
+    skip_intent_parsing: bool = Field(default=False, deprecated=True)
     constraints: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -733,11 +736,29 @@ def _normalize_recommendations_for_frontend(
 
 
 async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = False) -> Dict[str, Any]:
+    orchestration_started = time.perf_counter()
     session_id = req.session_id or f"session-{uuid.uuid4()}"
     SESSION_STORE.append_message(session_id, "user", req.query)
     req_payload = req.model_dump()
+    logger.info(
+        "event=orchestrate_start session_id=%s user_id=%s allow_deprecated_payload=%s",
+        session_id,
+        req.user_id,
+        allow_deprecated_payload,
+    )
 
-    intent = await _parse_intent(req.query)
+    if req.skip_intent_parsing:
+        intent = {
+            "search_query": req.query,
+            "original_language": _detect_language_code(req.query),
+            "intent": "book_recommendation",
+            "preferred_genres": [],
+            "constraints": {},
+            "scenario_hint": "",
+            "response_style": "detailed",
+        }
+    else:
+        intent = await _parse_intent(req.query)
     search_query = str(intent.get("search_query") or req.query or "").strip()
     if any("\u4e00" <= ch <= "\u9fff" for ch in search_query):
         try:
@@ -784,9 +805,10 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
     ablation_flags = constraints.get("ablation_flags") if isinstance(constraints.get("ablation_flags"), dict) else {}
     scoring_weights = constraints.get("scoring_weights") if isinstance(constraints.get("scoring_weights"), dict) else {}
     requested_top_k = int(constraints.get("top_k") or 5)
-    top_k = max(1, min(requested_top_k, 5))
+    top_k = max(1, min(requested_top_k, 10))
 
     # 1) Notify RDA to stand by.
+    phase_started = time.perf_counter()
     rda_standby_payload = {
         "performative": "request",
         "action": "rda.standby",
@@ -794,6 +816,13 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
         "user_id": req.user_id,
     }
     standby_resp, standby_route = await _invoke_partner("rda", rda_standby_payload)
+    logger.info(
+        "event=orchestrate_phase_done session_id=%s phase=rda_standby state=%s route=%s elapsed_ms=%.3f",
+        session_id,
+        _state(standby_resp),
+        standby_route.get("route"),
+        (time.perf_counter() - phase_started) * 1000,
+    )
 
     # 2) GroupMgmt broadcast to RPA + BCA in parallel.
     profile_payload = {
@@ -804,6 +833,8 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
         "user_profile": req_payload.get("user_profile") if isinstance(req_payload.get("user_profile"), dict) else {},
         "history": req_payload.get("history") if isinstance(req_payload.get("history"), list) else [],
         "reviews": req_payload.get("reviews") if isinstance(req_payload.get("reviews"), list) else [],
+        "behavior_genres": req_payload.get("behavior_genres") if isinstance(req_payload.get("behavior_genres"), list) else [],
+        "skip_genre_inference": bool(req_payload.get("skip_genre_inference")),
     }
     req_books = req_payload.get("books") if isinstance(req_payload.get("books"), list) else []
     req_candidate_ids = req_payload.get("candidate_ids") if isinstance(req_payload.get("candidate_ids"), list) else []
@@ -825,9 +856,19 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
         # Alignment ablation: neutralize declared preference signals to BCA.
         content_payload["declared_genres"] = []
 
+    phase_started = time.perf_counter()
     (profile_resp, profile_route), (content_resp, content_route) = await asyncio.gather(
         _invoke_partner("profile", profile_payload),
         _invoke_partner("content", content_payload),
+    )
+    logger.info(
+        "event=orchestrate_phase_done session_id=%s phase=profile_content profile_state=%s content_state=%s profile_route=%s content_route=%s elapsed_ms=%.3f",
+        session_id,
+        _state(profile_resp),
+        _state(content_resp),
+        profile_route.get("route"),
+        content_route.get("route"),
+        (time.perf_counter() - phase_started) * 1000,
     )
 
     profile_data = _extract_result(profile_resp)
@@ -860,9 +901,17 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
         },
         "counter_proposal_received": bool(content_outputs.get("counter_proposal")),
     }
+    phase_started = time.perf_counter()
     rda_resp, rda_route = await _invoke_partner("rda", rda_payload)
     rda_data = _extract_result(rda_resp)
     rda_state = _state(rda_resp)
+    logger.info(
+        "event=orchestrate_phase_done session_id=%s phase=rda_arbitrate state=%s route=%s elapsed_ms=%.3f",
+        session_id,
+        rda_state,
+        rda_route.get("route"),
+        (time.perf_counter() - phase_started) * 1000,
+    )
 
     if ablation_flags.get("fixed_arbitration_weights") or ablation_flags.get("freeze_feedback"):
         # Ablation mode: bypass learned/adaptive arbitration output with fixed weights.
@@ -920,9 +969,17 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
         engine_payload["min_coverage"] = 0.0
     if ablation_flags:
         engine_payload["ablation_flags"] = ablation_flags
+    phase_started = time.perf_counter()
     engine_resp, engine_route = await _invoke_partner("engine", engine_payload)
     engine_data = _extract_result(engine_resp)
     engine_state = _state(engine_resp)
+    logger.info(
+        "event=orchestrate_phase_done session_id=%s phase=engine state=%s route=%s elapsed_ms=%.3f",
+        session_id,
+        engine_state,
+        engine_route.get("route"),
+        (time.perf_counter() - phase_started) * 1000,
+    )
 
     recommendations = engine_data.get("recommendations") if isinstance(engine_data.get("recommendations"), list) else []
     explanations = engine_data.get("explanations") if isinstance(engine_data.get("explanations"), list) else []
@@ -954,6 +1011,14 @@ async def _orchestrate_inner(req: UserRequest, allow_deprecated_payload: bool = 
 
     SESSION_STORE.update_fields(session_id, {"last_response": response, "intent": intent})
     SESSION_STORE.append_message(session_id, "assistant", "orchestration_completed")
+    logger.info(
+        "event=orchestrate_done session_id=%s state=%s recommendation_count=%d explanation_count=%d elapsed_ms=%.3f",
+        session_id,
+        response["state"],
+        len(normalized_recommendations),
+        len(explanations),
+        (time.perf_counter() - orchestration_started) * 1000,
+    )
     return response
 
 
